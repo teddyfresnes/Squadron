@@ -57,7 +57,9 @@
       const d = defaults();
       const bob = [0, 0, -1, 0][i];
       d.bodyDY = bob;
-      d.headDY = bob;
+      // headDY is additive on top of bodyDY; keep it 0 so the head rides with
+      // the torso during breathing and the neck stays tight.
+      d.headDY = 0;
       d.legs = { front: 0, back: 0, frontBend: 0, backBend: 0 };
       // Arm hangs down naturally holding weapon low
       d.aimAngle = 0.15;  // slight downward
@@ -75,9 +77,9 @@
       const t = i / 8;
       const cycle = Math.sin(t * TAU);
       const cycle2 = Math.sin(t * TAU + Math.PI);
-      // Vertical bob
+      // Vertical bob — head rides with the body to keep the neck tight.
       d.bodyDY = Math.abs(cycle) > 0.7 ? 0 : -1;
-      d.headDY = d.bodyDY;
+      d.headDY = 0;
       // Legs out of phase
       const frontLift = Math.max(0, cycle) * 2;
       const backLift = Math.max(0, cycle2) * 2;
@@ -103,7 +105,7 @@
       const cycle = Math.sin(t * TAU);
       const cycle2 = Math.sin(t * TAU + Math.PI);
       d.bodyDY = -Math.round((Math.abs(cycle) * 2));
-      d.headDY = d.bodyDY;
+      d.headDY = 0;
       d.legs = {
         front: -Math.round(Math.max(0, cycle) * 3),
         back: -Math.round(Math.max(0, cycle2) * 3),
@@ -124,7 +126,7 @@
     get: function (i) {
       const d = defaults();
       d.bodyDY = i === 1 ? -1 : 0;
-      d.headDY = d.bodyDY;
+      d.headDY = 0;
       d.aimAngle = -0.1;  // slight upward
       d.legs = { front: 0, back: 0, frontBend: 0, backBend: 0 };
       d.stance = 'wide';  // legs spread
@@ -187,20 +189,20 @@
       const d = defaults();
       if (i === 0) {
         d.bodyDY = -2;
-        d.headDY = -3;
+        d.headDY = -1;   // small extra head snap-back on top of body recoil
         d.tint = '#ff2030';
         d.alpha = 0.9;
         d.headBack = 1;
         d.eyesClosed = true;
       } else if (i === 1) {
         d.bodyDY = -1;
-        d.headDY = -2;
+        d.headDY = -1;
         d.tint = '#ff2030';
         d.alpha = 0.85;
         d.eyesClosed = true;
       } else {
         d.bodyDY = 0;
-        d.headDY = -1;
+        d.headDY = 0;
       }
       d.aimAngle = 0.4;  // weapon drops
       d.mouthHurt = true;

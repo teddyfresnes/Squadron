@@ -63,6 +63,43 @@
     }
   };
 
+  // ---------- WAIST BRIDGE ----------
+  // Fills the rows between torso bottom and legs top when bodyDY lifts the
+  // torso. Uses outline color so it reads as a belt shadow continuous with the
+  // torso bottom outline row.
+  Parts.drawWaistBridge = function (ctx, tx, topY, legsY) {
+    const O = P.outline;
+    // topY is the first row below the torso outline bottom.
+    // Draw rows up to (but not including) the legs' top row.
+    for (let y = topY; y < legsY; y++) {
+      for (let x = 0; x < 7; x++) {
+        E.px(ctx, tx + x, y, O);
+      }
+    }
+  };
+
+  // ---------- NECK ----------
+  // Connects head chin to torso collar. Dynamically fills any gap between them.
+  // ox     : body origin X (horizontal center of neck).
+  // topY   : first row below the head's chin outline.
+  // torsoY : torso top row (neck ends just above it, clamped to 3 rows max).
+  Parts.drawNeck = function (ctx, ox, topY, torsoY, skin) {
+    const O = P.outline;
+    // If the head's chin already reaches the torso top row, the neck would
+    // overlap the torso — skip to avoid painting skin on the uniform.
+    if (topY >= torsoY) return;
+    // Stretch as needed so the head never detaches even in dramatic poses.
+    const endY = torsoY - 1;
+    for (let y = topY; y <= endY; y++) {
+      E.px(ctx, ox - 2, y, O);
+      E.px(ctx, ox - 1, y, skin.shade);
+      E.px(ctx, ox,     y, skin.base);
+      E.px(ctx, ox + 1, y, O);
+    }
+    // Collar-bone shadow where neck meets torso — subtle darker seam.
+    E.px(ctx, ox - 1, endY, skin.shade);
+  };
+
   // ---------- EYE ----------
   Parts.drawEye = function (ctx, cx, cy, eyeColor, opts) {
     opts = opts || {};
@@ -198,13 +235,18 @@
         'OBBBBBBO'
       ];
       E.stamp(ctx, cx, cy - 2, tpl, { O, B: b, H: h });
-      // chin strap
+      // Visor ridge — darker band separating helmet from face.
+      for (let vx = 1; vx <= 6; vx++) E.px(ctx, cx + vx, cy + 3, s);
+      // chin strap anchor points at the sides of the head
       E.px(ctx, cx + 0, cy + 3, O);
       E.px(ctx, cx + 7, cy + 3, O);
       if (hatKind === 'Combat Helmet') {
-        // Rail hint
+        // Rail / side mount hint
         E.px(ctx, cx + 7, cy - 1, h);
         E.px(ctx, cx + 7, cy + 0, h);
+        // NVG mount bracket on the front
+        E.px(ctx, cx + 5, cy - 2, O);
+        E.px(ctx, cx + 6, cy - 2, h);
       }
     } else if (hatKind === 'Boonie') {
       // wide brim
@@ -233,24 +275,45 @@
   };
 
   // ---------- TORSO ----------
-  // Torso 6 wide x 8 tall, centered at cx=12 (so x 12..17), cy=14..21
+  // 7 wide × 8 tall. Character faces RIGHT: left column = back (shaded),
+  // right column = front (where buttons / placket live). tx,ty is TL of the box.
   Parts.drawTorso = function (ctx, tx, ty, uniform, opts) {
     opts = opts || {};
     const b = uniform.base, s = uniform.shade, h = uniform.hl;
     const O = P.outline;
-    // tx,ty is TL of 6x8 box
+
+    // Base silhouette. Shoulders get a highlight row on the back, front side is
+    // pre-shaded so buttons and pocket details read cleanly.
     const tpl = [
-      'OBBBBBO',
-      'OBHBBBO',
-      'OBBBBBO',
-      'OBBBBSO',
-      'OBBBBSO',
-      'OBBBBSO',
-      'OBBBBSO',
-      'OOOOOOO'
+      'OBBSBBO', // y0 collar line — center dip (S) reads as the neck opening
+      'OBHBBSO', // y1 shoulder highlight (back) + shoulder seam shade (front)
+      'OBBBBSO', // y2
+      'OBBBBSO', // y3
+      'OBBBBSO', // y4
+      'OBBBBSO', // y5
+      'OSSSSSO', // y6 belt band — darker strip across the waist
+      'OOOOOOO'  // y7 base outline (sits flush with top of legs)
     ];
-    // width=7 actually
     E.stamp(ctx, tx, ty, tpl, { O, B: b, H: h, S: s });
+
+    // Collar notch inset — a single darker pixel under the V so the collar
+    // reads as an opening rather than a single misplaced shade pixel.
+    E.px(ctx, tx + 3, ty + 1, s);
+
+    // Placket + buttons down the front (right side of the body).
+    E.px(ctx, tx + 4, ty + 2, s);   // placket seam
+    E.px(ctx, tx + 4, ty + 3, h);   // upper button
+    E.px(ctx, tx + 4, ty + 4, s);   // placket seam
+    E.px(ctx, tx + 4, ty + 5, h);   // lower button
+
+    // Chest pocket hint (left of placket, small L-shape of stitching).
+    E.px(ctx, tx + 2, ty + 3, s);
+    E.px(ctx, tx + 3, ty + 3, s);
+    E.px(ctx, tx + 2, ty + 4, s);
+
+    // Belt buckle — one bright pixel centered on the belt row.
+    E.px(ctx, tx + 3, ty + 6, h);
+    E.px(ctx, tx + 4, ty + 6, O);  // buckle outline edge for contrast
   };
 
   // ---------- VEST ----------
@@ -315,13 +378,24 @@
     const bootsB = P.boots.base, bootsS = P.boots.shade;
 
     const drawLeg = function (lx, ly, bend) {
-      // 2 wide, 6 tall
-      // If bend > 0, knee bends forward
+      // 2 wide, 6 tall. If bend > 0, knee bends forward at row 3.
       const height = 6;
       for (let i = 0; i < height; i++) {
         const dx = (i >= 3 && bend) ? bend : 0;
-        E.px(ctx, lx + dx, ly + i, b);
-        E.px(ctx, lx + 1 + dx, ly + i, s);
+        // Top row reads as a waistband: shade on both pixels so it visually
+        // merges with the torso's bottom outline rather than showing a sudden
+        // color shift when pants are lighter than the shirt.
+        if (i === 0) {
+          E.px(ctx, lx + dx, ly + i, s);
+          E.px(ctx, lx + 1 + dx, ly + i, s);
+        } else {
+          E.px(ctx, lx + dx, ly + i, b);
+          E.px(ctx, lx + 1 + dx, ly + i, s);
+        }
+        // Knee crease — single darker pixel on the front column at the bend row.
+        if (i === 3) {
+          E.px(ctx, lx + 1 + dx, ly + i, O);
+        }
         // outline
         E.px(ctx, lx - 1 + dx, ly + i, O);
         E.px(ctx, lx + 2 + dx, ly + i, O);

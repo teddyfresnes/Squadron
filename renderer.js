@@ -123,6 +123,10 @@
     // ---- Legs
     Parts.drawLegs(ctx, torsoTL_x, legsTL_y, pants, frame.legs);
 
+    // ---- Waist bridge — fills any gap between the (possibly lifted) torso and
+    // the planted legs so body bobs can't expose background between them.
+    Parts.drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8, legsTL_y);
+
     // ---- Torso
     Parts.drawTorso(ctx, torsoTL_x, torsoTL_y, uniform);
 
@@ -137,6 +141,11 @@
         E.px(ctx, torsoTL_x + 1 + i, torsoTL_y + 1 + i, strap);
       }
     }
+
+    // ---- Neck — skin bridge from head chin to torso collar.
+    // Always renders at least 1 row so the head never floats away from the body
+    // regardless of head/body DY offsets. Stretches up to 3 rows for dramatic poses.
+    Parts.drawNeck(ctx, originX, headTL_y + 9, torsoTL_y, skin);
 
     // ---- Head
     Parts.drawHead(ctx, headTL_x, headTL_y, skin, { hurt: frame.mouthHurt });
