@@ -159,36 +159,30 @@ html, body {
 .anim-meta { font-size: 9px; color: var(--text-dimmer); }
 
 /* ---------------- Weapons ---------------- */
+.weapon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.weapon-group { display: flex; flex-direction: column; gap: 4px; }
+.weapon-group-title {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.weapon-group-count {
+  color: var(--text-dimmer);
+  font-size: 8px;
+  font-weight: 500;
+}
 .weapon-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 5px;
-}
-.weapon-style-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
   gap: 4px;
-  margin-bottom: 10px;
-}
-.weapon-style {
-  all: unset;
-  cursor: pointer;
-  min-height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-dim);
-  font-size: 10px;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
-}
-.weapon-style:hover { border-color: var(--border-2); color: var(--text); }
-.weapon-style.selected {
-  border-color: var(--accent-3);
-  color: var(--accent-3);
-  background: rgba(80,150,217,0.08);
 }
 .weapon-card {
   all: unset;
@@ -196,11 +190,12 @@ html, body {
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 4px 8px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   transition: border-color 0.12s;
+  min-height: 24px;
 }
 .weapon-card:hover { border-color: var(--border-2); }
 .weapon-card.selected {
@@ -208,11 +203,46 @@ html, body {
   box-shadow: inset 0 0 0 1px rgba(80,150,217,0.25);
   background: linear-gradient(90deg, rgba(80,150,217,0.05), transparent 60%), var(--panel-2);
 }
-.weapon-card canvas { flex-shrink: 0; }
+.weapon-card canvas {
+  flex-shrink: 0;
+  background: rgba(0,0,0,0.25);
+  border-radius: 3px;
+}
 .weapon-name {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.06em;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------- Weapon skin picker ---------------- */
+.skin-picker { display: flex; flex-direction: column; gap: 6px; }
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.skin-chip {
+  all: unset;
+  cursor: pointer;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  padding: 4px 0;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  transition: all 0.12s;
+}
+.skin-chip:hover { color: var(--text); border-color: var(--border-2); }
+.skin-chip.selected {
+  background: rgba(217,150,80,0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(217,150,80,0.3);
 }
 
 /* ---------------- Stage ---------------- */

@@ -37,7 +37,16 @@
 
   // Outline a filled region post-hoc (simple 4-neighbor) — useful for reading pixels and adding outline
   Engine.outlineRegion = function (ctx, w, h, outlineColor) {
-    const img = ctx.getImageData(0, 0, w, h);
+    let img;
+    // Reading pixel data fails on a canvas that has been tainted by a sprite
+    // sheet loaded under a cross-origin policy (e.g. opening the HTML directly
+    // via file:// in some browsers). In that case we silently skip the outline
+    // pass — the sprite already carries its own baked-in outline.
+    try {
+      img = ctx.getImageData(0, 0, w, h);
+    } catch (e) {
+      return;
+    }
     const d = img.data;
     const idx = (x, y) => (y * w + x) * 4;
     const isFilled = (x, y) => {

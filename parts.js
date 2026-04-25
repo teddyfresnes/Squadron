@@ -422,14 +422,9 @@
   // ---------- ARM ----------
   // Arm drawn as segment from shoulder to hand, at an angle.
   // We render it pixel-wise using Bresenham with given color.
-  Parts.drawArm = function (ctx, sx, sy, hx, hy, uniform, glovesCol) {
-    const b = uniform.base, s = uniform.shade;
-    const O = P.outline;
-    const gb = glovesCol.base;
-
-    // Bresenham from (sx,sy) to (hx,hy)
+  function linePoints(x0, y0, x1, y1) {
     const points = [];
-    let x0 = sx | 0, y0 = sy | 0, x1 = hx | 0, y1 = hy | 0;
+    x0 = x0 | 0; y0 = y0 | 0; x1 = x1 | 0; y1 = y1 | 0;
     const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
     const sx2 = x0 < x1 ? 1 : -1;
     const sy2 = y0 < y1 ? 1 : -1;
@@ -441,29 +436,69 @@
       if (e2 > -dy) { err -= dy; x0 += sx2; }
       if (e2 < dx)  { err += dx; y0 += sy2; }
     }
-    // Draw outline first (expanded)
-    for (const [x, y] of points) {
-      E.px(ctx, x, y - 1, O);
-      E.px(ctx, x, y + 1, O);
-      E.px(ctx, x - 1, y, O);
-      E.px(ctx, x + 1, y, O);
+    return points;
+  }
+
+  function drawHand(ctx, hx, hy, glovesCol, opts) {
+    opts = opts || {};
+    const O = P.outline;
+    const gb = glovesCol.base;
+    hx = hx | 0; hy = hy | 0;
+    if (opts.large) {
+      E.rect(ctx, hx - 1, hy - 1, 4, 4, O);
+      E.rect(ctx, hx, hy, 2, 2, gb);
+      E.px(ctx, hx + 1, hy, glovesCol.hl || gb);
+      return;
     }
-    // Then arm
-    for (const [x, y] of points) {
-      E.px(ctx, x, y, b);
-    }
-    // Hand / glove at end
     E.px(ctx, hx, hy, gb);
     E.px(ctx, hx, hy - 1, O);
     E.px(ctx, hx, hy + 1, O);
     E.px(ctx, hx + 1, hy, O);
     E.px(ctx, hx - 1, hy, O);
     E.px(ctx, hx, hy, gb);
+  }
+
+  function drawArmPath(ctx, points, uniform, glovesCol, opts) {
+    opts = opts || {};
+    const b = uniform.base, s = uniform.shade;
+    const O = P.outline;
+    const outline = opts.thick ? [[0, -2], [0, 2], [-2, 0], [2, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]] :
+      [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    const fill = opts.thick ? [[0, 0], [1, 0], [0, 1]] : [[0, 0]];
+
+    for (const [x, y] of points) {
+      for (const [ox, oy] of outline) E.px(ctx, x + ox, y + oy, O);
+    }
+    for (const [x, y] of points) {
+      for (const [ox, oy] of fill) E.px(ctx, x + ox, y + oy, b);
+      if (opts.thick) E.px(ctx, x + 1, y + 1, s);
+    }
+    const last = points[points.length - 1];
+    if (last) drawHand(ctx, last[0], last[1], glovesCol, { large: opts.handLarge });
+  }
+
+  Parts.drawArm = function (ctx, sx, sy, hx, hy, uniform, glovesCol) {
+    drawArmPath(ctx, linePoints(sx, sy, hx, hy), uniform, glovesCol, { thick: false, handLarge: false });
+  };
+
+  Parts.drawBentArm = function (ctx, sx, sy, ex, ey, hx, hy, uniform, glovesCol, opts) {
+    opts = opts || {};
+    const a = linePoints(sx, sy, ex, ey);
+    const b = linePoints(ex, ey, hx, hy);
+    if (a.length && b.length) b.shift();
+    drawArmPath(ctx, a.concat(b), uniform, glovesCol, {
+      thick: opts.thick !== false,
+      handLarge: opts.handLarge !== false
+    });
+  };
+
+  Parts.drawHand = function (ctx, hx, hy, glovesCol, opts) {
+    drawHand(ctx, hx, hy, glovesCol, opts);
   };
 
   // ---------- HD MIXED RENDERING ----------
-  // These variants keep the same logical anchors as the pixel versions, but use
-  // canvas paths so the high-resolution backing canvas can preserve smooth edges.
+  // Smooth variants keep the same anchors as the pixel parts. They are used by
+  // the renderer only when the canvas has a high-resolution backing store.
   function roundRectPath(ctx, x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     ctx.moveTo(x + r, y);
@@ -533,13 +568,13 @@
 
     fillEllipse(ctx, cx + 0.25, cy + 4.8, 0.75, 1.0, O);
     fillEllipse(ctx, cx + 0.45, cy + 4.9, 0.45, 0.65, skin.shade);
-    fillPath(ctx, O, () => {
+    fillPath(ctx, O, function () {
       ctx.moveTo(cx + 7.15, cy + 4.25);
       ctx.lineTo(cx + 8.7, cy + 5.05);
       ctx.lineTo(cx + 7.15, cy + 5.65);
       ctx.closePath();
     });
-    fillPath(ctx, skin.base, () => {
+    fillPath(ctx, skin.base, function () {
       ctx.moveTo(cx + 7.0, cy + 4.45);
       ctx.lineTo(cx + 8.15, cy + 5.05);
       ctx.lineTo(cx + 7.0, cy + 5.45);
@@ -573,7 +608,7 @@
       return;
     }
 
-    fillPath(ctx, O, () => {
+    fillPath(ctx, O, function () {
       ctx.moveTo(cx + 0.3, cy + 3.4);
       ctx.quadraticCurveTo(cx + 1.0, cy - 0.9, cx + 4.1, cy - 0.9);
       ctx.quadraticCurveTo(cx + 7.35, cy - 0.45, cx + 7.6, cy + 3.1);
@@ -581,7 +616,7 @@
       ctx.quadraticCurveTo(cx + 4.1, cy + 2.4, cx + 0.3, cy + 3.4);
       ctx.closePath();
     });
-    fillPath(ctx, b, () => {
+    fillPath(ctx, b, function () {
       ctx.moveTo(cx + 0.85, cy + 3.15);
       ctx.quadraticCurveTo(cx + 1.35, cy - 0.35, cx + 4.15, cy - 0.35);
       ctx.quadraticCurveTo(cx + 6.7, cy + 0.05, cx + 7.0, cy + 2.8);
@@ -591,7 +626,7 @@
     strokeLine(ctx, cx + 3.7, cy + 0.1, cx + 5.7, cy + 1.15, h, 0.35);
 
     if (style === 'Messy') {
-      strokePath(ctx, O, 0.55, () => {
+      strokePath(ctx, O, 0.55, function () {
         ctx.moveTo(cx + 1.0, cy + 0.7);
         ctx.lineTo(cx + 0.2, cy - 1.2);
         ctx.moveTo(cx + 3.0, cy + 0.0);
@@ -599,7 +634,7 @@
         ctx.moveTo(cx + 5.0, cy + 0.0);
         ctx.lineTo(cx + 5.85, cy - 1.35);
       });
-      strokePath(ctx, b, 0.34, () => {
+      strokePath(ctx, b, 0.34, function () {
         ctx.moveTo(cx + 1.0, cy + 0.7);
         ctx.lineTo(cx + 0.25, cy - 1.05);
         ctx.moveTo(cx + 3.0, cy + 0.0);
@@ -624,13 +659,13 @@
     const h = hatCol.hl;
 
     if (hatKind === 'Cap') {
-      fillPath(ctx, O, () => {
+      fillPath(ctx, O, function () {
         ctx.moveTo(cx + 0.4, cy + 2.45);
         ctx.quadraticCurveTo(cx + 1.5, cy - 1.2, cx + 4.8, cy - 1.0);
         ctx.quadraticCurveTo(cx + 7.5, cy - 0.55, cx + 7.65, cy + 2.4);
         ctx.lineTo(cx + 0.4, cy + 2.45);
       });
-      fillPath(ctx, b, () => {
+      fillPath(ctx, b, function () {
         ctx.moveTo(cx + 0.95, cy + 2.0);
         ctx.quadraticCurveTo(cx + 1.8, cy - 0.55, cx + 4.8, cy - 0.45);
         ctx.quadraticCurveTo(cx + 6.85, cy - 0.15, cx + 7.0, cy + 2.0);
@@ -645,13 +680,13 @@
       strokeLine(ctx, cx + 1.1, cy + 2.75, cx + 7.1, cy + 2.75, s, 0.55);
       strokeLine(ctx, cx + 2.7, cy - 0.25, cx + 4.3, cy - 0.4, h, 0.4);
     } else if (hatKind === 'Helmet' || hatKind === 'Combat Helmet') {
-      fillPath(ctx, O, () => {
+      fillPath(ctx, O, function () {
         ctx.moveTo(cx - 0.1, cy + 2.8);
         ctx.quadraticCurveTo(cx + 1.2, cy - 2.2, cx + 4.7, cy - 2.1);
         ctx.quadraticCurveTo(cx + 8.2, cy - 1.7, cx + 8.15, cy + 3.2);
         ctx.lineTo(cx - 0.1, cy + 2.8);
       });
-      fillPath(ctx, b, () => {
+      fillPath(ctx, b, function () {
         ctx.moveTo(cx + 0.55, cy + 2.4);
         ctx.quadraticCurveTo(cx + 1.55, cy - 1.45, cx + 4.7, cy - 1.45);
         ctx.quadraticCurveTo(cx + 7.35, cy - 1.15, cx + 7.45, cy + 2.55);
@@ -666,13 +701,13 @@
     } else if (hatKind === 'Boonie') {
       fillRoundRect(ctx, cx - 1.2, cy + 2.0, 10.6, 1.45, 0.65, O);
       fillRoundRect(ctx, cx - 0.75, cy + 1.85, 9.7, 0.95, 0.45, b);
-      fillPath(ctx, O, () => {
+      fillPath(ctx, O, function () {
         ctx.moveTo(cx + 1.0, cy + 2.15);
         ctx.quadraticCurveTo(cx + 2.0, cy - 1.0, cx + 4.35, cy - 0.9);
         ctx.quadraticCurveTo(cx + 6.85, cy - 0.75, cx + 7.15, cy + 2.2);
         ctx.closePath();
       });
-      fillPath(ctx, b, () => {
+      fillPath(ctx, b, function () {
         ctx.moveTo(cx + 1.45, cy + 2.0);
         ctx.quadraticCurveTo(cx + 2.2, cy - 0.45, cx + 4.35, cy - 0.35);
         ctx.quadraticCurveTo(cx + 6.35, cy - 0.2, cx + 6.65, cy + 2.0);
@@ -697,7 +732,7 @@
 
   Parts.drawTorsoHD = function (ctx, tx, ty, uniform) {
     const O = P.outline;
-    fillPath(ctx, O, () => {
+    fillPath(ctx, O, function () {
       ctx.moveTo(tx - 0.4, ty + 1.2);
       ctx.quadraticCurveTo(tx + 2.0, ty - 0.35, tx + 4.0, ty - 0.15);
       ctx.quadraticCurveTo(tx + 6.8, ty + 0.05, tx + 7.45, ty + 1.45);
@@ -705,7 +740,7 @@
       ctx.lineTo(tx - 0.05, ty + 8.1);
       ctx.closePath();
     });
-    fillPath(ctx, uniform.base, () => {
+    fillPath(ctx, uniform.base, function () {
       ctx.moveTo(tx + 0.35, ty + 1.35);
       ctx.quadraticCurveTo(tx + 2.2, ty + 0.45, tx + 4.0, ty + 0.55);
       ctx.quadraticCurveTo(tx + 6.0, ty + 0.65, tx + 6.65, ty + 1.55);
@@ -753,12 +788,12 @@
       const kneeY = ly + 3.2;
       const footX = lx + 1.25 + bend;
       const footY = ly + 6.25;
-      strokePath(ctx, P.outline, 2.45, () => {
+      strokePath(ctx, P.outline, 2.45, function () {
         ctx.moveTo(lx + 0.8, ly + 0.2);
         ctx.lineTo(kneeX, kneeY);
         ctx.lineTo(footX, footY);
       });
-      strokePath(ctx, pants.base, 1.45, () => {
+      strokePath(ctx, pants.base, 1.45, function () {
         ctx.moveTo(lx + 0.8, ly + 0.2);
         ctx.lineTo(kneeX, kneeY);
         ctx.lineTo(footX, footY);
@@ -771,12 +806,48 @@
     drawLeg(tx + 4, ty + legOffsets.front, legOffsets.frontBend);
   };
 
-  Parts.drawArmHD = function (ctx, sx, sy, hx, hy, uniform, glovesCol) {
-    strokeLine(ctx, sx, sy, hx, hy, P.outline, 2.35);
-    strokeLine(ctx, sx, sy, hx, hy, uniform.base, 1.35);
-    strokeLine(ctx, sx + 0.15, sy - 0.15, hx - 0.2, hy - 0.15, uniform.hl || uniform.base, 0.35);
-    fillEllipse(ctx, hx, hy, 1.15, 1.05, P.outline);
-    fillEllipse(ctx, hx, hy, 0.72, 0.62, glovesCol.base);
+  Parts.drawArmHD = function (ctx, sx, sy, hx, hy, uniform, glovesCol, opts) {
+    opts = opts || {};
+    const scale = opts.scale || 1;
+    strokeLine(ctx, sx, sy, hx, hy, P.outline, 2.35 * scale);
+    strokeLine(ctx, sx, sy, hx, hy, uniform.base, 1.35 * scale);
+    strokeLine(ctx, sx + 0.15 * scale, sy - 0.15 * scale, hx - 0.2 * scale, hy - 0.15 * scale, uniform.hl || uniform.base, 0.35 * scale);
+    fillEllipse(ctx, hx, hy, 1.15 * scale, 1.05 * scale, P.outline);
+    fillEllipse(ctx, hx, hy, 0.72 * scale, 0.62 * scale, glovesCol.base);
+  };
+
+  Parts.drawBentArmHD = function (ctx, sx, sy, ex, ey, hx, hy, uniform, glovesCol, opts) {
+    opts = opts || {};
+    const scale = opts.scale || 1;
+    strokePath(ctx, P.outline, 2.35 * scale, function () {
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.lineTo(hx, hy);
+    });
+    strokePath(ctx, uniform.base, 1.35 * scale, function () {
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.lineTo(hx, hy);
+    });
+    strokePath(ctx, uniform.hl || uniform.base, 0.35 * scale, function () {
+      ctx.moveTo(sx + 0.15 * scale, sy - 0.15 * scale);
+      ctx.lineTo(ex, ey - 0.1 * scale);
+      ctx.lineTo(hx - 0.2 * scale, hy - 0.15 * scale);
+    });
+    Parts.drawHandHD(ctx, hx, hy, glovesCol, { scale: scale, large: opts.handLarge !== false });
+  };
+
+  Parts.drawHandHD = function (ctx, hx, hy, glovesCol, opts) {
+    opts = opts || {};
+    const scale = opts.scale || 1;
+    const large = opts.large !== false;
+    const outlineRx = (large ? 1.45 : 1.15) * scale;
+    const outlineRy = (large ? 1.3 : 1.05) * scale;
+    const fillRx = (large ? 0.95 : 0.72) * scale;
+    const fillRy = (large ? 0.82 : 0.62) * scale;
+    fillEllipse(ctx, hx, hy, outlineRx, outlineRy, P.outline);
+    fillEllipse(ctx, hx, hy, fillRx, fillRy, glovesCol.base);
+    fillEllipse(ctx, hx + 0.25 * scale, hy - 0.08 * scale, 0.18 * scale, 0.14 * scale, glovesCol.hl || glovesCol.base);
   };
 
   window.Parts = Parts;

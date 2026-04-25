@@ -44,8 +44,16 @@
       showWeapon: true, showBody: true,
       alpha: 1, tint: null,
       handAtGrip: true,
+      motion: 'idle',
+      motionFrame: 0,
       aimAngle: 0
     };
+  }
+
+  function mark(d, motion, frameIdx) {
+    d.motion = motion;
+    d.motionFrame = frameIdx || 0;
+    return d;
   }
 
   // ---------- IDLE (4 frames, gentle breathing) ----------
@@ -54,7 +62,7 @@
     frames: 4,
     fps: 4,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'idle', i);
       const bob = [0, 0, -1, 0][i];
       d.bodyDY = bob;
       // headDY is additive on top of bodyDY; keep it 0 so the head rides with
@@ -73,7 +81,7 @@
     frames: 8,
     fps: 10,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'walk', i);
       const t = i / 8;
       const cycle = Math.sin(t * TAU);
       const cycle2 = Math.sin(t * TAU + Math.PI);
@@ -100,7 +108,7 @@
     frames: 6,
     fps: 14,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'run', i);
       const t = i / 6;
       const cycle = Math.sin(t * TAU);
       const cycle2 = Math.sin(t * TAU + Math.PI);
@@ -124,7 +132,7 @@
     frames: 2,
     fps: 2,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'aim', i);
       d.bodyDY = i === 1 ? -1 : 0;
       d.headDY = 0;
       d.aimAngle = -0.1;  // slight upward
@@ -140,23 +148,27 @@
     frames: 4,
     fps: 14,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'shoot', i);
       d.aimAngle = -0.1;
       d.stance = 'wide';
       if (i === 0) {
         d.weaponDX = 0;
         d.weaponAngle = 0;
+        d.recoilStage = 'pre';
       } else if (i === 1) {
         d.weaponDX = -2;
         d.weaponAngle = -0.15;
         d.muzzleFlash = true;
         d.bodyDY = -1;
+        d.recoilStage = 'kick';
       } else if (i === 2) {
         d.weaponDX = -1;
         d.weaponAngle = -0.08;
+        d.recoilStage = 'settle';
       } else {
         d.weaponDX = 0;
         d.weaponAngle = 0;
+        d.recoilStage = 'recover';
       }
       return d;
     }
@@ -168,7 +180,7 @@
     frames: 6,
     fps: 8,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'reload', i);
       d.stance = 'wide';
       // Weapon tilts downward, back hand moves to magazine
       const t = i / 5;
@@ -186,7 +198,7 @@
     frames: 3,
     fps: 8,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'hurt', i);
       if (i === 0) {
         d.bodyDY = -2;
         d.headDY = -1;   // small extra head snap-back on top of body recoil
@@ -217,7 +229,7 @@
     fps: 8,
     loop: false,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'dead', i);
       const fall = Math.min(1, i / 4);
       d.deathAngle = fall * (Math.PI / 2);  // rotate 90° to face down
       d.bodyDY = Math.round(fall * 6);
@@ -235,7 +247,7 @@
     frames: 8,
     fps: 16,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'roll', i);
       const t = i / 8;
       d.rollAngle = t * TAU;  // full rotation
       d.bodyDY = -Math.round(Math.sin(t * Math.PI) * 3);
@@ -252,7 +264,7 @@
     frames: 6,
     fps: 10,
     get: function (i) {
-      const d = defaults();
+      const d = mark(defaults(), 'throw', i);
       // Wind up -> throw -> follow-through
       if (i <= 2) {
         d.aimAngle = 1.6 - i * 0.4;  // arm way up behind
