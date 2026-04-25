@@ -131,12 +131,69 @@
     { name: 'PISTOL-08',  type: 'pistol',  sx: 832, sy: 661, sw:  21, sh: 15, gripX:  3, gripY: 14, foregripX:  3, foregripY: 14, muzzleX: 20, muzzleY:  2 }
   ];
 
+  const HOLD_BY_TYPE = {
+    pistol:  { holdStyle: 'pistol',  stanceProfile: 'one-hand', recoilProfile: 'snap' },
+    smg:     { holdStyle: 'smg',     stanceProfile: 'compact',  recoilProfile: 'buzz' },
+    rifle:   { holdStyle: 'rifle',   stanceProfile: 'shoulder', recoilProfile: 'medium' },
+    shotgun: { holdStyle: 'shotgun', stanceProfile: 'low-heavy', recoilProfile: 'pump' },
+    sniper:  { holdStyle: 'sniper',  stanceProfile: 'precision', recoilProfile: 'controlled-heavy' },
+    heavy:   { holdStyle: 'heavy',   stanceProfile: 'braced',   recoilProfile: 'heavy' }
+  };
+
+  const HOLD_OVERRIDES = {
+    'PISTOL-01':  { holdVariant: 'pocket' },
+    'PISTOL-02':  { holdVariant: 'long-slide' },
+    'PISTOL-04':  { holdVariant: 'long-slide' },
+    'PISTOL-06':  { holdVariant: 'long-slide' },
+    'SMG-01':     { holdVariant: 'compact' },
+    'SMG-04':     { holdVariant: 'tall-compact' },
+    'SMG-05':     { holdVariant: 'long-smg' },
+    'SMG-06':     { holdVariant: 'long-smg' },
+    'SMG-07':     { holdVariant: 'long-smg' },
+    'SHOTGUN-01': { holdVariant: 'short-shotgun' },
+    'SHOTGUN-02': { holdVariant: 'long-shotgun' },
+    'SHOTGUN-03': { holdVariant: 'long-shotgun' },
+    'SHOTGUN-05': { holdVariant: 'long-shotgun' },
+    'SHOTGUN-06': { holdVariant: 'long-shotgun' },
+    'SHOTGUN-08': { holdVariant: 'long-shotgun' },
+    'RIFLE-04':   { holdVariant: 'long-rifle' },
+    'RIFLE-05':   { holdVariant: 'long-rifle' },
+    'RIFLE-06':   { holdVariant: 'long-rifle' },
+    'RIFLE-08':   { holdVariant: 'long-rifle' },
+    'SNIPER-01':  { holdVariant: 'long-sniper' },
+    'SNIPER-05':  { holdVariant: 'long-sniper' },
+    'SNIPER-06':  { holdVariant: 'long-sniper' },
+    'SNIPER-07':  { holdVariant: 'long-sniper' },
+    'SNIPER-08':  { holdVariant: 'long-sniper' },
+    'SNIPER-09':  { holdVariant: 'compact-sniper' },
+    'SNIPER-10':  { holdVariant: 'compact-sniper' },
+    'HEAVY-01':   { holdVariant: 'launcher' },
+    'HEAVY-02':   { holdVariant: 'launcher' },
+    'HEAVY-03':   { holdVariant: 'launcher' },
+    'HEAVY-09':   { holdVariant: 'cannon' },
+    'HEAVY-13':   { holdVariant: 'cannon' },
+    'HEAVY-14':   { holdVariant: 'cannon' }
+  };
+
+  function holdMetaFor(def) {
+    return Object.assign(
+      {},
+      HOLD_BY_TYPE[def.type] || HOLD_BY_TYPE.rifle,
+      HOLD_OVERRIDES[def.name] || {}
+    );
+  }
+
   // ---------- Sprite-sheet weapon ----------
   function makeSheetWeapon(def) {
     const twoHanded = def.type !== 'pistol';
+    const holdMeta = holdMetaFor(def);
     const w = {
       name: def.name,
       type: def.type,
+      holdStyle: holdMeta.holdStyle,
+      holdVariant: holdMeta.holdVariant || 'standard',
+      stanceProfile: holdMeta.stanceProfile,
+      recoilProfile: holdMeta.recoilProfile,
       twoHanded,
       width: def.sw,
       height: def.sh,

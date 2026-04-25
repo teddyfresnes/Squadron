@@ -23,11 +23,10 @@ const DEFAULT_CFG = {
   weaponSkinIdx: 33  // sheet 33.png — default texture style
 };
 
-// Stage is sized to fit the largest weapons in the asset pack (sniper rifles
-// reach ~120 px). We keep the body 32 px tall but extend the stage so a
-// horizontally-aimed sniper doesn't clip.
-const STAGE_W = 192;
-const STAGE_H = 96;
+// Stage is sized to fit the largest weapons plus the 2x soldier body. Snipers
+// can now sit on the shoulder without clipping in either facing direction.
+const STAGE_W = 256;
+const STAGE_H = 112;
 const SCALE = 3;    // default display scale for main preview
 
 // ---------------- Animation player hook ----------------
@@ -224,7 +223,7 @@ function App() {
                 onClick={() => setAnimKey(k)}
               >
                 <div className="anim-preview-wrap">
-                  <AnimPreview cfg={cfg} animKey={k} scale={2} facing={1} />
+                  <AnimPreview cfg={cfg} animKey={k} scale={1} facing={1} />
                 </div>
                 <div className="anim-label">{window.Anims[k].name}</div>
                 <div className="anim-meta">{window.Anims[k].frames}f</div>
@@ -327,7 +326,7 @@ function FrameStrip({ cfg, animKey, facing }) {
       <div className="frame-strip-inner">
         {frames.map((i) => (
           <div key={i} className="frame-cell">
-            <SpriteCanvas cfg={cfg} animKey={animKey} frame={i} scale={3} facing={facing} />
+            <SpriteCanvas cfg={cfg} animKey={animKey} frame={i} scale={2} facing={facing} />
             <div className="frame-idx">{String(i).padStart(2, '0')}</div>
           </div>
         ))}
@@ -345,7 +344,7 @@ function AllAnimsRow({ cfg, facing }) {
         {window.AnimList.map((k) => (
           <div key={k} className="all-anim-cell">
             <div className="all-anim-preview">
-              <AnimPreview cfg={cfg} animKey={k} scale={3} facing={facing} running={true} />
+              <AnimPreview cfg={cfg} animKey={k} scale={2} facing={facing} running={true} />
             </div>
             <div className="all-anim-name">{window.Anims[k].name}</div>
           </div>

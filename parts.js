@@ -422,14 +422,9 @@
   // ---------- ARM ----------
   // Arm drawn as segment from shoulder to hand, at an angle.
   // We render it pixel-wise using Bresenham with given color.
-  Parts.drawArm = function (ctx, sx, sy, hx, hy, uniform, glovesCol) {
-    const b = uniform.base, s = uniform.shade;
-    const O = P.outline;
-    const gb = glovesCol.base;
-
-    // Bresenham from (sx,sy) to (hx,hy)
+  function linePoints(x0, y0, x1, y1) {
     const points = [];
-    let x0 = sx | 0, y0 = sy | 0, x1 = hx | 0, y1 = hy | 0;
+    x0 = x0 | 0; y0 = y0 | 0; x1 = x1 | 0; y1 = y1 | 0;
     const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
     const sx2 = x0 < x1 ? 1 : -1;
     const sy2 = y0 < y1 ? 1 : -1;
@@ -441,24 +436,64 @@
       if (e2 > -dy) { err -= dy; x0 += sx2; }
       if (e2 < dx)  { err += dx; y0 += sy2; }
     }
-    // Draw outline first (expanded)
-    for (const [x, y] of points) {
-      E.px(ctx, x, y - 1, O);
-      E.px(ctx, x, y + 1, O);
-      E.px(ctx, x - 1, y, O);
-      E.px(ctx, x + 1, y, O);
+    return points;
+  }
+
+  function drawHand(ctx, hx, hy, glovesCol, opts) {
+    opts = opts || {};
+    const O = P.outline;
+    const gb = glovesCol.base;
+    hx = hx | 0; hy = hy | 0;
+    if (opts.large) {
+      E.rect(ctx, hx - 1, hy - 1, 4, 4, O);
+      E.rect(ctx, hx, hy, 2, 2, gb);
+      E.px(ctx, hx + 1, hy, glovesCol.hl || gb);
+      return;
     }
-    // Then arm
-    for (const [x, y] of points) {
-      E.px(ctx, x, y, b);
-    }
-    // Hand / glove at end
     E.px(ctx, hx, hy, gb);
     E.px(ctx, hx, hy - 1, O);
     E.px(ctx, hx, hy + 1, O);
     E.px(ctx, hx + 1, hy, O);
     E.px(ctx, hx - 1, hy, O);
     E.px(ctx, hx, hy, gb);
+  }
+
+  function drawArmPath(ctx, points, uniform, glovesCol, opts) {
+    opts = opts || {};
+    const b = uniform.base, s = uniform.shade;
+    const O = P.outline;
+    const outline = opts.thick ? [[0, -2], [0, 2], [-2, 0], [2, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]] :
+      [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    const fill = opts.thick ? [[0, 0], [1, 0], [0, 1]] : [[0, 0]];
+
+    for (const [x, y] of points) {
+      for (const [ox, oy] of outline) E.px(ctx, x + ox, y + oy, O);
+    }
+    for (const [x, y] of points) {
+      for (const [ox, oy] of fill) E.px(ctx, x + ox, y + oy, b);
+      if (opts.thick) E.px(ctx, x + 1, y + 1, s);
+    }
+    const last = points[points.length - 1];
+    if (last) drawHand(ctx, last[0], last[1], glovesCol, { large: opts.handLarge });
+  }
+
+  Parts.drawArm = function (ctx, sx, sy, hx, hy, uniform, glovesCol) {
+    drawArmPath(ctx, linePoints(sx, sy, hx, hy), uniform, glovesCol, { thick: false, handLarge: false });
+  };
+
+  Parts.drawBentArm = function (ctx, sx, sy, ex, ey, hx, hy, uniform, glovesCol, opts) {
+    opts = opts || {};
+    const a = linePoints(sx, sy, ex, ey);
+    const b = linePoints(ex, ey, hx, hy);
+    if (a.length && b.length) b.shift();
+    drawArmPath(ctx, a.concat(b), uniform, glovesCol, {
+      thick: opts.thick !== false,
+      handLarge: opts.handLarge !== false
+    });
+  };
+
+  Parts.drawHand = function (ctx, hx, hy, glovesCol, opts) {
+    drawHand(ctx, hx, hy, glovesCol, opts);
   };
 
   window.Parts = Parts;
