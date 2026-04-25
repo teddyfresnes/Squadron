@@ -16,9 +16,12 @@
   //
   // All coords in the 64x64 stage.
 
-  function renderFrame(ctx, stageW, stageH, cfg, anim, frameIdx, facing) {
+  function renderFrame(ctx, stageW, stageH, cfg, anim, frameIdx, facing, options) {
+    options = options || {};
     facing = facing || 1;  // +1 right, -1 left
     const frame = anim.get(frameIdx);
+    const renderScale = options.renderScale || 1;
+    const smooth = options.smooth === true;
 
     // Pick data from config
     const skin = P.skin[cfg.skinIdx];
@@ -31,10 +34,29 @@
     const hatKind = P.hat[cfg.hatIdx].name;
     const hatCol = P.hat[cfg.hatIdx];
     const hairStyle = P.hairstyles[cfg.hairStyleIdx].name;
-    const weapon = window.Weapons.list[cfg.weaponIdx];
+    const weapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
+    const drawBackpack = smooth && Parts.drawBackpackHD ? Parts.drawBackpackHD : Parts.drawBackpack;
+    const drawWaistBridge = smooth && Parts.drawWaistBridgeHD ? Parts.drawWaistBridgeHD : Parts.drawWaistBridge;
+    const drawNeck = smooth && Parts.drawNeckHD ? Parts.drawNeckHD : Parts.drawNeck;
+    const drawHead = smooth && Parts.drawHeadHD ? Parts.drawHeadHD : Parts.drawHead;
+    const drawHair = smooth && Parts.drawHairHD ? Parts.drawHairHD : Parts.drawHair;
+    const drawHat = smooth && Parts.drawHatHD ? Parts.drawHatHD : Parts.drawHat;
+    const drawEye = smooth && Parts.drawEyeHD ? Parts.drawEyeHD : Parts.drawEye;
+    const drawTorso = smooth && Parts.drawTorsoHD ? Parts.drawTorsoHD : Parts.drawTorso;
+    const drawVest = smooth && Parts.drawVestHD ? Parts.drawVestHD : Parts.drawVest;
+    const drawLegs = smooth && Parts.drawLegsHD ? Parts.drawLegsHD : Parts.drawLegs;
+    const drawArm = smooth && Parts.drawArmHD ? Parts.drawArmHD : Parts.drawArm;
 
     // Clear stage
-    E.clear(ctx, stageW, stageH);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    E.clear(ctx, ctx.canvas.width, ctx.canvas.height);
+    ctx.restore();
+
+    ctx.save();
+    ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    ctx.imageSmoothingEnabled = smooth;
+    ctx.imageSmoothingQuality = 'high';
 
     // Hurt flash backdrop alpha handled via globalAlpha
     ctx.globalAlpha = frame.alpha || 1;
@@ -76,7 +98,7 @@
     const legsTL_y = originY + 0;  // legs always planted; only frame.legs offsets change
 
     // ---- Draw backpack first (behind body when facing right, back = left side)
-    if (pack) Parts.drawBackpack(ctx, torsoTL_x, torsoTL_y, pack);
+    if (pack) drawBackpack(ctx, torsoTL_x, torsoTL_y, pack);
 
     // ---- Draw back arm (behind body) — only for two-handed weapons
     // We'll place it after torso for front arm; back arm drawn BEFORE torso so it appears behind.
@@ -117,21 +139,21 @@
 
     // ---- Draw back arm BEHIND torso
     if (backHand && !frame.tuck) {
-      Parts.drawArm(ctx, shoulderBackX, shoulderBackY, backHand.hx, backHand.hy, uniform, P.gloves);
+      drawArm(ctx, shoulderBackX, shoulderBackY, backHand.hx, backHand.hy, uniform, P.gloves);
     }
 
     // ---- Legs
-    Parts.drawLegs(ctx, torsoTL_x, legsTL_y, pants, frame.legs);
+    drawLegs(ctx, torsoTL_x, legsTL_y, pants, frame.legs);
 
     // ---- Waist bridge — fills any gap between the (possibly lifted) torso and
     // the planted legs so body bobs can't expose background between them.
-    Parts.drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8, legsTL_y);
+    drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8, legsTL_y);
 
     // ---- Torso
-    Parts.drawTorso(ctx, torsoTL_x, torsoTL_y, uniform);
+    drawTorso(ctx, torsoTL_x, torsoTL_y, uniform);
 
     // ---- Vest over torso
-    if (vest) Parts.drawVest(ctx, torsoTL_x, torsoTL_y, vest);
+    if (vest) drawVest(ctx, torsoTL_x, torsoTL_y, vest);
 
     // ---- Backpack strap crossing torso
     if (pack) {
@@ -145,28 +167,28 @@
     // ---- Neck — skin bridge from head chin to torso collar.
     // Always renders at least 1 row so the head never floats away from the body
     // regardless of head/body DY offsets. Stretches up to 3 rows for dramatic poses.
-    Parts.drawNeck(ctx, originX, headTL_y + 9, torsoTL_y, skin);
+    drawNeck(ctx, originX, headTL_y + 9, torsoTL_y, skin);
 
     // ---- Head
-    Parts.drawHead(ctx, headTL_x, headTL_y, skin, { hurt: frame.mouthHurt });
+    drawHead(ctx, headTL_x, headTL_y, skin, { hurt: frame.mouthHurt });
 
     // ---- Hair (under hat)
     if (!hatCol || hatKind === 'None' || hatKind === 'Bandana') {
-      Parts.drawHair(ctx, headTL_x, headTL_y, hairStyle, hair);
+      drawHair(ctx, headTL_x, headTL_y, hairStyle, hair);
     } else if (hatKind === 'Cap' || hatKind === 'Boonie') {
       // Keep back hair visible
       if (hairStyle === 'Long' || hairStyle === 'Ponytail' || hairStyle === 'Messy') {
-        Parts.drawHair(ctx, headTL_x, headTL_y, hairStyle, hair);
+        drawHair(ctx, headTL_x, headTL_y, hairStyle, hair);
       }
     }
 
     // ---- Hat
     if (hatCol && hatKind !== 'None') {
-      Parts.drawHat(ctx, headTL_x, headTL_y, hatKind, hatCol);
+      drawHat(ctx, headTL_x, headTL_y, hatKind, hatCol);
     }
 
     // ---- Eye
-    Parts.drawEye(ctx, headTL_x, headTL_y, eye.base, { closed: frame.eyesClosed });
+    drawEye(ctx, headTL_x, headTL_y, eye.base, { closed: frame.eyesClosed });
 
     // ---- Weapon + front arm
     const showWeapon = frame.showWeapon !== false && !frame.weaponDropped;
@@ -202,7 +224,7 @@
     }
 
     // ---- Front arm (on top of body and weapon grip)
-    Parts.drawArm(ctx, shoulderFrontX, shoulderFrontY, fh.hx, fh.hy, uniform, P.gloves);
+    drawArm(ctx, shoulderFrontX, shoulderFrontY, fh.hx, fh.hy, uniform, P.gloves);
 
     // Released grenade in front of thrower
     if (frame.grenadeReleased) {
@@ -226,6 +248,7 @@
     }
 
     ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   window.CharacterRenderer = { renderFrame };

@@ -1,302 +1,321 @@
-// Weapons — all drawn facing right. Each returns { width, height, gripX, gripY, muzzleX, muzzleY, draw(ctx, x, y, flipX) }
-// gripX/gripY are where the main (front) hand holds the weapon — this is the anchor we pin to the front hand.
-// The sprite is drawn with gripX/gripY placed AT the hand's pixel.
+// Weapons atlas. Each source sheet in assets/weapons contains the same layout;
+// only the texture/style changes. The detected regions below come from 33.png.
 
 (function () {
-  const E = window.Engine;
-  const O = '#0a0a10';
+  const DEFAULT_SHEET_ID = 33;
+  const SOURCE_SCALE = 0.25;
+  const SHEET_IDS = Array.from({ length: 34 }, (_, i) => i);
 
-  function makeWeapon(def) {
+  const REGIONS = [
+    [45, 19, 32, 20],
+    [111, 19, 46, 20],
+    [206, 19, 52, 20],
+    [353, 19, 45, 16],
+    [448, 19, 67, 17],
+    [560, 19, 73, 19],
+    [894, 19, 75, 27],
+    [700, 24, 56, 22],
+    [809, 28, 45, 18],
+    [353, 44, 41, 15],
+    [448, 44, 64, 16],
+    [560, 44, 65, 16],
+    [45, 53, 24, 22],
+    [111, 53, 36, 22],
+    [206, 53, 45, 22],
+    [892, 54, 82, 21],
+    [700, 59, 62, 16],
+    [815, 63, 47, 12],
+    [352, 68, 49, 15],
+    [449, 69, 59, 16],
+    [560, 69, 73, 16],
+    [893, 83, 85, 24],
+    [700, 87, 63, 20],
+    [111, 89, 31, 32],
+    [206, 89, 40, 32],
+    [818, 90, 38, 17],
+    [352, 92, 65, 16],
+    [45, 93, 22, 22],
+    [448, 94, 75, 14],
+    [560, 94, 75, 14],
+    [352, 117, 61, 15],
+    [448, 117, 62, 15],
+    [560, 117, 79, 15],
+    [700, 120, 56, 18],
+    [894, 120, 76, 18],
+    [813, 124, 39, 14],
+    [111, 136, 38, 33],
+    [206, 136, 54, 33],
+    [45, 138, 27, 31],
+    [352, 140, 64, 16],
+    [448, 141, 84, 16],
+    [560, 141, 84, 16],
+    [700, 151, 55, 17],
+    [900, 151, 72, 17],
+    [818, 155, 37, 13],
+    [352, 166, 54, 15],
+    [448, 166, 71, 15],
+    [560, 166, 80, 15],
+    [900, 177, 74, 24],
+    [700, 180, 62, 15],
+    [45, 183, 46, 13],
+    [111, 183, 62, 16],
+    [206, 183, 75, 22],
+    [816, 183, 36, 12],
+    [352, 190, 67, 15],
+    [447, 190, 78, 15],
+    [560, 190, 81, 15],
+    [700, 208, 60, 15],
+    [899, 208, 78, 19],
+    [804, 209, 44, 14],
+    [111, 213, 57, 23],
+    [206, 213, 74, 23],
+    [45, 214, 43, 22],
+    [352, 214, 43, 16],
+    [448, 214, 60, 16],
+    [560, 214, 72, 16],
+    [700, 236, 60, 15],
+    [807, 236, 38, 15],
+    [899, 236, 78, 16],
+    [352, 239, 37, 16],
+    [448, 239, 54, 16],
+    [560, 239, 64, 16],
+    [206, 249, 76, 32],
+    [45, 250, 44, 27],
+    [111, 250, 60, 27],
+    [700, 264, 61, 26],
+    [823, 264, 31, 22],
+    [894, 264, 83, 26],
+    [206, 290, 73, 18],
+    [45, 291, 39, 15],
+    [111, 291, 64, 15],
+    [891, 301, 76, 16],
+    [700, 303, 49, 15],
+    [806, 303, 34, 14],
+    [45, 320, 27, 15],
+    [135, 320, 40, 15],
+    [206, 320, 64, 21],
+    [893, 330, 74, 16],
+    [700, 331, 51, 15],
+    [817, 331, 24, 15],
+    [206, 348, 67, 32],
+    [110, 349, 53, 27],
+    [45, 354, 38, 22],
+    [700, 359, 60, 15],
+    [808, 359, 42, 15],
+    [894, 359, 79, 15],
+    [700, 387, 54, 20],
+    [893, 387, 72, 22],
+    [810, 389, 32, 18],
+    [111, 391, 43, 24],
+    [45, 392, 27, 23],
+    [206, 392, 57, 23],
+    [700, 420, 59, 22],
+    [893, 420, 81, 22],
+    [810, 421, 36, 21],
+    [352, 500, 112, 24],
+    [493, 500, 82, 24],
+    [614, 500, 131, 24],
+    [25, 511, 49, 17],
+    [128, 511, 53, 17],
+    [238, 511, 45, 17],
+    [832, 511, 16, 14],
+    [874, 511, 16, 14],
+    [915, 511, 18, 14],
+    [832, 530, 28, 16],
+    [874, 530, 28, 16],
+    [915, 530, 29, 16],
+    [352, 539, 106, 20],
+    [492, 539, 85, 20],
+    [614, 539, 138, 20],
+    [127, 544, 67, 17],
+    [23, 546, 63, 14],
+    [236, 546, 52, 14],
+    [832, 551, 26, 16],
+    [873, 551, 27, 16],
+    [913, 551, 29, 16],
+    [913, 571, 31, 17],
+    [832, 572, 29, 16],
+    [874, 572, 29, 16],
+    [352, 574, 96, 23],
+    [492, 574, 70, 23],
+    [615, 574, 128, 23],
+    [127, 580, 81, 21],
+    [25, 584, 75, 15],
+    [238, 584, 63, 15],
+    [832, 593, 22, 16],
+    [874, 593, 22, 16],
+    [915, 593, 22, 16],
+    [354, 612, 93, 22],
+    [492, 612, 79, 22],
+    [615, 612, 128, 22],
+    [915, 613, 30, 17],
+    [832, 614, 29, 16],
+    [874, 614, 29, 16],
+    [122, 622, 87, 21],
+    [25, 625, 56, 16],
+    [238, 625, 48, 16],
+    [832, 637, 20, 17],
+    [915, 637, 23, 19],
+    [874, 638, 20, 16],
+    [354, 649, 111, 24],
+    [499, 649, 78, 24],
+    [615, 649, 140, 27],
+    [832, 661, 21, 15],
+    [874, 662, 21, 14],
+    [915, 662, 21, 14],
+    [121, 666, 94, 17],
+    [25, 667, 70, 15],
+    [238, 667, 56, 15],
+    [354, 688, 109, 22],
+    [494, 688, 74, 22],
+    [615, 688, 146, 25],
+    [128, 707, 83, 14],
+    [25, 708, 69, 16],
+    [245, 708, 50, 14],
+    [354, 725, 118, 18],
+    [501, 725, 76, 18],
+    [615, 725, 146, 18],
+    [126, 747, 85, 23],
+    [25, 750, 49, 16],
+    [244, 750, 43, 13],
+    [354, 753, 117, 26],
+    [504, 753, 77, 26],
+    [614, 753, 143, 26],
+    [25, 793, 74, 15],
+    [123, 793, 92, 16],
+    [248, 793, 57, 11],
+    [354, 794, 81, 26],
+    [498, 794, 59, 25],
+    [614, 794, 110, 27],
+    [354, 835, 81, 21],
+    [498, 835, 57, 20],
+    [614, 835, 121, 21]
+  ];
+
+  const cache = new Map();
+  let activeSheetId = DEFAULT_SHEET_ID;
+  let activeImage = null;
+  let loadToken = 0;
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const pad3 = (n) => String(n).padStart(3, '0');
+
+  function normalizeSheetId(sheetId) {
+    const id = Number(sheetId);
+    return SHEET_IDS.includes(id) ? id : DEFAULT_SHEET_ID;
+  }
+
+  function event(name, detail) {
+    window.dispatchEvent(new CustomEvent(name, { detail }));
+  }
+
+  function loadImage(sheetId) {
+    if (cache.has(sheetId)) return cache.get(sheetId);
+    const image = new Image();
+    image.decoding = 'async';
+    image.src = `assets/weapons/${sheetId}.png`;
+    cache.set(sheetId, image);
+    return image;
+  }
+
+  function setSheet(sheetId) {
+    const id = normalizeSheetId(sheetId);
+    activeSheetId = id;
+    const image = loadImage(id);
+    const token = ++loadToken;
+
+    const publish = () => {
+      if (token !== loadToken || activeSheetId !== id) return;
+      activeImage = image;
+      event('weapons:loaded', { sheetId: id });
+    };
+
+    if (image.complete && image.naturalWidth > 0) {
+      publish();
+      return;
+    }
+
+    image.addEventListener('load', publish, { once: true });
+    image.addEventListener('error', () => {
+      if (token !== loadToken || activeSheetId !== id) return;
+      event('weapons:error', { sheetId: id });
+    }, { once: true });
+  }
+
+  function classify(width, height) {
+    if (width <= 7 && height <= 6) {
+      return { type: 'grenade', twoHanded: false };
+    }
+    if (width <= 13) {
+      return { type: 'sidearm', twoHanded: false };
+    }
+    if (width >= 24) {
+      return { type: 'heavy', twoHanded: true };
+    }
+    return { type: 'longgun', twoHanded: width >= 14 };
+  }
+
+  function makeAnchors(width, height, twoHanded) {
+    const gripBias = twoHanded ? 0.34 : 0.28;
+    const gripX = clamp(Math.round(width * gripBias), 1, Math.max(1, width - 1));
+    const gripY = clamp(Math.round(height * 0.72), 1, Math.max(1, height - 1));
+    const foregripX = clamp(Math.round(width * 0.64), gripX + 1, width);
+    const foregripY = clamp(Math.round(height * 0.55), 0, Math.max(0, height - 1));
+    const muzzleY = clamp(Math.round(height * 0.42), 0, Math.max(0, height - 1));
+    return { gripX, gripY, foregripX, foregripY, muzzleX: width, muzzleY };
+  }
+
+  function makeWeapon(region, index) {
+    const [sx, sy, sw, sh] = region;
+    const width = Math.max(1, sw * SOURCE_SCALE);
+    const height = Math.max(1, sh * SOURCE_SCALE);
+    const role = classify(width, height);
+    const anchors = makeAnchors(width, height, role.twoHanded);
+
     return {
-      name: def.name,
-      type: def.type,
-      twoHanded: def.twoHanded || false,
-      width: def.width,
-      height: def.height,
-      gripX: def.gripX,
-      gripY: def.gripY,
-      foregripX: def.foregripX,
-      foregripY: def.foregripY,
-      muzzleX: def.muzzleX,
-      muzzleY: def.muzzleY,
-      draw: function (ctx, px, py, flipX) {
-        // px,py is where grip anchor goes. So top-left of sprite is px-gripX, py-gripY.
-        const tlx = px - def.gripX;
-        const tly = py - def.gripY;
+      name: `Weapon ${pad3(index + 1)}`,
+      type: role.type,
+      twoHanded: role.twoHanded,
+      width,
+      height,
+      gripX: anchors.gripX,
+      gripY: anchors.gripY,
+      foregripX: anchors.foregripX,
+      foregripY: anchors.foregripY,
+      muzzleX: anchors.muzzleX,
+      muzzleY: anchors.muzzleY,
+      source: { sx, sy, sw, sh },
+      draw(ctx, px, py, flipX) {
+        if (!activeImage || !activeImage.complete || activeImage.naturalWidth === 0) return;
+
+        const tlx = px - anchors.gripX;
+        const tly = py - anchors.gripY;
+
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         if (flipX) {
-          ctx.save();
-          ctx.translate(tlx + def.width, tly);
+          ctx.translate(tlx + width, tly);
           ctx.scale(-1, 1);
-          def.draw(ctx, 0, 0);
-          ctx.restore();
+          ctx.drawImage(activeImage, sx, sy, sw, sh, 0, 0, width, height);
         } else {
-          def.draw(ctx, tlx, tly);
+          ctx.drawImage(activeImage, sx, sy, sw, sh, tlx, tly, width, height);
         }
+        ctx.restore();
       }
     };
   }
 
-  // Common draw helper
-  const px = (ctx, x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x|0, y|0, 1, 1); };
-  const rect = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x|0, y|0, w|0, h|0); };
-
-  // ---------- PISTOL ----------
-  const pistol = makeWeapon({
-    name: 'Pistol',
-    type: 'pistol',
-    twoHanded: false,
-    width: 9, height: 6,
-    gripX: 2, gripY: 4,    // grip position (where hand holds)
-    muzzleX: 9, muzzleY: 2, // where bullets exit
-    draw: function (ctx, x, y) {
-      const M = '#52525a';  // metal
-      const Ms = '#2a2a32';
-      const Mh = '#8a8a92';
-      // Slide (top)
-      rect(ctx, x + 2, y + 1, 6, 2, M);
-      px(ctx, x + 2, y + 1, Mh);
-      px(ctx, x + 3, y + 1, Mh);
-      rect(ctx, x + 2, y + 3, 6, 1, Ms);
-      // Barrel tip
-      px(ctx, x + 8, y + 2, Ms);
-      // Grip
-      rect(ctx, x + 2, y + 3, 2, 3, '#3a2a20');
-      px(ctx, x + 2, y + 5, O);
-      px(ctx, x + 3, y + 5, O);
-      // Trigger guard
-      px(ctx, x + 4, y + 4, O);
-      px(ctx, x + 4, y + 5, O);
-      px(ctx, x + 5, y + 5, O);
-      // Outline
-      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
-    }
-  });
-
-  // ---------- SMG ----------
-  const smg = makeWeapon({
-    name: 'SMG',
-    type: 'smg',
-    twoHanded: true,
-    width: 13, height: 7,
-    gripX: 3, gripY: 5,
-    foregripX: 8, foregripY: 4,
-    muzzleX: 13, muzzleY: 2,
-    draw: function (ctx, x, y) {
-      const M = '#42424a';
-      const Ms = '#20202a';
-      const Mh = '#72727a';
-      // Upper receiver
-      rect(ctx, x + 2, y + 1, 8, 2, M);
-      rect(ctx, x + 2, y + 1, 8, 1, Mh);
-      // Barrel
-      rect(ctx, x + 9, y + 2, 4, 1, Ms);
-      // Stock folded / short
-      px(ctx, x + 1, y + 2, M);
-      px(ctx, x + 0, y + 2, Ms);
-      // Magazine
-      rect(ctx, x + 4, y + 3, 2, 3, Ms);
-      px(ctx, x + 4, y + 5, O);
-      px(ctx, x + 5, y + 5, O);
-      // Grip
-      rect(ctx, x + 2, y + 3, 2, 3, '#2a2a30');
-      // Trigger guard hint
-      px(ctx, x + 3, y + 4, O);
-      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
-    }
-  });
-
-  // ---------- ASSAULT RIFLE ----------
-  const rifle = makeWeapon({
-    name: 'Assault Rifle',
-    type: 'rifle',
-    twoHanded: true,
-    width: 17, height: 7,
-    gripX: 5, gripY: 5,
-    foregripX: 11, foregripY: 4,
-    muzzleX: 17, muzzleY: 2,
-    draw: function (ctx, x, y) {
-      const M = '#3a3a42';
-      const Ms = '#1a1a22';
-      const Mh = '#62626a';
-      // Stock (back)
-      rect(ctx, x + 0, y + 2, 4, 2, '#3a2a20');
-      px(ctx, x + 0, y + 3, Ms);
-      // Upper receiver
-      rect(ctx, x + 4, y + 1, 9, 2, M);
-      rect(ctx, x + 4, y + 1, 9, 1, Mh);
-      // Sight
-      px(ctx, x + 7, y + 0, M);
-      px(ctx, x + 8, y + 0, Ms);
-      // Barrel
-      rect(ctx, x + 13, y + 2, 4, 1, Ms);
-      // Magazine
-      rect(ctx, x + 6, y + 3, 2, 4, M);
-      px(ctx, x + 6, y + 6, Ms);
-      px(ctx, x + 7, y + 6, Ms);
-      // Grip
-      rect(ctx, x + 4, y + 3, 2, 3, '#2a2a30');
-      // Foregrip / handguard
-      rect(ctx, x + 9, y + 3, 4, 1, Ms);
-      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
-    }
-  });
-
-  // ---------- SHOTGUN ----------
-  const shotgun = makeWeapon({
-    name: 'Shotgun',
-    type: 'shotgun',
-    twoHanded: true,
-    width: 16, height: 6,
-    gripX: 4, gripY: 4,
-    foregripX: 10, foregripY: 3,
-    muzzleX: 16, muzzleY: 2,
-    draw: function (ctx, x, y) {
-      const M = '#42342a';
-      const Ms = '#22180f';
-      const Metal = '#52525a';
-      const MetalS = '#2a2a32';
-      // Stock
-      rect(ctx, x + 0, y + 2, 4, 2, M);
-      rect(ctx, x + 0, y + 2, 4, 1, '#6a523a');
-      // Receiver
-      rect(ctx, x + 4, y + 1, 4, 3, Metal);
-      rect(ctx, x + 4, y + 1, 4, 1, '#7a7a82');
-      // Pump
-      rect(ctx, x + 9, y + 2, 3, 2, M);
-      // Barrel
-      rect(ctx, x + 8, y + 1, 8, 2, MetalS);
-      rect(ctx, x + 8, y + 1, 8, 1, Metal);
-      // Grip
-      rect(ctx, x + 4, y + 3, 2, 2, '#2a1a12');
-      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
-    }
-  });
-
-  // ---------- SNIPER ----------
-  const sniper = makeWeapon({
-    name: 'Sniper',
-    type: 'sniper',
-    twoHanded: true,
-    width: 22, height: 8,
-    gripX: 6, gripY: 6,
-    foregripX: 14, foregripY: 4,
-    muzzleX: 22, muzzleY: 3,
-    draw: function (ctx, x, y) {
-      const M = '#3a3a42';
-      const Ms = '#1a1a22';
-      const Mh = '#62626a';
-      // Stock
-      rect(ctx, x + 0, y + 3, 5, 2, '#3a2a20');
-      px(ctx, x + 0, y + 4, Ms);
-      // Receiver
-      rect(ctx, x + 5, y + 2, 6, 2, M);
-      rect(ctx, x + 5, y + 2, 6, 1, Mh);
-      // Scope
-      rect(ctx, x + 6, y + 0, 5, 2, Ms);
-      rect(ctx, x + 6, y + 0, 5, 1, M);
-      px(ctx, x + 5, y + 1, Ms);
-      px(ctx, x + 11, y + 1, Ms);
-      // Bolt handle hint
-      px(ctx, x + 10, y + 1, Mh);
-      // Long barrel
-      rect(ctx, x + 11, y + 3, 11, 1, Ms);
-      // Muzzle brake
-      rect(ctx, x + 20, y + 2, 2, 2, M);
-      // Bipod
-      px(ctx, x + 15, y + 4, Ms);
-      px(ctx, x + 15, y + 5, Ms);
-      px(ctx, x + 14, y + 6, Ms);
-      px(ctx, x + 16, y + 6, Ms);
-      // Magazine
-      rect(ctx, x + 7, y + 4, 2, 2, M);
-      // Grip
-      rect(ctx, x + 5, y + 4, 2, 3, '#2a2a30');
-      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
-    }
-  });
-
-  // ---------- ROCKET LAUNCHER ----------
-  const rocket = makeWeapon({
-    name: 'Rocket Launcher',
-    type: 'rocket',
-    twoHanded: true,
-    width: 18, height: 8,
-    gripX: 5, gripY: 6,
-    foregripX: 11, foregripY: 4,
-    muzzleX: 18, muzzleY: 3,
-    draw: function (ctx, x, y) {
-      const M = '#5a6a3a';  // olive tube
-      const Ms = '#3a4a22';
-      const Mh = '#7a8a52';
-      // Tube
-      rect(ctx, x + 1, y + 2, 16, 3, M);
-      rect(ctx, x + 1, y + 2, 16, 1, Mh);
-      rect(ctx, x + 1, y + 4, 16, 1, Ms);
-      // Rear flare
-      rect(ctx, x + 0, y + 1, 2, 5, Ms);
-      // Front flare
-      rect(ctx, x + 17, y + 1, 1, 5, Ms);
-      // Sight
-      rect(ctx, x + 7, y + 0, 2, 2, Ms);
-      px(ctx, x + 8, y + 0, Mh);
-      // Grip
-      rect(ctx, x + 4, y + 5, 2, 3, '#2a2a30');
-      // Warning stripe
-      px(ctx, x + 14, y + 3, '#b8a040');
-      px(ctx, x + 15, y + 3, '#b8a040');
-      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
-    }
-  });
-
-  // ---------- KNIFE ----------
-  const knife = makeWeapon({
-    name: 'Knife',
-    type: 'melee',
-    twoHanded: false,
-    width: 7, height: 3,
-    gripX: 1, gripY: 1,
-    muzzleX: 7, muzzleY: 1,
-    draw: function (ctx, x, y) {
-      // Handle
-      px(ctx, x + 0, y + 1, '#3a2a20');
-      px(ctx, x + 1, y + 1, '#5a3a22');
-      // Guard
-      px(ctx, x + 2, y + 0, O);
-      px(ctx, x + 2, y + 1, '#52525a');
-      px(ctx, x + 2, y + 2, O);
-      // Blade
-      for (let i = 3; i < 7; i++) {
-        px(ctx, x + i, y + 1, '#b8b8c2');
-      }
-      px(ctx, x + 6, y + 1, '#ffffff');
-      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
-    }
-  });
-
-  // ---------- GRENADE ----------
-  const grenade = makeWeapon({
-    name: 'Grenade',
-    type: 'grenade',
-    twoHanded: false,
-    width: 4, height: 5,
-    gripX: 1, gripY: 2,
-    muzzleX: 2, muzzleY: 2,
-    draw: function (ctx, x, y) {
-      // Body
-      rect(ctx, x + 1, y + 1, 2, 3, '#3a4a22');
-      px(ctx, x + 1, y + 1, '#5a6a3a');
-      // Lever
-      px(ctx, x + 2, y + 0, '#8a8a92');
-      px(ctx, x + 3, y + 0, '#8a8a92');
-      px(ctx, x + 3, y + 1, '#8a8a92');
-      // Pin (on top)
-      px(ctx, x + 0, y + 0, O);
-      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
-    }
-  });
+  const list = REGIONS.map(makeWeapon);
 
   window.Weapons = {
-    pistol, smg, rifle, shotgun, sniper, rocket, knife, grenade,
-    list: [pistol, smg, rifle, shotgun, sniper, rocket, knife, grenade]
+    DEFAULT_SHEET_ID,
+    sheetIds: SHEET_IDS,
+    list,
+    grenade: list[111] || list[0],
+    getSheetId: () => activeSheetId,
+    setSheet
   };
+
+  setSheet(DEFAULT_SHEET_ID);
 })();

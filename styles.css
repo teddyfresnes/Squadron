@@ -164,6 +164,32 @@ html, body {
   grid-template-columns: 1fr;
   gap: 5px;
 }
+.weapon-style-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.weapon-style {
+  all: unset;
+  cursor: pointer;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  font-size: 10px;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.weapon-style:hover { border-color: var(--border-2); color: var(--text); }
+.weapon-style.selected {
+  border-color: var(--accent-3);
+  color: var(--accent-3);
+  background: rgba(80,150,217,0.08);
+}
 .weapon-card {
   all: unset;
   cursor: pointer;

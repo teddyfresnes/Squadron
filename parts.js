@@ -461,5 +461,323 @@
     E.px(ctx, hx, hy, gb);
   };
 
+  // ---------- HD MIXED RENDERING ----------
+  // These variants keep the same logical anchors as the pixel versions, but use
+  // canvas paths so the high-resolution backing canvas can preserve smooth edges.
+  function roundRectPath(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+  }
+
+  function fillRoundRect(ctx, x, y, w, h, r, color) {
+    ctx.beginPath();
+    roundRectPath(ctx, x, y, w, h, r);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function fillEllipse(ctx, x, y, rx, ry, color) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function strokeLine(ctx, x1, y1, x2, y2, color, width) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function strokePath(ctx, color, width, draw) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    draw();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function fillPath(ctx, color, draw) {
+    ctx.beginPath();
+    draw();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  Parts.drawHeadHD = function (ctx, cx, cy, skin, opts) {
+    opts = opts || {};
+    const O = P.outline;
+    fillEllipse(ctx, cx + 4, cy + 4.7, 4.35, 4.9, O);
+    fillEllipse(ctx, cx + 4.35, cy + 4.65, 3.7, 4.15, skin.base);
+    fillEllipse(ctx, cx + 2.1, cy + 4.7, 1.15, 3.4, skin.shade);
+    fillEllipse(ctx, cx + 5.2, cy + 4.1, 1.35, 1.05, skin.hl);
+
+    fillEllipse(ctx, cx + 0.25, cy + 4.8, 0.75, 1.0, O);
+    fillEllipse(ctx, cx + 0.45, cy + 4.9, 0.45, 0.65, skin.shade);
+    fillPath(ctx, O, () => {
+      ctx.moveTo(cx + 7.15, cy + 4.25);
+      ctx.lineTo(cx + 8.7, cy + 5.05);
+      ctx.lineTo(cx + 7.15, cy + 5.65);
+      ctx.closePath();
+    });
+    fillPath(ctx, skin.base, () => {
+      ctx.moveTo(cx + 7.0, cy + 4.45);
+      ctx.lineTo(cx + 8.15, cy + 5.05);
+      ctx.lineTo(cx + 7.0, cy + 5.45);
+      ctx.closePath();
+    });
+    strokeLine(ctx, cx + 5.2, cy + 7.25, cx + (opts.hurt ? 6.65 : 5.95), cy + 7.25, O, 0.34);
+  };
+
+  Parts.drawEyeHD = function (ctx, cx, cy, eyeColor, opts) {
+    opts = opts || {};
+    const ex = cx + 5.7;
+    const ey = cy + 4.25;
+    if (opts.closed) {
+      strokeLine(ctx, ex - 0.45, ey, ex + 0.75, ey, P.outline, 0.35);
+      return;
+    }
+    fillEllipse(ctx, ex, ey, 0.9, 0.5, P.white);
+    fillEllipse(ctx, ex + 0.35, ey, 0.34, 0.4, eyeColor);
+  };
+
+  Parts.drawHairHD = function (ctx, cx, cy, style, hairCol) {
+    if (!style || style === 'Bald') return;
+    const O = P.outline;
+    const b = hairCol.base;
+    const h = hairCol.hl;
+
+    if (style === 'Mohawk') {
+      fillRoundRect(ctx, cx + 2.35, cy - 3.1, 3.6, 5.4, 0.9, O);
+      fillRoundRect(ctx, cx + 2.85, cy - 2.7, 2.6, 4.75, 0.75, b);
+      strokeLine(ctx, cx + 4.2, cy - 2.4, cx + 4.2, cy + 0.8, h, 0.45);
+      return;
+    }
+
+    fillPath(ctx, O, () => {
+      ctx.moveTo(cx + 0.3, cy + 3.4);
+      ctx.quadraticCurveTo(cx + 1.0, cy - 0.9, cx + 4.1, cy - 0.9);
+      ctx.quadraticCurveTo(cx + 7.35, cy - 0.45, cx + 7.6, cy + 3.1);
+      ctx.lineTo(cx + 6.3, cy + 4.0);
+      ctx.quadraticCurveTo(cx + 4.1, cy + 2.4, cx + 0.3, cy + 3.4);
+      ctx.closePath();
+    });
+    fillPath(ctx, b, () => {
+      ctx.moveTo(cx + 0.85, cy + 3.15);
+      ctx.quadraticCurveTo(cx + 1.35, cy - 0.35, cx + 4.15, cy - 0.35);
+      ctx.quadraticCurveTo(cx + 6.7, cy + 0.05, cx + 7.0, cy + 2.8);
+      ctx.quadraticCurveTo(cx + 4.3, cy + 1.85, cx + 0.85, cy + 3.15);
+      ctx.closePath();
+    });
+    strokeLine(ctx, cx + 3.7, cy + 0.1, cx + 5.7, cy + 1.15, h, 0.35);
+
+    if (style === 'Messy') {
+      strokePath(ctx, O, 0.55, () => {
+        ctx.moveTo(cx + 1.0, cy + 0.7);
+        ctx.lineTo(cx + 0.2, cy - 1.2);
+        ctx.moveTo(cx + 3.0, cy + 0.0);
+        ctx.lineTo(cx + 2.45, cy - 1.7);
+        ctx.moveTo(cx + 5.0, cy + 0.0);
+        ctx.lineTo(cx + 5.85, cy - 1.35);
+      });
+      strokePath(ctx, b, 0.34, () => {
+        ctx.moveTo(cx + 1.0, cy + 0.7);
+        ctx.lineTo(cx + 0.25, cy - 1.05);
+        ctx.moveTo(cx + 3.0, cy + 0.0);
+        ctx.lineTo(cx + 2.5, cy - 1.5);
+        ctx.moveTo(cx + 5.0, cy + 0.0);
+        ctx.lineTo(cx + 5.75, cy - 1.15);
+      });
+    } else if (style === 'Long') {
+      strokeLine(ctx, cx - 0.25, cy + 3.3, cx - 1.0, cy + 9.0, O, 1.5);
+      strokeLine(ctx, cx - 0.2, cy + 3.25, cx - 0.85, cy + 8.7, b, 0.95);
+    } else if (style === 'Ponytail') {
+      strokeLine(ctx, cx + 0.3, cy + 4.1, cx - 1.6, cy + 7.4, O, 2.0);
+      strokeLine(ctx, cx + 0.3, cy + 4.1, cx - 1.4, cy + 7.25, b, 1.25);
+    }
+  };
+
+  Parts.drawHatHD = function (ctx, cx, cy, hatKind, hatCol) {
+    if (!hatCol || hatKind === 'None') return;
+    const O = P.outline;
+    const b = hatCol.base;
+    const s = hatCol.shade;
+    const h = hatCol.hl;
+
+    if (hatKind === 'Cap') {
+      fillPath(ctx, O, () => {
+        ctx.moveTo(cx + 0.4, cy + 2.45);
+        ctx.quadraticCurveTo(cx + 1.5, cy - 1.2, cx + 4.8, cy - 1.0);
+        ctx.quadraticCurveTo(cx + 7.5, cy - 0.55, cx + 7.65, cy + 2.4);
+        ctx.lineTo(cx + 0.4, cy + 2.45);
+      });
+      fillPath(ctx, b, () => {
+        ctx.moveTo(cx + 0.95, cy + 2.0);
+        ctx.quadraticCurveTo(cx + 1.8, cy - 0.55, cx + 4.8, cy - 0.45);
+        ctx.quadraticCurveTo(cx + 6.85, cy - 0.15, cx + 7.0, cy + 2.0);
+        ctx.closePath();
+      });
+      fillRoundRect(ctx, cx + 6.0, cy + 1.35, 4.0, 0.95, 0.35, O);
+      fillRoundRect(ctx, cx + 6.0, cy + 1.05, 3.65, 0.72, 0.3, b);
+      strokeLine(ctx, cx + 3.3, cy + 0.1, cx + 4.85, cy + 0.35, h, 0.35);
+    } else if (hatKind === 'Beanie') {
+      fillRoundRect(ctx, cx + 0.1, cy - 1.45, 7.85, 5.1, 2.2, O);
+      fillRoundRect(ctx, cx + 0.65, cy - 0.95, 6.8, 4.05, 1.75, b);
+      strokeLine(ctx, cx + 1.1, cy + 2.75, cx + 7.1, cy + 2.75, s, 0.55);
+      strokeLine(ctx, cx + 2.7, cy - 0.25, cx + 4.3, cy - 0.4, h, 0.4);
+    } else if (hatKind === 'Helmet' || hatKind === 'Combat Helmet') {
+      fillPath(ctx, O, () => {
+        ctx.moveTo(cx - 0.1, cy + 2.8);
+        ctx.quadraticCurveTo(cx + 1.2, cy - 2.2, cx + 4.7, cy - 2.1);
+        ctx.quadraticCurveTo(cx + 8.2, cy - 1.7, cx + 8.15, cy + 3.2);
+        ctx.lineTo(cx - 0.1, cy + 2.8);
+      });
+      fillPath(ctx, b, () => {
+        ctx.moveTo(cx + 0.55, cy + 2.4);
+        ctx.quadraticCurveTo(cx + 1.55, cy - 1.45, cx + 4.7, cy - 1.45);
+        ctx.quadraticCurveTo(cx + 7.35, cy - 1.15, cx + 7.45, cy + 2.55);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 1.0, cy + 2.8, cx + 7.4, cy + 2.95, s, 0.55);
+      strokeLine(ctx, cx + 3.0, cy - 0.75, cx + 5.0, cy - 0.95, h, 0.45);
+      if (hatKind === 'Combat Helmet') {
+        fillRoundRect(ctx, cx + 5.2, cy - 2.25, 1.7, 0.9, 0.25, O);
+        fillRoundRect(ctx, cx + 5.55, cy - 2.05, 1.1, 0.5, 0.2, h);
+      }
+    } else if (hatKind === 'Boonie') {
+      fillRoundRect(ctx, cx - 1.2, cy + 2.0, 10.6, 1.45, 0.65, O);
+      fillRoundRect(ctx, cx - 0.75, cy + 1.85, 9.7, 0.95, 0.45, b);
+      fillPath(ctx, O, () => {
+        ctx.moveTo(cx + 1.0, cy + 2.15);
+        ctx.quadraticCurveTo(cx + 2.0, cy - 1.0, cx + 4.35, cy - 0.9);
+        ctx.quadraticCurveTo(cx + 6.85, cy - 0.75, cx + 7.15, cy + 2.2);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, () => {
+        ctx.moveTo(cx + 1.45, cy + 2.0);
+        ctx.quadraticCurveTo(cx + 2.2, cy - 0.45, cx + 4.35, cy - 0.35);
+        ctx.quadraticCurveTo(cx + 6.35, cy - 0.2, cx + 6.65, cy + 2.0);
+        ctx.closePath();
+      });
+    } else if (hatKind === 'Bandana') {
+      fillRoundRect(ctx, cx + 0.15, cy + 1.8, 7.7, 1.65, 0.45, O);
+      fillRoundRect(ctx, cx + 0.55, cy + 2.05, 6.9, 1.05, 0.35, b);
+      strokeLine(ctx, cx + 0.45, cy + 3.0, cx - 1.55, cy + 4.25, O, 0.9);
+      strokeLine(ctx, cx + 0.45, cy + 3.0, cx - 1.35, cy + 4.1, b, 0.5);
+      strokeLine(ctx, cx + 2.8, cy + 2.25, cx + 4.2, cy + 2.25, h, 0.35);
+    }
+  };
+
+  Parts.drawNeckHD = function (ctx, ox, topY, torsoY, skin) {
+    if (topY >= torsoY) return;
+    const h = torsoY - topY;
+    fillRoundRect(ctx, ox - 2.25, topY - 0.15, 4.5, h + 0.45, 0.7, P.outline);
+    fillRoundRect(ctx, ox - 1.45, topY, 2.9, h + 0.2, 0.55, skin.base);
+    fillRoundRect(ctx, ox - 1.45, topY, 0.95, h + 0.2, 0.45, skin.shade);
+  };
+
+  Parts.drawTorsoHD = function (ctx, tx, ty, uniform) {
+    const O = P.outline;
+    fillPath(ctx, O, () => {
+      ctx.moveTo(tx - 0.4, ty + 1.2);
+      ctx.quadraticCurveTo(tx + 2.0, ty - 0.35, tx + 4.0, ty - 0.15);
+      ctx.quadraticCurveTo(tx + 6.8, ty + 0.05, tx + 7.45, ty + 1.45);
+      ctx.lineTo(tx + 7.0, ty + 8.1);
+      ctx.lineTo(tx - 0.05, ty + 8.1);
+      ctx.closePath();
+    });
+    fillPath(ctx, uniform.base, () => {
+      ctx.moveTo(tx + 0.35, ty + 1.35);
+      ctx.quadraticCurveTo(tx + 2.2, ty + 0.45, tx + 4.0, ty + 0.55);
+      ctx.quadraticCurveTo(tx + 6.0, ty + 0.65, tx + 6.65, ty + 1.55);
+      ctx.lineTo(tx + 6.25, ty + 7.25);
+      ctx.lineTo(tx + 0.65, ty + 7.25);
+      ctx.closePath();
+    });
+    fillRoundRect(ctx, tx + 5.0, ty + 1.2, 1.35, 5.65, 0.4, uniform.shade);
+    fillRoundRect(ctx, tx + 0.85, ty + 6.35, 5.95, 1.15, 0.25, uniform.shade);
+    strokeLine(ctx, tx + 2.0, ty + 1.4, tx + 3.55, ty + 0.95, uniform.hl, 0.4);
+    fillEllipse(ctx, tx + 4.5, ty + 3.3, 0.28, 0.28, uniform.hl);
+    fillEllipse(ctx, tx + 4.45, ty + 5.1, 0.28, 0.28, uniform.hl);
+  };
+
+  Parts.drawVestHD = function (ctx, tx, ty, vest) {
+    if (!vest) return;
+    fillRoundRect(ctx, tx + 0.2, ty + 1.1, 6.75, 6.7, 0.8, P.outline);
+    fillRoundRect(ctx, tx + 0.75, ty + 1.55, 5.7, 5.65, 0.65, vest.base);
+    fillRoundRect(ctx, tx + 4.9, ty + 1.9, 0.9, 4.8, 0.35, vest.shade);
+    strokeLine(ctx, tx + 2.1, ty + 0.65, tx + 2.5, ty + 2.1, vest.strap, 0.6);
+    strokeLine(ctx, tx + 4.7, ty + 0.65, tx + 4.25, ty + 2.1, vest.strap, 0.6);
+    fillRoundRect(ctx, tx + 1.65, ty + 4.7, 1.2, 1.2, 0.25, vest.shade);
+    fillRoundRect(ctx, tx + 3.0, ty + 4.7, 1.2, 1.2, 0.25, vest.shade);
+    fillRoundRect(ctx, tx + 4.35, ty + 4.7, 1.2, 1.2, 0.25, vest.shade);
+  };
+
+  Parts.drawBackpackHD = function (ctx, tx, ty, pack) {
+    if (!pack) return;
+    fillRoundRect(ctx, tx - 2.65, ty + 1.1, 4.2, 7.0, 1.0, P.outline);
+    fillRoundRect(ctx, tx - 2.05, ty + 1.55, 3.05, 6.05, 0.75, pack.base);
+    fillRoundRect(ctx, tx - 1.6, ty + 2.1, 0.85, 2.5, 0.35, pack.hl);
+    strokeLine(ctx, tx - 2.0, ty + 4.9, tx + 0.75, ty + 4.9, pack.shade, 0.55);
+  };
+
+  Parts.drawWaistBridgeHD = function (ctx, tx, topY, legsY) {
+    if (topY >= legsY) return;
+    fillRoundRect(ctx, tx - 0.2, topY - 0.1, 7.35, legsY - topY + 0.35, 0.25, P.outline);
+  };
+
+  Parts.drawLegsHD = function (ctx, tx, ty, pants, legOffsets) {
+    legOffsets = legOffsets || { front: 0, back: 0, frontBend: 0, backBend: 0 };
+    const bootsB = P.boots.base;
+    const drawLeg = function (lx, ly, bend) {
+      const kneeX = lx + 0.9 + bend * 0.45;
+      const kneeY = ly + 3.2;
+      const footX = lx + 1.25 + bend;
+      const footY = ly + 6.25;
+      strokePath(ctx, P.outline, 2.45, () => {
+        ctx.moveTo(lx + 0.8, ly + 0.2);
+        ctx.lineTo(kneeX, kneeY);
+        ctx.lineTo(footX, footY);
+      });
+      strokePath(ctx, pants.base, 1.45, () => {
+        ctx.moveTo(lx + 0.8, ly + 0.2);
+        ctx.lineTo(kneeX, kneeY);
+        ctx.lineTo(footX, footY);
+      });
+      strokeLine(ctx, lx + 1.25, ly + 0.7, footX + 0.25, footY - 0.4, pants.shade, 0.45);
+      fillRoundRect(ctx, footX - 0.9, footY - 0.1, 3.2, 1.35, 0.45, P.outline);
+      fillRoundRect(ctx, footX - 0.45, footY - 0.35, 2.5, 0.9, 0.35, bootsB);
+    };
+    drawLeg(tx + 1, ty + legOffsets.back, legOffsets.backBend);
+    drawLeg(tx + 4, ty + legOffsets.front, legOffsets.frontBend);
+  };
+
+  Parts.drawArmHD = function (ctx, sx, sy, hx, hy, uniform, glovesCol) {
+    strokeLine(ctx, sx, sy, hx, hy, P.outline, 2.35);
+    strokeLine(ctx, sx, sy, hx, hy, uniform.base, 1.35);
+    strokeLine(ctx, sx + 0.15, sy - 0.15, hx - 0.2, hy - 0.15, uniform.hl || uniform.base, 0.35);
+    fillEllipse(ctx, hx, hy, 1.15, 1.05, P.outline);
+    fillEllipse(ctx, hx, hy, 0.72, 0.62, glovesCol.base);
+  };
+
   window.Parts = Parts;
 })();

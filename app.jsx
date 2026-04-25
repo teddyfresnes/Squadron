@@ -14,11 +14,17 @@ const DEFAULT_CFG = {
   backpackOn: false,
   backpackIdx: 1,
   hatIdx: 4,  // Combat Helmet
-  weaponIdx: 2  // Rifle
+  weaponIdx: 4,
+  weaponSheetIdx: 33
 };
 
 const STAGE = 64;   // stage size per frame
 const SCALE = 6;    // default display scale for main preview
+const MAX_DEVICE_PIXEL_RATIO = 2;
+
+function getRenderRatio() {
+  return Math.min(window.devicePixelRatio || 1, MAX_DEVICE_PIXEL_RATIO);
+}
 
 // ---------------- Animation player hook ----------------
 function useAnim(animKey, running) {
@@ -58,25 +64,35 @@ function useAnim(animKey, running) {
 }
 
 // ---------------- Canvas renderer component ----------------
-function SpriteCanvas({ cfg, animKey, frame, scale, facing }) {
+function SpriteCanvas({ cfg, animKey, frame, scale, facing, weaponVersion }) {
   const ref = useRef();
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
+    const ratio = getRenderRatio();
+    const cssW = STAGE * scale;
+    const cssH = STAGE * scale;
+    const targetW = Math.round(cssW * ratio);
+    const targetH = Math.round(cssH * ratio);
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+    }
     const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    window.CharacterRenderer.renderFrame(ctx, STAGE, STAGE, cfg, window.Anims[animKey], frame, facing || 1);
-  }, [cfg, animKey, frame, facing]);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    window.CharacterRenderer.renderFrame(ctx, STAGE, STAGE, cfg, window.Anims[animKey], frame, facing || 1, {
+      renderScale: scale * ratio,
+      smooth: true
+    });
+  }, [cfg, animKey, frame, facing, scale, weaponVersion]);
 
   return (
     <canvas
       ref={ref}
-      width={STAGE}
-      height={STAGE}
       style={{
         width: STAGE * scale,
         height: STAGE * scale,
-        imageRendering: 'pixelated',
         display: 'block'
       }}
     />
@@ -84,9 +100,9 @@ function SpriteCanvas({ cfg, animKey, frame, scale, facing }) {
 }
 
 // Plays the animation inside a small canvas
-function AnimPreview({ cfg, animKey, scale, facing, running }) {
+function AnimPreview({ cfg, animKey, scale, facing, running, weaponVersion }) {
   const frame = useAnim(animKey, running !== false);
-  return <SpriteCanvas cfg={cfg} animKey={animKey} frame={frame} scale={scale} facing={facing} />;
+  return <SpriteCanvas cfg={cfg} animKey={animKey} frame={frame} scale={scale} facing={facing} weaponVersion={weaponVersion} />;
 }
 
 // ---------------- UI components ----------------
@@ -157,13 +173,26 @@ function App() {
   const [bgMode, setBgMode] = useState('grid');
   const [showAll, setShowAll] = useState(false);
   const [scale, setScale] = useState(8);
+  const [weaponVersion, setWeaponVersion] = useState(0);
 
   useEffect(() => { localStorage.setItem('char-cfg', JSON.stringify(cfg)); }, [cfg]);
   useEffect(() => { localStorage.setItem('char-anim', animKey); }, [animKey]);
+  useEffect(() => {
+    const refreshWeapons = () => setWeaponVersion((v) => v + 1);
+    window.addEventListener('weapons:loaded', refreshWeapons);
+    window.addEventListener('weapons:error', refreshWeapons);
+    return () => {
+      window.removeEventListener('weapons:loaded', refreshWeapons);
+      window.removeEventListener('weapons:error', refreshWeapons);
+    };
+  }, []);
+  useEffect(() => {
+    window.Weapons.setSheet(cfg.weaponSheetIdx);
+  }, [cfg.weaponSheetIdx]);
 
   const set = (key) => (v) => setCfg((c) => ({ ...c, [key]: v }));
 
-  const currentWeapon = window.Weapons.list[cfg.weaponIdx];
+  const currentWeapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
 
   return (
     <div className="app">
@@ -177,6 +206,7 @@ function App() {
         </div>
         <div className="topbar-right">
           <div className="pill">{currentWeapon.name}</div>
+          <div className="pill">Texture {cfg.weaponSheetIdx ?? window.Weapons.DEFAULT_SHEET_ID}</div>
           <div className="pill">{window.Anims[animKey].name}</div>
           <div className="pill">{window.Anims[animKey].frames}f @ {window.Anims[animKey].fps}fps</div>
         </div>
@@ -194,7 +224,7 @@ function App() {
                 onClick={() => setAnimKey(k)}
               >
                 <div className="anim-preview-wrap">
-                  <AnimPreview cfg={cfg} animKey={k} scale={2} facing={1} />
+                  <AnimPreview cfg={cfg} animKey={k} scale={2} facing={1} weaponVersion={weaponVersion} />
                 </div>
                 <div className="anim-label">{window.Anims[k].name}</div>
                 <div className="anim-meta">{window.Anims[k].frames}f</div>
@@ -203,6 +233,18 @@ function App() {
           </div>
 
           <div className="panel-title" style={{marginTop: 16}}>WEAPON</div>
+          <div className="weapon-style-grid">
+            {window.Weapons.sheetIds.map((id) => (
+              <button
+                key={id}
+                className={'weapon-style' + ((cfg.weaponSheetIdx ?? window.Weapons.DEFAULT_SHEET_ID) === id ? ' selected' : '')}
+                onClick={() => set('weaponSheetIdx')(id)}
+                title={'Texture ' + id}
+              >
+                {id}
+              </button>
+            ))}
+          </div>
           <div className="weapon-grid">
             {window.Weapons.list.map((w, i) => (
               <button
@@ -210,7 +252,7 @@ function App() {
                 className={'weapon-card' + (cfg.weaponIdx === i ? ' selected' : '')}
                 onClick={() => set('weaponIdx')(i)}
               >
-                <WeaponIcon weapon={w} />
+                <WeaponIcon weapon={w} weaponVersion={weaponVersion} />
                 <div className="weapon-name">{w.name}</div>
               </button>
             ))}
@@ -221,7 +263,7 @@ function App() {
         <main className="stage-wrap">
           <div className={'stage bg-' + bgMode}>
             <div className="stage-inner">
-              <AnimPreview cfg={cfg} animKey={animKey} scale={scale} facing={facing} running={true} />
+              <AnimPreview cfg={cfg} animKey={animKey} scale={scale} facing={facing} running={true} weaponVersion={weaponVersion} />
             </div>
             <div className="stage-chrome">
               <div className="stage-coords">32 × 32 px · ×{scale}</div>
@@ -236,9 +278,9 @@ function App() {
             </div>
           </div>
 
-          <FrameStrip cfg={cfg} animKey={animKey} facing={facing} />
+          <FrameStrip cfg={cfg} animKey={animKey} facing={facing} weaponVersion={weaponVersion} />
 
-          <AllAnimsRow cfg={cfg} facing={facing} />
+          <AllAnimsRow cfg={cfg} facing={facing} weaponVersion={weaponVersion} />
         </main>
 
         {/* Right: customization */}
@@ -287,7 +329,7 @@ function App() {
 }
 
 // Strip of individual frames for current animation
-function FrameStrip({ cfg, animKey, facing }) {
+function FrameStrip({ cfg, animKey, facing, weaponVersion }) {
   const anim = window.Anims[animKey];
   const frames = [];
   for (let i = 0; i < anim.frames; i++) frames.push(i);
@@ -297,7 +339,7 @@ function FrameStrip({ cfg, animKey, facing }) {
       <div className="frame-strip-inner">
         {frames.map((i) => (
           <div key={i} className="frame-cell">
-            <SpriteCanvas cfg={cfg} animKey={animKey} frame={i} scale={3} facing={facing} />
+            <SpriteCanvas cfg={cfg} animKey={animKey} frame={i} scale={3} facing={facing} weaponVersion={weaponVersion} />
             <div className="frame-idx">{String(i).padStart(2, '0')}</div>
           </div>
         ))}
@@ -307,7 +349,7 @@ function FrameStrip({ cfg, animKey, facing }) {
 }
 
 // Grid of all animations playing in parallel
-function AllAnimsRow({ cfg, facing }) {
+function AllAnimsRow({ cfg, facing, weaponVersion }) {
   return (
     <div className="all-anims">
       <div className="all-anims-label">ALL ANIMATIONS · LIVE</div>
@@ -315,7 +357,7 @@ function AllAnimsRow({ cfg, facing }) {
         {window.AnimList.map((k) => (
           <div key={k} className="all-anim-cell">
             <div className="all-anim-preview">
-              <AnimPreview cfg={cfg} animKey={k} scale={3} facing={facing} running={true} />
+              <AnimPreview cfg={cfg} animKey={k} scale={3} facing={facing} running={true} weaponVersion={weaponVersion} />
             </div>
             <div className="all-anim-name">{window.Anims[k].name}</div>
           </div>
@@ -325,27 +367,38 @@ function AllAnimsRow({ cfg, facing }) {
   );
 }
 
-function WeaponIcon({ weapon }) {
+function WeaponIcon({ weapon, weaponVersion }) {
   const ref = useRef();
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
+    const viewW = 44;
+    const viewH = 18;
+    const cssW = 110;
+    const cssH = 45;
+    const ratio = getRenderRatio();
+    const targetW = Math.round(cssW * ratio);
+    const targetH = Math.round(cssH * ratio);
+    if (c.width !== targetW || c.height !== targetH) {
+      c.width = targetW;
+      c.height = targetH;
+    }
     const ctx = c.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, c.width, c.height);
-    const offX = Math.floor((32 - weapon.width) / 2);
-    const offY = Math.floor((14 - weapon.height) / 2);
+    ctx.setTransform(c.width / viewW, 0, 0, c.height / viewH, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, viewW, viewH);
+    const offX = (viewW - weapon.width) / 2;
+    const offY = (viewH - weapon.height) / 2;
     ctx.save();
     ctx.translate(offX + weapon.gripX, offY + weapon.gripY);
     weapon.draw(ctx, 0, 0, false);
     ctx.restore();
-  }, [weapon]);
+  }, [weapon, weaponVersion]);
   return (
     <canvas
       ref={ref}
-      width={32}
-      height={14}
-      style={{ width: 96, height: 42, imageRendering: 'pixelated' }}
+      style={{ width: 110, height: 45 }}
     />
   );
 }
