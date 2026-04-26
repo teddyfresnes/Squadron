@@ -33,13 +33,11 @@
       'OSBBHBBBO',
       'OSBBBBBBO',
       '.OSBBBBO.',
-      '..OOOOO..'
+      '..OSOOO..'
     ];
     const map = { O, B: b, H: h, S: s };
     E.stamp(ctx, cx, cy, tpl, map);
 
-    // Tiny nose hint only: no mouth, so the low eyes own the face.
-    E.px(ctx, cx + 8, cy + 5, O);
   };
 
   // ---------- WAIST BRIDGE ----------
@@ -67,8 +65,8 @@
     // If the head's chin already reaches the torso top row, the neck would
     // overlap the torso — skip to avoid painting skin on the uniform.
     if (topY >= torsoY) return;
-    // Stretch as needed so the head never detaches even in dramatic poses.
-    const endY = torsoY - 1;
+    // Tiny neck nub only; the head should sit almost directly on the collar.
+    const endY = Math.min(topY, torsoY - 1);
     for (let y = topY; y <= endY; y++) {
       E.px(ctx, ox - 1, y, O);
       E.px(ctx, ox,     y, skin.base);
@@ -592,18 +590,12 @@
     fillPath(ctx, skin.shade, function () {
       ctx.moveTo(cx + 0.95, cy + 3.85);
       ctx.quadraticCurveTo(cx + 1.25, cy + 1.8, cx + 2.95, cy + 1.55);
-      ctx.quadraticCurveTo(cx + 2.35, cy + 3.9, cx + 2.75, cy + 6.75);
-      ctx.quadraticCurveTo(cx + 1.65, cy + 6.75, cx + 1.0, cy + 5.55);
+      ctx.quadraticCurveTo(cx + 2.3, cy + 4.4, cx + 2.55, cy + 7.35);
+      ctx.quadraticCurveTo(cx + 1.55, cy + 7.05, cx + 1.0, cy + 5.55);
       ctx.quadraticCurveTo(cx + 0.8, cy + 4.65, cx + 0.95, cy + 3.85);
       ctx.closePath();
     });
     fillEllipse(ctx, cx + 5.4, cy + 3.75, 1.45, 0.8, skin.hl);
-
-    fillPath(ctx, O, function () {
-      ctx.moveTo(cx + 8.0, cy + 5.75);
-      ctx.lineTo(cx + 8.45, cy + 6.0);
-      ctx.lineTo(cx + 8.0, cy + 6.2);
-    });
   };
 
   Parts.drawEyeHD = function (ctx, cx, cy, eyeColor, opts) {
@@ -782,10 +774,10 @@
 
   Parts.drawNeckHD = function (ctx, ox, topY, torsoY, skin) {
     if (topY >= torsoY) return;
-    const h = torsoY - topY;
-    fillRoundRect(ctx, ox - 0.95, topY - 0.1, 1.9, h + 0.35, 0.35, P.outline);
-    fillRoundRect(ctx, ox - 0.45, topY, 0.9, h + 0.15, 0.25, skin.base);
-    fillRoundRect(ctx, ox - 0.42, topY, 0.25, h + 0.15, 0.18, skin.shade);
+    const h = Math.min(0.95, torsoY - topY);
+    fillRoundRect(ctx, ox - 0.85, topY - 0.05, 1.7, h + 0.1, 0.3, P.outline);
+    fillRoundRect(ctx, ox - 0.38, topY + 0.05, 0.76, h - 0.05, 0.22, skin.base);
+    fillRoundRect(ctx, ox - 0.36, topY + 0.05, 0.22, h - 0.05, 0.16, skin.shade);
   };
 
   Parts.drawTorsoHD = function (ctx, tx, ty, uniform) {
