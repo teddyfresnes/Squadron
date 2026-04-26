@@ -33,7 +33,7 @@
       'OSBBHBBBO',
       'OSBBBBBBO',
       '.OSBBBBO.',
-      '..OSOOO..'
+      '..OOOOO..'
     ];
     const map = { O, B: b, H: h, S: s };
     E.stamp(ctx, cx, cy, tpl, map);
@@ -590,8 +590,8 @@
     fillPath(ctx, skin.shade, function () {
       ctx.moveTo(cx + 0.95, cy + 3.85);
       ctx.quadraticCurveTo(cx + 1.25, cy + 1.8, cx + 2.95, cy + 1.55);
-      ctx.quadraticCurveTo(cx + 2.3, cy + 4.4, cx + 2.55, cy + 7.35);
-      ctx.quadraticCurveTo(cx + 1.55, cy + 7.05, cx + 1.0, cy + 5.55);
+      ctx.quadraticCurveTo(cx + 2.25, cy + 4.35, cx + 2.35, cy + 7.05);
+      ctx.quadraticCurveTo(cx + 1.48, cy + 6.85, cx + 1.0, cy + 5.55);
       ctx.quadraticCurveTo(cx + 0.8, cy + 4.65, cx + 0.95, cy + 3.85);
       ctx.closePath();
     });
