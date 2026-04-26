@@ -324,18 +324,18 @@
     E.px(ctx, tx + 4, ty + 6, O);
 
     // ---- Shoulder accents (3/4 perspective without protruding silhouette) ----
-    // Back shoulder ball (left, further from viewer): tiny shaded bump above
-    // the corner so the shoulder reads as a rounded joint, not a flat edge.
-    E.px(ctx, tx + 0, ty + 0, O);   // top-left corner outline
-    E.px(ctx, tx + 0, ty + 1, h);   // back deltoid highlight (top)
-    E.px(ctx, tx + 1, ty + 2, h);   // back deltoid highlight (inner)
-
-    // Front shoulder ball (right, closer to viewer): bigger highlight + a
+    // Front shoulder ball (left, closer to viewer): bigger highlight + a
     // darker seam so it visually pops as the near shoulder.
+    E.px(ctx, tx + 0, ty + 0, O);   // top-left corner outline
+    E.px(ctx, tx + 0, ty + 1, h);   // front deltoid highlight (top)
+    E.px(ctx, tx + 1, ty + 2, h);   // front deltoid highlight (inner)
+    E.px(ctx, tx + 0, ty + 2, s);   // armhole seam shadow
+
+    // Back shoulder ball (right, further from viewer): tiny shaded bump above
+    // the corner so the shoulder reads as a rounded joint at distance.
     E.px(ctx, tx + 6, ty + 0, O);   // top-right corner outline
-    E.px(ctx, tx + 6, ty + 1, h);   // front deltoid highlight (top)
-    E.px(ctx, tx + 5, ty + 2, h);   // front deltoid highlight (inner)
-    E.px(ctx, tx + 6, ty + 2, s);   // armhole seam shadow
+    E.px(ctx, tx + 6, ty + 1, h);   // back deltoid highlight (top)
+    E.px(ctx, tx + 5, ty + 2, h);   // back deltoid highlight (inner)
   };
 
   // ---------- VEST ----------
@@ -823,10 +823,10 @@
     fillRoundRect(ctx, tx + 5.0, ty + 1.6, 1.35, 5.25, 0.4, uniform.shade);
     // Belt band
     fillRoundRect(ctx, tx + 0.85, ty + 6.35, 5.95, 1.15, 0.25, uniform.shade);
-    // Back shoulder highlight
-    fillEllipse(ctx, tx + 1.2, ty + 1.4, 0.55, 0.45, uniform.hl);
-    // Front shoulder highlight (bigger / closer to viewer)
-    fillEllipse(ctx, tx + 5.7, ty + 1.4, 0.7, 0.55, uniform.hl);
+    // Front shoulder highlight (bigger / closer to viewer — now on the LEFT)
+    fillEllipse(ctx, tx + 1.2, ty + 1.4, 0.7, 0.55, uniform.hl);
+    // Back shoulder highlight (smaller — now on the RIGHT)
+    fillEllipse(ctx, tx + 5.7, ty + 1.4, 0.55, 0.45, uniform.hl);
     // Buttons
     fillEllipse(ctx, tx + 4.5, ty + 3.3, 0.28, 0.28, uniform.hl);
     fillEllipse(ctx, tx + 4.45, ty + 5.1, 0.28, 0.28, uniform.hl);

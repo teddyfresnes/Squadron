@@ -434,11 +434,12 @@
     const legsTL_x = originX - 3;
     const legsTL_y = originY;
 
-    // Arm anchors at the actual corners of the torso top row so arms exit
-    // from the visible shoulders rather than from inside the chest. Front
-    // shoulder is the right corner (closer to viewer); back is the left.
-    const shoulderFront = worldPoint(originX, originY, torsoTL_x + 6, torsoTL_y + 1);
-    const shoulderBack = worldPoint(originX, originY, torsoTL_x + 0, torsoTL_y + 1);
+    // Arm anchors at the actual corners of the torso top row. Front shoulder
+    // is on the LEFT (closer to viewer in this 3/4 rotation); back on the
+    // RIGHT (further from viewer). The trigger arm therefore reaches across
+    // the body to the weapon grip — the classic minitroopers shooting pose.
+    const shoulderFront = worldPoint(originX, originY, torsoTL_x + 0, torsoTL_y + 1);
+    const shoulderBack = worldPoint(originX, originY, torsoTL_x + 6, torsoTL_y + 1);
 
     const weaponGrip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal);
     const aim = computeAngle(hold, frame);
