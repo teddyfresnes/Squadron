@@ -430,7 +430,7 @@
     const torsoTL_x = originX - 3 + upperBodyDXLocal;
     const torsoTL_y = originY - 8 + bodyDY;
     const headTL_x = originX - 4 + upperBodyDXLocal;
-    const headTL_y = originY - 17 + bodyDY + headDY + (frame.headBack ? -1 : 0);
+    const headTL_y = originY - 16 + bodyDY + headDY + (frame.headBack ? -1 : 0);
     const legsTL_x = originX - 3;
     const legsTL_y = originY;
 
