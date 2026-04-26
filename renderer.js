@@ -434,8 +434,11 @@
     const legsTL_x = originX - 3;
     const legsTL_y = originY;
 
-    const shoulderFront = worldPoint(originX, originY, torsoTL_x + 5, torsoTL_y + 2);
-    const shoulderBack = worldPoint(originX, originY, torsoTL_x + 1, torsoTL_y + 2);
+    // Arm anchors at the actual corners of the torso top row so arms exit
+    // from the visible shoulders rather than from inside the chest. Front
+    // shoulder is the right corner (closer to viewer); back is the left.
+    const shoulderFront = worldPoint(originX, originY, torsoTL_x + 6, torsoTL_y + 1);
+    const shoulderBack = worldPoint(originX, originY, torsoTL_x + 0, torsoTL_y + 1);
 
     const weaponGrip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal);
     const aim = computeAngle(hold, frame);

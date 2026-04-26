@@ -46,10 +46,11 @@
   // torso bottom outline row.
   Parts.drawWaistBridge = function (ctx, tx, topY, legsY) {
     const O = P.outline;
-    // topY is the first row below the torso outline bottom.
-    // Draw rows up to (but not including) the legs' top row.
+    // Fills any gap between torso bottom and legs top (e.g. when bodyDY lifts
+    // the upper body during walk/run/aim). 9 wide so the outer leg outlines
+    // (which now extend past the 7-wide torso) are connected too.
     for (let y = topY; y < legsY; y++) {
-      for (let x = 0; x < 7; x++) {
+      for (let x = -1; x < 8; x++) {
         E.px(ctx, tx + x, y, O);
       }
     }
@@ -283,45 +284,58 @@
   };
 
   // ---------- TORSO ----------
-  // 7 wide × 8 tall. Character faces RIGHT: left column = back (shaded),
-  // right column = front (where buttons / placket live). tx,ty is TL of the box.
+  // 7-wide × 8-tall main body, with shoulder caps protruding 1 px on each
+  // side so the silhouette reads as a 3/4 chibi perspective:
+  //   - Back shoulder cap on the LEFT (further from viewer, smaller / shaded)
+  //   - Front shoulder cap on the RIGHT (closer to viewer, larger / lit)
+  // The renderer anchors arms exactly on these caps, so the shoulders are
+  // both a visual cue AND the explicit attach point for the arm system.
   Parts.drawTorso = function (ctx, tx, ty, uniform, opts) {
     opts = opts || {};
     const b = uniform.base, s = uniform.shade, h = uniform.hl;
     const O = P.outline;
 
-    // Base silhouette. Shoulders get a highlight row on the back, front side is
-    // pre-shaded so buttons and pocket details read cleanly.
+    // Slightly-tapered base silhouette (collar narrower than shoulders).
     const tpl = [
-      'OBBSBBO', // y0 collar line — center dip (S) reads as the neck opening
-      'OBHBBSO', // y1 shoulder highlight (back) + shoulder seam shade (front)
+      '.OBSBO.', // y0 collar — narrow neck opening (S = neck dip)
+      'OBHBBSO', // y1 shoulder line (back HL + front seam)
       'OBBBBSO', // y2
       'OBBBBSO', // y3
       'OBBBBSO', // y4
       'OBBBBSO', // y5
-      'OSSSSSO', // y6 belt band — darker strip across the waist
-      'OOOOOOO'  // y7 base outline (sits flush with top of legs)
+      'OSSSSSO', // y6 belt band
+      'OOOOOOO'  // y7 base outline (flush with leg tops)
     ];
     E.stamp(ctx, tx, ty, tpl, { O, B: b, H: h, S: s });
 
-    // Collar notch inset — a single darker pixel under the V so the collar
-    // reads as an opening rather than a single misplaced shade pixel.
-    E.px(ctx, tx + 3, ty + 1, s);
+    // Placket + buttons down the front (right side = closer to viewer).
+    E.px(ctx, tx + 4, ty + 2, s);
+    E.px(ctx, tx + 4, ty + 3, h);
+    E.px(ctx, tx + 4, ty + 4, s);
+    E.px(ctx, tx + 4, ty + 5, h);
 
-    // Placket + buttons down the front (right side of the body).
-    E.px(ctx, tx + 4, ty + 2, s);   // placket seam
-    E.px(ctx, tx + 4, ty + 3, h);   // upper button
-    E.px(ctx, tx + 4, ty + 4, s);   // placket seam
-    E.px(ctx, tx + 4, ty + 5, h);   // lower button
-
-    // Chest pocket hint (left of placket, small L-shape of stitching).
+    // Chest pocket hint
     E.px(ctx, tx + 2, ty + 3, s);
     E.px(ctx, tx + 3, ty + 3, s);
     E.px(ctx, tx + 2, ty + 4, s);
 
-    // Belt buckle — one bright pixel centered on the belt row.
+    // Belt buckle
     E.px(ctx, tx + 3, ty + 6, h);
-    E.px(ctx, tx + 4, ty + 6, O);  // buckle outline edge for contrast
+    E.px(ctx, tx + 4, ty + 6, O);
+
+    // ---- Shoulder accents (3/4 perspective without protruding silhouette) ----
+    // Back shoulder ball (left, further from viewer): tiny shaded bump above
+    // the corner so the shoulder reads as a rounded joint, not a flat edge.
+    E.px(ctx, tx + 0, ty + 0, O);   // top-left corner outline
+    E.px(ctx, tx + 0, ty + 1, h);   // back deltoid highlight (top)
+    E.px(ctx, tx + 1, ty + 2, h);   // back deltoid highlight (inner)
+
+    // Front shoulder ball (right, closer to viewer): bigger highlight + a
+    // darker seam so it visually pops as the near shoulder.
+    E.px(ctx, tx + 6, ty + 0, O);   // top-right corner outline
+    E.px(ctx, tx + 6, ty + 1, h);   // front deltoid highlight (top)
+    E.px(ctx, tx + 5, ty + 2, h);   // front deltoid highlight (inner)
+    E.px(ctx, tx + 6, ty + 2, s);   // armhole seam shadow
   };
 
   // ---------- VEST ----------
@@ -375,56 +389,59 @@
   };
 
   // ---------- LEGS ----------
-  // Legs: 2 legs, 2px wide each, 6 tall. At torso bottom y=22 to 29.
-  // Offsets control walking/running. frontLeg and backLeg y offsets and bend.
+  // Two legs, 2 px wide × 6 px tall + boot. legOffsets is the modular
+  // animation interface — front/back y offsets drive lift, frontBend/backBend
+  // drive knee forward bend. Anchors (hips at ty=0, knees at ty=3, feet at
+  // ty=6) stay constant so walk/run/crouch/jump/dead poses just reuse them.
+  //
+  // Spread layout: back leg sits at tx+0, front leg at tx+5 (5 col stride).
+  // A single outline "hip bridge" pixel at tx+3 fills the visible gap
+  // between leg tops so the silhouette stays solid even as legs lift.
   Parts.drawLegs = function (ctx, tx, ty, pants, legOffsets) {
-    // tx = torso TL (so legs start at tx+1 and tx+4 roughly)
-    // ty = top of legs
     legOffsets = legOffsets || { front: 0, back: 0, frontBend: 0, backBend: 0 };
-    const b = pants.base, s = pants.shade, h = pants.hl;
+    const b = pants.base, s = pants.shade;
     const O = P.outline;
-    const bootsB = P.boots.base, bootsS = P.boots.shade;
+    const bootsB = P.boots.base;
 
     const drawLeg = function (lx, ly, bend) {
-      // 2 wide, 6 tall. If bend > 0, knee bends forward at row 3.
       const height = 6;
       for (let i = 0; i < height; i++) {
         const dx = (i >= 3 && bend) ? bend : 0;
-        // Top row reads as a waistband: shade on both pixels so it visually
-        // merges with the torso's bottom outline rather than showing a sudden
-        // color shift when pants are lighter than the shirt.
         if (i === 0) {
+          // Waistband row — shade both pixels so it merges with the torso base.
           E.px(ctx, lx + dx, ly + i, s);
           E.px(ctx, lx + 1 + dx, ly + i, s);
         } else {
           E.px(ctx, lx + dx, ly + i, b);
           E.px(ctx, lx + 1 + dx, ly + i, s);
         }
-        // Knee crease — single darker pixel on the front column at the bend row.
         if (i === 3) {
+          // Knee crease — single darker pixel on the front column.
           E.px(ctx, lx + 1 + dx, ly + i, O);
         }
-        // outline
+        // Leg outline
         E.px(ctx, lx - 1 + dx, ly + i, O);
         E.px(ctx, lx + 2 + dx, ly + i, O);
       }
-      // Boot
-      E.px(ctx, lx + (bend || 0), ly + 6, bootsB);
-      E.px(ctx, lx + 1 + (bend || 0), ly + 6, bootsB);
-      E.px(ctx, lx + (bend || 0) + (bend > 0 ? 1 : 0), ly + 6, bootsB);
-      // Boot tip extending forward
-      E.px(ctx, lx + 2 + (bend || 0), ly + 6, bootsB);
-      E.px(ctx, lx + (bend || 0) - 1, ly + 6, O);
-      E.px(ctx, lx + 3 + (bend || 0), ly + 6, O);
-      E.px(ctx, lx + (bend || 0), ly + 7, O);
-      E.px(ctx, lx + 1 + (bend || 0), ly + 7, O);
-      E.px(ctx, lx + 2 + (bend || 0), ly + 7, O);
+      // Boot — 4 px wide with a forward tip
+      const bx = lx + (bend || 0);
+      E.px(ctx, bx,     ly + 6, bootsB);
+      E.px(ctx, bx + 1, ly + 6, bootsB);
+      E.px(ctx, bx + 2, ly + 6, bootsB);
+      E.px(ctx, bx - 1, ly + 6, O);
+      E.px(ctx, bx + 3, ly + 6, O);
+      E.px(ctx, bx,     ly + 7, O);
+      E.px(ctx, bx + 1, ly + 7, O);
+      E.px(ctx, bx + 2, ly + 7, O);
     };
 
-    // Back leg first
-    drawLeg(tx + 1, ty + legOffsets.back, legOffsets.backBend);
-    // Front leg on top
-    drawLeg(tx + 4, ty + legOffsets.front, legOffsets.frontBend);
+    // Back leg drawn first, front leg drawn on top — natural depth ordering.
+    drawLeg(tx + 0, ty + legOffsets.back, legOffsets.backBend);
+    drawLeg(tx + 5, ty + legOffsets.front, legOffsets.frontBend);
+
+    // Hip bridge — fills the 1-px gap between leg outlines at the natural
+    // hip row so the silhouette never shows a hole, even mid-stride.
+    E.px(ctx, tx + 3, ty, O);
   };
 
   // ---------- ARM ----------
@@ -782,25 +799,35 @@
 
   Parts.drawTorsoHD = function (ctx, tx, ty, uniform) {
     const O = P.outline;
+    // Trapezoidal torso: shoulders wider than belt, with two distinct shoulder
+    // balls bulging at the top corners for a 3/4 chibi perspective.
     fillPath(ctx, O, function () {
-      ctx.moveTo(tx - 0.4, ty + 1.2);
-      ctx.quadraticCurveTo(tx + 2.0, ty - 0.35, tx + 4.0, ty - 0.15);
-      ctx.quadraticCurveTo(tx + 6.8, ty + 0.05, tx + 7.45, ty + 1.45);
+      ctx.moveTo(tx - 0.5, ty + 1.6);
+      ctx.quadraticCurveTo(tx - 0.2, ty + 0.3, tx + 1.2, ty + 0.15);
+      ctx.quadraticCurveTo(tx + 3.5, ty - 0.4, tx + 5.8, ty + 0.15);
+      ctx.quadraticCurveTo(tx + 7.2, ty + 0.3, tx + 7.55, ty + 1.6);
       ctx.lineTo(tx + 7.0, ty + 8.1);
       ctx.lineTo(tx - 0.05, ty + 8.1);
       ctx.closePath();
     });
     fillPath(ctx, uniform.base, function () {
-      ctx.moveTo(tx + 0.35, ty + 1.35);
-      ctx.quadraticCurveTo(tx + 2.2, ty + 0.45, tx + 4.0, ty + 0.55);
-      ctx.quadraticCurveTo(tx + 6.0, ty + 0.65, tx + 6.65, ty + 1.55);
+      ctx.moveTo(tx + 0.2, ty + 1.7);
+      ctx.quadraticCurveTo(tx + 0.5, ty + 0.85, tx + 1.5, ty + 0.7);
+      ctx.quadraticCurveTo(tx + 3.5, ty + 0.2, tx + 5.5, ty + 0.7);
+      ctx.quadraticCurveTo(tx + 6.5, ty + 0.85, tx + 6.85, ty + 1.7);
       ctx.lineTo(tx + 6.25, ty + 7.25);
-      ctx.lineTo(tx + 0.65, ty + 7.25);
+      ctx.lineTo(tx + 0.75, ty + 7.25);
       ctx.closePath();
     });
-    fillRoundRect(ctx, tx + 5.0, ty + 1.2, 1.35, 5.65, 0.4, uniform.shade);
+    // Front-side shading column (right = front in 3/4 view)
+    fillRoundRect(ctx, tx + 5.0, ty + 1.6, 1.35, 5.25, 0.4, uniform.shade);
+    // Belt band
     fillRoundRect(ctx, tx + 0.85, ty + 6.35, 5.95, 1.15, 0.25, uniform.shade);
-    strokeLine(ctx, tx + 2.0, ty + 1.4, tx + 3.55, ty + 0.95, uniform.hl, 0.4);
+    // Back shoulder highlight
+    fillEllipse(ctx, tx + 1.2, ty + 1.4, 0.55, 0.45, uniform.hl);
+    // Front shoulder highlight (bigger / closer to viewer)
+    fillEllipse(ctx, tx + 5.7, ty + 1.4, 0.7, 0.55, uniform.hl);
+    // Buttons
     fillEllipse(ctx, tx + 4.5, ty + 3.3, 0.28, 0.28, uniform.hl);
     fillEllipse(ctx, tx + 4.45, ty + 5.1, 0.28, 0.28, uniform.hl);
   };
@@ -827,7 +854,7 @@
 
   Parts.drawWaistBridgeHD = function (ctx, tx, topY, legsY) {
     if (topY >= legsY) return;
-    fillRoundRect(ctx, tx - 0.2, topY - 0.1, 7.35, legsY - topY + 0.35, 0.25, P.outline);
+    fillRoundRect(ctx, tx - 1.2, topY - 0.1, 9.35, legsY - topY + 0.35, 0.25, P.outline);
   };
 
   Parts.drawLegsHD = function (ctx, tx, ty, pants, legOffsets) {
@@ -852,8 +879,11 @@
       fillRoundRect(ctx, footX - 0.9, footY - 0.1, 3.2, 1.35, 0.45, P.outline);
       fillRoundRect(ctx, footX - 0.45, footY - 0.35, 2.5, 0.9, 0.35, bootsB);
     };
-    drawLeg(tx + 1, ty + legOffsets.back, legOffsets.backBend);
-    drawLeg(tx + 4, ty + legOffsets.front, legOffsets.frontBend);
+    // Spread stance — back leg on the left, front leg on the right.
+    drawLeg(tx + 0, ty + legOffsets.back, legOffsets.backBend);
+    drawLeg(tx + 5, ty + legOffsets.front, legOffsets.frontBend);
+    // Hip bridge between leg tops so HD silhouette stays solid.
+    fillRoundRect(ctx, tx + 2.7, ty - 0.1, 1.6, 1.0, 0.25, P.outline);
   };
 
   Parts.drawArmHD = function (ctx, sx, sy, hx, hy, uniform, glovesCol, opts) {
