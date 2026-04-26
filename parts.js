@@ -2,7 +2,7 @@
 // Sprite is 32x32. Character faces RIGHT by default.
 // Anatomy map (approximate):
 //   y  0-2   : hat / hair top
-//   y  3-11  : head (9px tall, ~9px wide)
+//   y  3-10  : head (8px tall, ~9px wide)
 //   y 12-13  : neck / collar
 //   y 14-21  : torso (8px)
 //   y 22-23  : hips / belt
@@ -17,50 +17,29 @@
   const Parts = {};
 
   // ---------- HEAD ----------
-  // Head is an ovoid ~8x9 centered at x=15, y=3..11.
+  // Head is a compact, right-facing MiniTroopers-style mass.
   // Takes skin palette entry.
   Parts.drawHead = function (ctx, cx, cy, skin, opts) {
     opts = opts || {};
     const b = skin.base, s = skin.shade, h = skin.hl;
     const O = P.outline;
 
-    // Head silhouette (facing right; chin slightly forward-right).
-    // 8 wide, 9 tall. cx,cy is top-left of bounding box.
+    // 9 wide, 8 tall. cx,cy is top-left of bounding box.
     const tpl = [
-      ' .OOOO. ',
-      '.OBBBBO.',
-      'OBBBBBBO',
-      'OBBBBBBO',
-      'OBBHBBBO',   // cheekbone highlight
-      'OBBBBBBO',
-      'OBBBBBBO',
-      '.OBBBBO.',
-      '..OOOO..'
+      '..OOOOO..',
+      '.OSBBBBO.',
+      'OSBBBBBBO',
+      'OSBBBBBBO',
+      'OSBBHBBBO',
+      'OSBBBBBBO',
+      '.OSBBBBO.',
+      '..OOOOO..'
     ];
     const map = { O, B: b, H: h, S: s };
     E.stamp(ctx, cx, cy, tpl, map);
 
-    // Shade on left cheek (back of head from right-facing view)
-    E.px(ctx, cx + 1, cy + 3, s);
-    E.px(ctx, cx + 1, cy + 4, s);
-    E.px(ctx, cx + 1, cy + 5, s);
-    E.px(ctx, cx + 1, cy + 6, s);
-
-    // Ear hint (left side = back ear)
-    E.px(ctx, cx + 0, cy + 4, O);
-    E.px(ctx, cx + 0, cy + 5, s);
-
-    // Nose (front, right side)
-    E.px(ctx, cx + 7, cy + 5, O);
-    E.px(ctx, cx + 7, cy + 4, b);
-
-    // Mouth
-    if (opts.hurt) {
-      E.px(ctx, cx + 5, cy + 7, O);
-      E.px(ctx, cx + 6, cy + 7, O);
-    } else {
-      E.px(ctx, cx + 5, cy + 7, O);
-    }
+    // Tiny nose hint only: no mouth, so the low eyes own the face.
+    E.px(ctx, cx + 8, cy + 5, O);
   };
 
   // ---------- WAIST BRIDGE ----------
@@ -91,28 +70,48 @@
     // Stretch as needed so the head never detaches even in dramatic poses.
     const endY = torsoY - 1;
     for (let y = topY; y <= endY; y++) {
-      E.px(ctx, ox - 2, y, O);
-      E.px(ctx, ox - 1, y, skin.shade);
+      E.px(ctx, ox - 1, y, O);
       E.px(ctx, ox,     y, skin.base);
       E.px(ctx, ox + 1, y, O);
     }
     // Collar-bone shadow where neck meets torso — subtle darker seam.
-    E.px(ctx, ox - 1, endY, skin.shade);
+    E.px(ctx, ox, endY, skin.shade);
   };
 
   // ---------- EYE ----------
   Parts.drawEye = function (ctx, cx, cy, eyeColor, opts) {
     opts = opts || {};
-    // Eye sits at cx + 5, cy + 4
-    const ex = cx + 5, ey = cy + 4;
+    // Two low, right-shifted eyes. The rear eye is larger; the front eye is
+    // smaller to fake perspective on a tiny sprite.
+    const ex = cx + 5, ey = cy + 5;
     if (opts.closed) {
+      E.px(ctx, ex - 1, ey, P.outline);
       E.px(ctx, ex, ey, P.outline);
       E.px(ctx, ex + 1, ey, P.outline);
+      E.px(ctx, ex + 2, ey, P.outline);
       return;
     }
-    // white + pupil
-    E.px(ctx, ex, ey, P.white);
-    E.px(ctx, ex + 1, ey, eyeColor);
+    // Big rear eye.
+    E.px(ctx, ex - 1, ey - 1, P.outline);
+    E.px(ctx, ex,     ey - 1, P.outline);
+    E.px(ctx, ex + 1, ey - 1, P.outline);
+    E.px(ctx, ex - 1, ey,     P.outline);
+    E.px(ctx, ex - 1, ey + 1, P.outline);
+    E.px(ctx, ex,     ey + 2, P.outline);
+    E.px(ctx, ex + 1, ey + 2, P.outline);
+    E.px(ctx, ex,     ey,     P.white);
+    E.px(ctx, ex,     ey + 1, P.white);
+    E.px(ctx, ex + 1, ey,     eyeColor);
+    E.px(ctx, ex + 1, ey + 1, eyeColor);
+
+    // Smaller front eye, glued to the big one.
+    E.px(ctx, ex + 2, ey - 1, P.outline);
+    E.px(ctx, ex + 3, ey - 1, P.outline);
+    E.px(ctx, ex + 3, ey,     P.outline);
+    E.px(ctx, ex + 3, ey + 1, P.outline);
+    E.px(ctx, ex + 2, ey + 2, P.outline);
+    E.px(ctx, ex + 2, ey,     P.white);
+    E.px(ctx, ex + 2, ey + 1, eyeColor);
   };
 
   // ---------- HAIR ----------
@@ -122,41 +121,49 @@
     const O = P.outline;
 
     if (style === 'Short') {
-      // Cap of hair across top of head
+      // Heavy cap across the upper half of the head.
       const tpl = [
-        ' .OOOO. ',
-        '.OBBBBO.',
-        'OBBHBBBO',
-        'OBBBBBBO'
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        '.BBBBBBBBO.',
+        '..BBBBBB...'
       ];
-      E.stamp(ctx, cx, cy, tpl, { O, B: b, H: h });
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, H: h });
       // Sideburn hint back
       E.px(ctx, cx + 1, cy + 4, b);
+      E.px(ctx, cx + 0, cy + 4, O);
     } else if (style === 'Buzz') {
       const tpl = [
-        ' .OOOO. ',
-        '.OBBBBO.',
-        'OBBBBBBO'
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBBBBBBBO.',
+        '.BBBBBBBB..'
       ];
-      E.stamp(ctx, cx, cy, tpl, { O, B: b });
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b });
     } else if (style === 'Messy') {
       const tpl = [
-        '.O.OO.O.',
-        'OBOBBOBO',
-        'OBBHBBBO',
-        'OBBBBBBO',
-        '.BBBBBB.'
+        '..O.OOO.O..',
+        '.OBBBBBBBO.',
+        'OBBHHBBBBBO',
+        'OBBBBBBBBBO',
+        'OBBBBBBBBO.',
+        '.BBBBBBBBO.',
+        '..BBBBBB...'
       ];
-      E.stamp(ctx, cx, cy - 1, tpl, { O, B: b, H: h });
+      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, H: h });
     } else if (style === 'Long') {
       // flows down the back (left side since facing right)
       const tpl = [
-        ' .OOOO. ',
-        '.OBBBBO.',
-        'OBBHBBBO',
-        'OBBBBBBO'
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.BBBBBBBBO.'
       ];
-      E.stamp(ctx, cx, cy, tpl, { O, B: b, H: h });
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, H: h });
       // Trail down back
       for (let i = 0; i < 6; i++) {
         E.px(ctx, cx + 0, cy + 3 + i, b);
@@ -166,29 +173,32 @@
       E.px(ctx, cx - 1, cy + 9, O);
     } else if (style === 'Mohawk') {
       // Center strip taller
-      for (let y = -2; y <= 2; y++) {
-        for (let x = 3; x <= 5; x++) {
+      for (let y = -3; y <= 3; y++) {
+        for (let x = 3; x <= 6; x++) {
           E.px(ctx, cx + x, cy + y, b);
         }
       }
       // outline
-      for (let y = -3; y <= 2; y++) {
+      for (let y = -4; y <= 3; y++) {
         E.px(ctx, cx + 2, cy + y, O);
-        E.px(ctx, cx + 6, cy + y, O);
+        E.px(ctx, cx + 7, cy + y, O);
       }
       E.px(ctx, cx + 3, cy - 3, O);
       E.px(ctx, cx + 4, cy - 3, O);
       E.px(ctx, cx + 5, cy - 3, O);
+      E.px(ctx, cx + 6, cy - 3, O);
       // highlight
       E.px(ctx, cx + 4, cy - 2, h);
+      E.px(ctx, cx + 5, cy - 2, h);
     } else if (style === 'Ponytail') {
       const tpl = [
-        ' .OOOO. ',
-        '.OBBBBO.',
-        'OBBHBBBO',
-        'OBBBBBBO'
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        '.BBBBBBBBO.'
       ];
-      E.stamp(ctx, cx, cy, tpl, { O, B: b, H: h });
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, H: h });
       // Ponytail behind (left side)
       E.px(ctx, cx + 0, cy + 3, O);
       E.px(ctx, cx - 1, cy + 4, O);
@@ -561,93 +571,141 @@
   Parts.drawHeadHD = function (ctx, cx, cy, skin, opts) {
     opts = opts || {};
     const O = P.outline;
-    fillEllipse(ctx, cx + 4, cy + 4.7, 4.35, 4.9, O);
-    fillEllipse(ctx, cx + 4.35, cy + 4.65, 3.7, 4.15, skin.base);
-    fillEllipse(ctx, cx + 2.1, cy + 4.7, 1.15, 3.4, skin.shade);
-    fillEllipse(ctx, cx + 5.2, cy + 4.1, 1.35, 1.05, skin.hl);
-
-    fillEllipse(ctx, cx + 0.25, cy + 4.8, 0.75, 1.0, O);
-    fillEllipse(ctx, cx + 0.45, cy + 4.9, 0.45, 0.65, skin.shade);
     fillPath(ctx, O, function () {
-      ctx.moveTo(cx + 7.15, cy + 4.25);
-      ctx.lineTo(cx + 8.7, cy + 5.05);
-      ctx.lineTo(cx + 7.15, cy + 5.65);
+      ctx.moveTo(cx + 0.45, cy + 3.65);
+      ctx.quadraticCurveTo(cx + 0.9, cy + 1.05, cx + 3.9, cy + 0.9);
+      ctx.quadraticCurveTo(cx + 7.65, cy + 0.8, cx + 8.45, cy + 3.85);
+      ctx.quadraticCurveTo(cx + 8.85, cy + 6.2, cx + 6.55, cy + 7.75);
+      ctx.quadraticCurveTo(cx + 3.4, cy + 8.65, cx + 1.25, cy + 7.15);
+      ctx.quadraticCurveTo(cx + 0.1, cy + 5.9, cx + 0.45, cy + 3.65);
       ctx.closePath();
     });
     fillPath(ctx, skin.base, function () {
-      ctx.moveTo(cx + 7.0, cy + 4.45);
-      ctx.lineTo(cx + 8.15, cy + 5.05);
-      ctx.lineTo(cx + 7.0, cy + 5.45);
+      ctx.moveTo(cx + 0.95, cy + 3.8);
+      ctx.quadraticCurveTo(cx + 1.3, cy + 1.65, cx + 4.0, cy + 1.45);
+      ctx.quadraticCurveTo(cx + 7.05, cy + 1.35, cx + 7.75, cy + 3.9);
+      ctx.quadraticCurveTo(cx + 8.05, cy + 5.9, cx + 6.2, cy + 7.05);
+      ctx.quadraticCurveTo(cx + 3.5, cy + 7.85, cx + 1.65, cy + 6.65);
+      ctx.quadraticCurveTo(cx + 0.75, cy + 5.55, cx + 0.95, cy + 3.8);
       ctx.closePath();
     });
-    strokeLine(ctx, cx + 5.2, cy + 7.25, cx + (opts.hurt ? 6.65 : 5.95), cy + 7.25, O, 0.34);
+    fillPath(ctx, skin.shade, function () {
+      ctx.moveTo(cx + 0.95, cy + 3.85);
+      ctx.quadraticCurveTo(cx + 1.25, cy + 1.8, cx + 2.95, cy + 1.55);
+      ctx.quadraticCurveTo(cx + 2.35, cy + 3.9, cx + 2.75, cy + 6.75);
+      ctx.quadraticCurveTo(cx + 1.65, cy + 6.75, cx + 1.0, cy + 5.55);
+      ctx.quadraticCurveTo(cx + 0.8, cy + 4.65, cx + 0.95, cy + 3.85);
+      ctx.closePath();
+    });
+    fillEllipse(ctx, cx + 5.4, cy + 3.75, 1.45, 0.8, skin.hl);
+
+    fillPath(ctx, O, function () {
+      ctx.moveTo(cx + 8.0, cy + 5.75);
+      ctx.lineTo(cx + 8.45, cy + 6.0);
+      ctx.lineTo(cx + 8.0, cy + 6.2);
+    });
   };
 
   Parts.drawEyeHD = function (ctx, cx, cy, eyeColor, opts) {
     opts = opts || {};
-    const ex = cx + 5.7;
-    const ey = cy + 4.25;
+    const ex = cx + 5.45;
+    const ey = cy + 5.45;
     if (opts.closed) {
-      strokeLine(ctx, ex - 0.45, ey, ex + 0.75, ey, P.outline, 0.35);
+      strokeLine(ctx, ex - 1.25, ey, ex + 1.0, ey, P.outline, 0.35);
+      strokeLine(ctx, ex + 1.2, ey, ex + 2.55, ey, P.outline, 0.3);
       return;
     }
-    fillEllipse(ctx, ex, ey, 0.9, 0.5, P.white);
-    fillEllipse(ctx, ex + 0.35, ey, 0.34, 0.4, eyeColor);
+    fillEllipse(ctx, ex, ey, 1.3, 1.45, P.outline);
+    fillEllipse(ctx, ex + 0.05, ey, 0.88, 1.05, P.white);
+    fillEllipse(ctx, ex + 0.48, ey + 0.03, 0.38, 0.72, eyeColor);
+
+    fillEllipse(ctx, ex + 1.55, ey, 0.92, 1.12, P.outline);
+    fillEllipse(ctx, ex + 1.58, ey, 0.58, 0.78, P.white);
+    fillEllipse(ctx, ex + 1.88, ey + 0.03, 0.28, 0.54, eyeColor);
   };
 
   Parts.drawHairHD = function (ctx, cx, cy, style, hairCol) {
     if (!style || style === 'Bald') return;
     const O = P.outline;
     const b = hairCol.base;
+    const s = hairCol.shade;
     const h = hairCol.hl;
 
     if (style === 'Mohawk') {
-      fillRoundRect(ctx, cx + 2.35, cy - 3.1, 3.6, 5.4, 0.9, O);
-      fillRoundRect(ctx, cx + 2.85, cy - 2.7, 2.6, 4.75, 0.75, b);
-      strokeLine(ctx, cx + 4.2, cy - 2.4, cx + 4.2, cy + 0.8, h, 0.45);
+      fillRoundRect(ctx, cx + 2.05, cy - 4.0, 5.15, 7.7, 1.05, O);
+      fillRoundRect(ctx, cx + 2.65, cy - 3.45, 3.95, 6.65, 0.9, b);
+      strokeLine(ctx, cx + 4.25, cy - 3.0, cx + 4.25, cy + 1.7, h, 0.55);
+      return;
+    }
+
+    if (style === 'Buzz') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx + 0.25, cy + 3.55);
+        ctx.quadraticCurveTo(cx + 1.1, cy + 0.1, cx + 4.35, cy + 0.0);
+        ctx.quadraticCurveTo(cx + 7.55, cy + 0.05, cx + 8.45, cy + 3.45);
+        ctx.quadraticCurveTo(cx + 5.0, cy + 4.2, cx + 0.25, cy + 3.55);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.95, cy + 3.15);
+        ctx.quadraticCurveTo(cx + 1.55, cy + 0.65, cx + 4.35, cy + 0.55);
+        ctx.quadraticCurveTo(cx + 6.95, cy + 0.65, cx + 7.7, cy + 3.05);
+        ctx.quadraticCurveTo(cx + 4.85, cy + 3.65, cx + 0.95, cy + 3.15);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.25, cy + 2.9, cx + 7.0, cy + 2.95, s, 0.35);
       return;
     }
 
     fillPath(ctx, O, function () {
-      ctx.moveTo(cx + 0.3, cy + 3.4);
-      ctx.quadraticCurveTo(cx + 1.0, cy - 0.9, cx + 4.1, cy - 0.9);
-      ctx.quadraticCurveTo(cx + 7.35, cy - 0.45, cx + 7.6, cy + 3.1);
-      ctx.lineTo(cx + 6.3, cy + 4.0);
-      ctx.quadraticCurveTo(cx + 4.1, cy + 2.4, cx + 0.3, cy + 3.4);
+      ctx.moveTo(cx - 0.7, cy + 4.05);
+      ctx.quadraticCurveTo(cx + 0.25, cy - 1.65, cx + 4.25, cy - 1.8);
+      ctx.quadraticCurveTo(cx + 8.65, cy - 1.45, cx + 9.2, cy + 3.45);
+      ctx.quadraticCurveTo(cx + 8.05, cy + 4.95, cx + 6.25, cy + 5.25);
+      ctx.quadraticCurveTo(cx + 4.3, cy + 4.05, cx + 2.35, cy + 4.55);
+      ctx.quadraticCurveTo(cx + 0.45, cy + 5.05, cx - 0.7, cy + 4.05);
       ctx.closePath();
     });
     fillPath(ctx, b, function () {
-      ctx.moveTo(cx + 0.85, cy + 3.15);
-      ctx.quadraticCurveTo(cx + 1.35, cy - 0.35, cx + 4.15, cy - 0.35);
-      ctx.quadraticCurveTo(cx + 6.7, cy + 0.05, cx + 7.0, cy + 2.8);
-      ctx.quadraticCurveTo(cx + 4.3, cy + 1.85, cx + 0.85, cy + 3.15);
+      ctx.moveTo(cx + 0.05, cy + 3.65);
+      ctx.quadraticCurveTo(cx + 0.8, cy - 0.95, cx + 4.25, cy - 1.05);
+      ctx.quadraticCurveTo(cx + 7.9, cy - 0.75, cx + 8.45, cy + 3.15);
+      ctx.quadraticCurveTo(cx + 7.35, cy + 4.35, cx + 5.9, cy + 4.55);
+      ctx.quadraticCurveTo(cx + 4.1, cy + 3.55, cx + 2.3, cy + 4.05);
+      ctx.quadraticCurveTo(cx + 0.75, cy + 4.45, cx + 0.05, cy + 3.65);
       ctx.closePath();
     });
-    strokeLine(ctx, cx + 3.7, cy + 0.1, cx + 5.7, cy + 1.15, h, 0.35);
+    strokeLine(ctx, cx + 2.2, cy + 0.4, cx + 6.1, cy + 1.0, h, 0.45);
+    strokeLine(ctx, cx + 1.0, cy + 3.85, cx + 7.85, cy + 3.95, s, 0.4);
 
     if (style === 'Messy') {
-      strokePath(ctx, O, 0.55, function () {
-        ctx.moveTo(cx + 1.0, cy + 0.7);
-        ctx.lineTo(cx + 0.2, cy - 1.2);
-        ctx.moveTo(cx + 3.0, cy + 0.0);
-        ctx.lineTo(cx + 2.45, cy - 1.7);
-        ctx.moveTo(cx + 5.0, cy + 0.0);
-        ctx.lineTo(cx + 5.85, cy - 1.35);
+      strokePath(ctx, O, 0.75, function () {
+        ctx.moveTo(cx + 0.9, cy + 0.75);
+        ctx.lineTo(cx + 0.0, cy - 1.8);
+        ctx.moveTo(cx + 2.85, cy - 0.25);
+        ctx.lineTo(cx + 2.25, cy - 2.45);
+        ctx.moveTo(cx + 5.15, cy - 0.45);
+        ctx.lineTo(cx + 6.05, cy - 2.1);
+        ctx.moveTo(cx + 7.25, cy + 0.75);
+        ctx.lineTo(cx + 8.75, cy - 0.95);
       });
-      strokePath(ctx, b, 0.34, function () {
-        ctx.moveTo(cx + 1.0, cy + 0.7);
-        ctx.lineTo(cx + 0.25, cy - 1.05);
-        ctx.moveTo(cx + 3.0, cy + 0.0);
-        ctx.lineTo(cx + 2.5, cy - 1.5);
-        ctx.moveTo(cx + 5.0, cy + 0.0);
-        ctx.lineTo(cx + 5.75, cy - 1.15);
+      strokePath(ctx, b, 0.46, function () {
+        ctx.moveTo(cx + 0.9, cy + 0.75);
+        ctx.lineTo(cx + 0.08, cy - 1.55);
+        ctx.moveTo(cx + 2.85, cy - 0.25);
+        ctx.lineTo(cx + 2.32, cy - 2.2);
+        ctx.moveTo(cx + 5.15, cy - 0.45);
+        ctx.lineTo(cx + 5.9, cy - 1.85);
+        ctx.moveTo(cx + 7.25, cy + 0.75);
+        ctx.lineTo(cx + 8.55, cy - 0.75);
       });
     } else if (style === 'Long') {
-      strokeLine(ctx, cx - 0.25, cy + 3.3, cx - 1.0, cy + 9.0, O, 1.5);
-      strokeLine(ctx, cx - 0.2, cy + 3.25, cx - 0.85, cy + 8.7, b, 0.95);
+      strokeLine(ctx, cx - 0.25, cy + 3.65, cx - 1.15, cy + 9.35, O, 2.1);
+      strokeLine(ctx, cx - 0.2, cy + 3.55, cx - 0.95, cy + 9.05, b, 1.35);
+      strokeLine(ctx, cx - 0.5, cy + 5.15, cx - 0.95, cy + 8.2, s, 0.45);
     } else if (style === 'Ponytail') {
-      strokeLine(ctx, cx + 0.3, cy + 4.1, cx - 1.6, cy + 7.4, O, 2.0);
-      strokeLine(ctx, cx + 0.3, cy + 4.1, cx - 1.4, cy + 7.25, b, 1.25);
+      strokeLine(ctx, cx + 0.05, cy + 4.35, cx - 2.1, cy + 7.85, O, 2.4);
+      strokeLine(ctx, cx + 0.05, cy + 4.35, cx - 1.85, cy + 7.65, b, 1.55);
     }
   };
 
@@ -725,9 +783,9 @@
   Parts.drawNeckHD = function (ctx, ox, topY, torsoY, skin) {
     if (topY >= torsoY) return;
     const h = torsoY - topY;
-    fillRoundRect(ctx, ox - 2.25, topY - 0.15, 4.5, h + 0.45, 0.7, P.outline);
-    fillRoundRect(ctx, ox - 1.45, topY, 2.9, h + 0.2, 0.55, skin.base);
-    fillRoundRect(ctx, ox - 1.45, topY, 0.95, h + 0.2, 0.45, skin.shade);
+    fillRoundRect(ctx, ox - 0.95, topY - 0.1, 1.9, h + 0.35, 0.35, P.outline);
+    fillRoundRect(ctx, ox - 0.45, topY, 0.9, h + 0.15, 0.25, skin.base);
+    fillRoundRect(ctx, ox - 0.42, topY, 0.25, h + 0.15, 0.18, skin.shade);
   };
 
   Parts.drawTorsoHD = function (ctx, tx, ty, uniform) {

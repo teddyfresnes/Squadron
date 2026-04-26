@@ -479,7 +479,7 @@
           E.px(ctx, torsoTL_x + 1 + i, torsoTL_y + 1 + i, strap);
         }
       }
-      drawNeck(ctx, originX + upperBodyDXLocal, headTL_y + 9, torsoTL_y, skin);
+      drawNeck(ctx, originX + upperBodyDXLocal, headTL_y + 8, torsoTL_y, skin);
       drawHead(ctx, headTL_x, headTL_y, skin, { hurt: frame.mouthHurt });
 
       if (!hatCol || hatKind === 'None' || hatKind === 'Bandana') {
