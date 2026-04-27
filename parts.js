@@ -416,7 +416,7 @@
     const drawSideLeg = function (lx, ly, bend, front) {
       const height = 6;
       const w = front ? 5 : 4;
-      const lowerShift = step(bend);
+      const lowerShift = front ? -1 : step(bend);
 
       for (let i = 0; i < height; i++) {
         const dx = i >= 3 ? lowerShift : 0;
@@ -454,7 +454,8 @@
       }
     };
 
-    // Back leg drawn first, front leg drawn on top for natural depth ordering.
+    // Rear/right leg drawn first, wider left leg on top and angled slightly
+    // backward so the stance keeps a little side-view spread.
     drawSideLeg(tx + 3, ty + legOffsets.back, legOffsets.backBend, false);
     drawSideLeg(tx + 0, ty + legOffsets.front, legOffsets.frontBend, true);
 
@@ -903,9 +904,9 @@
       const fillW = front ? 2.0 : 1.35;
       const fill = front ? pants.base : pants.shade;
       const hipX = lx;
-      const kneeX = lx + (front ? 0.3 : 0.18) + bend * 0.35;
+      const kneeX = front ? lx + 0.05 - bend * 0.25 : lx + 0.18 + bend * 0.35;
       const kneeY = ly + 3.2;
-      const footX = lx + (front ? 0.55 : 0.45) + bend * 0.75;
+      const footX = front ? lx - 0.25 - bend * 0.45 : lx + 0.45 + bend * 0.75;
       const footY = ly + 6.25;
 
       strokePath(ctx, P.outline, outlineW, function () {
@@ -929,7 +930,8 @@
         fillRoundRect(ctx, footX - 0.42, footY - 0.24, 2.25, 0.78, 0.3, bootsB);
       }
     };
-    // Rear leg sits slightly to the right; the wider front leg overlaps it.
+    // Rear/right leg sits slightly to the right; the wider left leg overlaps
+    // it and angles back a touch to avoid both legs pointing the same way.
     drawSideLegHD(tx + 4.35, ty + legOffsets.back, legOffsets.backBend, false);
     drawSideLegHD(tx + 1.75, ty + legOffsets.front, legOffsets.frontBend, true);
     // Small colored hip plate removes the old black center bridge.
