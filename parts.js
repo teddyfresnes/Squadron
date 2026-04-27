@@ -415,7 +415,7 @@
 
     const drawSideLeg = function (lx, ly, bend, front) {
       const height = 6;
-      const w = front ? 5 : 4;
+      const w = 5;
       const lowerShift = front ? -1 : step(bend);
 
       for (let i = 0; i < height; i++) {
@@ -426,10 +426,10 @@
           if (x === 0 || x === w - 1) color = O;
           else if (i === 0) color = s;
           else if (front) color = x >= 3 ? s : b;
-          else color = x === 1 ? s : b;
+          else color = x >= 2 ? s : b;
           E.px(ctx, lx + dx + x, y, color);
         }
-        if (i === 3) E.px(ctx, lx + dx + (front ? 2 : 1), y, SO);
+        if (i === 3) E.px(ctx, lx + dx + 2, y, SO);
       }
 
       const bx = lx + lowerShift;
@@ -448,9 +448,13 @@
         E.px(ctx, bx + 0, ly + 6, O);
         E.px(ctx, bx + 1, ly + 6, bootsB);
         E.px(ctx, bx + 2, ly + 6, bootsB);
-        E.px(ctx, bx + 3, ly + 6, O);
+        E.px(ctx, bx + 3, ly + 6, bootsB);
+        E.px(ctx, bx + 4, ly + 6, bootsB);
+        E.px(ctx, bx + 5, ly + 6, O);
         E.px(ctx, bx + 1, ly + 7, O);
         E.px(ctx, bx + 2, ly + 7, O);
+        E.px(ctx, bx + 3, ly + 7, O);
+        E.px(ctx, bx + 4, ly + 7, O);
       }
     };
 
@@ -900,8 +904,8 @@
     };
     const drawSideLegHD = function (lx, ly, bend, front) {
       bend = step(bend);
-      const outlineW = front ? 3.05 : 2.35;
-      const fillW = front ? 2.0 : 1.35;
+      const outlineW = 3.05;
+      const fillW = 2.0;
       const fill = front ? pants.base : pants.shade;
       const hipX = lx;
       const kneeX = front ? lx + 0.05 - bend * 0.25 : lx + 0.18 + bend * 0.35;
@@ -919,15 +923,15 @@
         ctx.lineTo(kneeX, kneeY);
         ctx.lineTo(footX, footY);
       });
-      strokeLine(ctx, hipX + (front ? 0.45 : 0.25), ly + 0.8, footX + 0.1, footY - 0.5, pants.shade, front ? 0.55 : 0.38);
+      strokeLine(ctx, hipX + 0.45, ly + 0.8, footX + 0.1, footY - 0.5, pants.shade, 0.55);
 
       if (front) {
         fillRoundRect(ctx, footX - 1.45, footY - 0.12, 4.55, 1.4, 0.42, P.outline);
         fillRoundRect(ctx, footX - 0.95, footY - 0.35, 3.7, 0.9, 0.34, bootsB);
         fillRoundRect(ctx, footX - 0.55, footY - 0.35, 0.75, 0.42, 0.18, bootsH);
       } else {
-        fillRoundRect(ctx, footX - 0.85, footY - 0.02, 3.0, 1.25, 0.38, P.outline);
-        fillRoundRect(ctx, footX - 0.42, footY - 0.24, 2.25, 0.78, 0.3, bootsB);
+        fillRoundRect(ctx, footX - 1.45, footY - 0.12, 4.55, 1.4, 0.42, P.outline);
+        fillRoundRect(ctx, footX - 0.95, footY - 0.35, 3.7, 0.9, 0.34, bootsB);
       }
     };
     // Rear/right leg sits slightly to the right; the wider left leg overlaps
