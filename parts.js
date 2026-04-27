@@ -300,9 +300,20 @@
     opts = opts || {};
     const b = uniform.base, s = uniform.shade, h = uniform.hl;
     const O = P.outline;
+    const stretchRows = (opts.stretchY || 0) >= 0.5 ? 1 : 0;
 
     // Slightly-tapered base silhouette (collar narrower than shoulders).
-    const tpl = [
+    const tpl = stretchRows ? [
+      '.OBSBO.',
+      'OBHBBSO',
+      'OBBBBSO',
+      'OBBBBSO',
+      'OBBBBSO',
+      'OBBBBSO',
+      'OSSSSSO',
+      'OBBBBSO',
+      'OOOOOOO'
+    ] : [
       '.OBSBO.', // y0 collar — narrow neck opening (S = neck dip)
       'OBHBBSO', // y1 shoulder line (back HL + front seam)
       'OBBBBSO', // y2
@@ -827,8 +838,10 @@
     fillRoundRect(ctx, ox - 0.36, topY + 0.05, 0.22, h - 0.05, 0.16, skin.shade);
   };
 
-  Parts.drawTorsoHD = function (ctx, tx, ty, uniform) {
+  Parts.drawTorsoHD = function (ctx, tx, ty, uniform, opts) {
+    opts = opts || {};
     const O = P.outline;
+    const stretchY = Math.max(0, Math.min(1.2, opts.stretchY || 0));
     // Trapezoidal torso: shoulders wider than belt, with two distinct shoulder
     // balls bulging at the top corners for a 3/4 chibi perspective.
     fillPath(ctx, O, function () {
@@ -836,8 +849,8 @@
       ctx.quadraticCurveTo(tx - 0.2, ty + 0.3, tx + 1.2, ty + 0.15);
       ctx.quadraticCurveTo(tx + 3.5, ty - 0.4, tx + 5.8, ty + 0.15);
       ctx.quadraticCurveTo(tx + 7.2, ty + 0.3, tx + 7.55, ty + 1.6);
-      ctx.lineTo(tx + 7.0, ty + 8.1);
-      ctx.lineTo(tx - 0.05, ty + 8.1);
+      ctx.lineTo(tx + 7.0, ty + 8.1 + stretchY);
+      ctx.lineTo(tx - 0.05, ty + 8.1 + stretchY);
       ctx.closePath();
     });
     fillPath(ctx, uniform.base, function () {
@@ -845,14 +858,14 @@
       ctx.quadraticCurveTo(tx + 0.5, ty + 0.85, tx + 1.5, ty + 0.7);
       ctx.quadraticCurveTo(tx + 3.5, ty + 0.2, tx + 5.5, ty + 0.7);
       ctx.quadraticCurveTo(tx + 6.5, ty + 0.85, tx + 6.85, ty + 1.7);
-      ctx.lineTo(tx + 6.25, ty + 7.25);
-      ctx.lineTo(tx + 0.75, ty + 7.25);
+      ctx.lineTo(tx + 6.25, ty + 7.25 + stretchY);
+      ctx.lineTo(tx + 0.75, ty + 7.25 + stretchY);
       ctx.closePath();
     });
     // Front-side shading column (right = front in 3/4 view)
-    fillRoundRect(ctx, tx + 5.0, ty + 1.6, 1.35, 5.25, 0.4, uniform.shade);
+    fillRoundRect(ctx, tx + 5.0, ty + 1.6, 1.35, 5.25 + stretchY * 0.55, 0.4, uniform.shade);
     // Belt band
-    fillRoundRect(ctx, tx + 0.85, ty + 6.35, 5.95, 1.15, 0.25, uniform.shade);
+    fillRoundRect(ctx, tx + 0.85, ty + 6.35 + stretchY * 0.35, 5.95, 1.15, 0.25, uniform.shade);
     // Front shoulder highlight (bigger / closer to viewer — now on the LEFT)
     fillEllipse(ctx, tx + 1.2, ty + 1.4, 0.7, 0.55, uniform.hl);
     // Back shoulder highlight (smaller — now on the RIGHT)

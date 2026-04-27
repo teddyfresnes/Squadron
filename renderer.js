@@ -426,6 +426,7 @@
 
     const bodyDY = frame.bodyDY || 0;
     const headDY = frame.headDY || 0;
+    const torsoStretchY = Math.max(0, frame.torsoStretch || 0);
 
     const torsoTL_x = originX - 3 + upperBodyDXLocal;
     const torsoTL_y = originY - 8 + bodyDY;
@@ -474,8 +475,8 @@
 
     withBodyScale(ctx, originX, originY, function () {
       drawLegs(ctx, legsTL_x, legsTL_y, pants, stanceLegs(frame, hold));
-      drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8, legsTL_y, pants);
-      drawTorso(ctx, torsoTL_x, torsoTL_y, uniform);
+      drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8 + (smooth ? torsoStretchY : Math.ceil(torsoStretchY)), legsTL_y, pants);
+      drawTorso(ctx, torsoTL_x, torsoTL_y, uniform, { stretchY: torsoStretchY });
       if (vest) drawVest(ctx, torsoTL_x, torsoTL_y, vest);
       if (pack) {
         const strap = pack.shade;

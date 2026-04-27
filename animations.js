@@ -1,6 +1,7 @@
 // Animation system — each animation returns per-frame parameters that drive parts.js + weapons.js.
 // Frame params include:
 //   bodyDY        : vertical offset of whole body (breathing, hit reaction)
+//   torsoStretch  : extra torso length used for soft breathing/idle extension
 //   torsoRot      : small torso lean (unused for strict side, kept 0)
 //   headDY        : head bob independent of body
 //   legs          : { front: dy, back: dy, frontBend: knee forward pixels, backBend }
@@ -34,7 +35,7 @@
   // Defaults
   function defaults() {
     return {
-      bodyDY: 0, headDY: 0,
+      bodyDY: 0, headDY: 0, torsoStretch: 0,
       legs: { front: 0, back: 0, frontBend: 0, backBend: 0 },
       frontArm: null, backArm: null,
       weaponAngle: 0, weaponDX: 0, weaponDY: 0,
@@ -56,17 +57,18 @@
     return d;
   }
 
-  // ---------- IDLE (4 frames, gentle breathing) ----------
+  // ---------- IDLE (8 frames, soft breathing) ----------
   Anims.idle = {
     name: 'Idle',
-    frames: 4,
-    fps: 4,
+    frames: 8,
+    fps: 8,
     get: function (i) {
       const d = mark(defaults(), 'idle', i);
-      const bob = [0, 0, -1, 0][i];
-      d.bodyDY = bob;
-      // headDY is additive on top of bodyDY; keep it 0 so the head rides with
-      // the torso during breathing and the neck stays tight.
+      const breath = [0, 0.25, 0.5, 0.75, 1, 0.75, 0.5, 0.25][i];
+      // The upper body rises a touch while the torso stretches back down to
+      // the legs, avoiding the old separate hip filler shape.
+      d.bodyDY = -breath;
+      d.torsoStretch = breath;
       d.headDY = 0;
       d.legs = { front: 0, back: 0, frontBend: 0, backBend: 0 };
       // Arm hangs down naturally holding weapon low
