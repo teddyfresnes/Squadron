@@ -474,7 +474,7 @@
 
     withBodyScale(ctx, originX, originY, function () {
       drawLegs(ctx, legsTL_x, legsTL_y, pants, stanceLegs(frame, hold));
-      drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8, legsTL_y);
+      drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8, legsTL_y, pants);
       drawTorso(ctx, torsoTL_x, torsoTL_y, uniform);
       if (vest) drawVest(ctx, torsoTL_x, torsoTL_y, vest);
       if (pack) {

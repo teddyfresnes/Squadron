@@ -42,17 +42,23 @@
 
   // ---------- WAIST BRIDGE ----------
   // Fills the rows between torso bottom and legs top when bodyDY lifts the
-  // torso. Uses outline color so it reads as a belt shadow continuous with the
-  // torso bottom outline row.
-  Parts.drawWaistBridge = function (ctx, tx, topY, legsY) {
+  // torso. Uses trouser colors so the connector reads as hips instead of a
+  // black artifact.
+  Parts.drawWaistBridge = function (ctx, tx, topY, legsY, pants) {
+    if (topY >= legsY) return;
     const O = P.outline;
-    // Fills any gap between torso bottom and legs top (e.g. when bodyDY lifts
-    // the upper body during walk/run/aim). 9 wide so the outer leg outlines
-    // (which now extend past the 7-wide torso) are connected too.
+    const b = pants && pants.base ? pants.base : P.outlineSoft;
+    const s = pants && pants.shade ? pants.shade : b;
+    // Keep the bobbing connector colored like the hips instead of drawing a
+    // thick black bar between torso and legs.
     for (let y = topY; y < legsY; y++) {
-      for (let x = -1; x < 8; x++) {
-        E.px(ctx, tx + x, y, O);
-      }
+      E.px(ctx, tx + 0, y, O);
+      E.px(ctx, tx + 1, y, b);
+      E.px(ctx, tx + 2, y, b);
+      E.px(ctx, tx + 3, y, b);
+      E.px(ctx, tx + 4, y, b);
+      E.px(ctx, tx + 5, y, s);
+      E.px(ctx, tx + 6, y, O);
     }
   };
 
@@ -389,59 +395,78 @@
   };
 
   // ---------- LEGS ----------
-  // Two legs, 2 px wide × 6 px tall + boot. legOffsets is the modular
-  // animation interface — front/back y offsets drive lift, frontBend/backBend
-  // drive knee forward bend. Anchors (hips at ty=0, knees at ty=3, feet at
-  // ty=6) stay constant so walk/run/crouch/jump/dead poses just reuse them.
-  //
-  // Spread layout: back leg sits at tx+0, front leg at tx+5 (5 col stride).
-  // A single outline "hip bridge" pixel at tx+3 fills the visible gap
-  // between leg tops so the silhouette stays solid even as legs lift.
+  // Side-view legs with a wider front leg on the left and a narrower rear leg
+  // slightly to the right. legOffsets keeps the existing animation contract:
+  // front/back drive lift, frontBend/backBend drive the lower-leg step.
   Parts.drawLegs = function (ctx, tx, ty, pants, legOffsets) {
     legOffsets = legOffsets || { front: 0, back: 0, frontBend: 0, backBend: 0 };
     const b = pants.base, s = pants.shade;
     const O = P.outline;
     const bootsB = P.boots.base;
+    const bootsH = P.boots.hl || bootsB;
+    const SO = P.outlineSoft || s;
 
-    const drawLeg = function (lx, ly, bend) {
-      const height = 6;
-      for (let i = 0; i < height; i++) {
-        const dx = (i >= 3 && bend) ? bend : 0;
-        if (i === 0) {
-          // Waistband row — shade both pixels so it merges with the torso base.
-          E.px(ctx, lx + dx, ly + i, s);
-          E.px(ctx, lx + 1 + dx, ly + i, s);
-        } else {
-          E.px(ctx, lx + dx, ly + i, b);
-          E.px(ctx, lx + 1 + dx, ly + i, s);
-        }
-        if (i === 3) {
-          // Knee crease — single darker pixel on the front column.
-          E.px(ctx, lx + 1 + dx, ly + i, O);
-        }
-        // Leg outline
-        E.px(ctx, lx - 1 + dx, ly + i, O);
-        E.px(ctx, lx + 2 + dx, ly + i, O);
-      }
-      // Boot — 4 px wide with a forward tip
-      const bx = lx + (bend || 0);
-      E.px(ctx, bx,     ly + 6, bootsB);
-      E.px(ctx, bx + 1, ly + 6, bootsB);
-      E.px(ctx, bx + 2, ly + 6, bootsB);
-      E.px(ctx, bx - 1, ly + 6, O);
-      E.px(ctx, bx + 3, ly + 6, O);
-      E.px(ctx, bx,     ly + 7, O);
-      E.px(ctx, bx + 1, ly + 7, O);
-      E.px(ctx, bx + 2, ly + 7, O);
+    const step = function (bend) {
+      bend = bend || 0;
+      if (bend > 1) return 1;
+      if (bend < -1) return -1;
+      return bend;
     };
 
-    // Back leg drawn first, front leg drawn on top — natural depth ordering.
-    drawLeg(tx + 0, ty + legOffsets.back, legOffsets.backBend);
-    drawLeg(tx + 5, ty + legOffsets.front, legOffsets.frontBend);
+    const drawSideLeg = function (lx, ly, bend, front) {
+      const height = 6;
+      const w = front ? 5 : 4;
+      const lowerShift = step(bend);
 
-    // Hip bridge — fills the 1-px gap between leg outlines at the natural
-    // hip row so the silhouette never shows a hole, even mid-stride.
-    E.px(ctx, tx + 3, ty, O);
+      for (let i = 0; i < height; i++) {
+        const dx = i >= 3 ? lowerShift : 0;
+        const y = ly + i;
+        for (let x = 0; x < w; x++) {
+          let color;
+          if (x === 0 || x === w - 1) color = O;
+          else if (i === 0) color = s;
+          else if (front) color = x >= 3 ? s : b;
+          else color = x === 1 ? s : b;
+          E.px(ctx, lx + dx + x, y, color);
+        }
+        if (i === 3) E.px(ctx, lx + dx + (front ? 2 : 1), y, SO);
+      }
+
+      const bx = lx + lowerShift;
+      if (front) {
+        E.px(ctx, bx + 0, ly + 6, O);
+        E.px(ctx, bx + 1, ly + 6, bootsB);
+        E.px(ctx, bx + 2, ly + 6, bootsH);
+        E.px(ctx, bx + 3, ly + 6, bootsB);
+        E.px(ctx, bx + 4, ly + 6, bootsB);
+        E.px(ctx, bx + 5, ly + 6, O);
+        E.px(ctx, bx + 1, ly + 7, O);
+        E.px(ctx, bx + 2, ly + 7, O);
+        E.px(ctx, bx + 3, ly + 7, O);
+        E.px(ctx, bx + 4, ly + 7, O);
+      } else {
+        E.px(ctx, bx + 0, ly + 6, O);
+        E.px(ctx, bx + 1, ly + 6, bootsB);
+        E.px(ctx, bx + 2, ly + 6, bootsB);
+        E.px(ctx, bx + 3, ly + 6, O);
+        E.px(ctx, bx + 1, ly + 7, O);
+        E.px(ctx, bx + 2, ly + 7, O);
+      }
+    };
+
+    // Back leg drawn first, front leg drawn on top for natural depth ordering.
+    drawSideLeg(tx + 3, ty + legOffsets.back, legOffsets.backBend, false);
+    drawSideLeg(tx + 0, ty + legOffsets.front, legOffsets.frontBend, true);
+
+    // Colored hip plate keeps the side-view silhouette solid without a
+    // separate black filler between the legs.
+    E.px(ctx, tx + 0, ty, O);
+    E.px(ctx, tx + 1, ty, b);
+    E.px(ctx, tx + 2, ty, b);
+    E.px(ctx, tx + 3, ty, b);
+    E.px(ctx, tx + 4, ty, b);
+    E.px(ctx, tx + 5, ty, s);
+    E.px(ctx, tx + 6, ty, O);
   };
 
   // ---------- ARM ----------
@@ -852,38 +877,65 @@
     strokeLine(ctx, tx - 2.0, ty + 4.9, tx + 0.75, ty + 4.9, pack.shade, 0.55);
   };
 
-  Parts.drawWaistBridgeHD = function (ctx, tx, topY, legsY) {
+  Parts.drawWaistBridgeHD = function (ctx, tx, topY, legsY, pants) {
     if (topY >= legsY) return;
-    fillRoundRect(ctx, tx - 1.2, topY - 0.1, 9.35, legsY - topY + 0.35, 0.25, P.outline);
+    const h = legsY - topY + 0.35;
+    const b = pants && pants.base ? pants.base : P.outlineSoft;
+    const s = pants && pants.shade ? pants.shade : b;
+    fillRoundRect(ctx, tx + 0.1, topY - 0.08, 6.9, h, 0.25, P.outline);
+    fillRoundRect(ctx, tx + 0.55, topY + 0.05, 5.95, Math.max(0.15, h - 0.25), 0.18, b);
+    strokeLine(ctx, tx + 4.7, topY + 0.2, tx + 5.9, topY + 0.2, s, 0.35);
   };
 
   Parts.drawLegsHD = function (ctx, tx, ty, pants, legOffsets) {
     legOffsets = legOffsets || { front: 0, back: 0, frontBend: 0, backBend: 0 };
     const bootsB = P.boots.base;
-    const drawLeg = function (lx, ly, bend) {
-      const kneeX = lx + 0.9 + bend * 0.45;
-      const kneeY = ly + 3.2;
-      const footX = lx + 1.25 + bend;
-      const footY = ly + 6.25;
-      strokePath(ctx, P.outline, 2.45, function () {
-        ctx.moveTo(lx + 0.8, ly + 0.2);
-        ctx.lineTo(kneeX, kneeY);
-        ctx.lineTo(footX, footY);
-      });
-      strokePath(ctx, pants.base, 1.45, function () {
-        ctx.moveTo(lx + 0.8, ly + 0.2);
-        ctx.lineTo(kneeX, kneeY);
-        ctx.lineTo(footX, footY);
-      });
-      strokeLine(ctx, lx + 1.25, ly + 0.7, footX + 0.25, footY - 0.4, pants.shade, 0.45);
-      fillRoundRect(ctx, footX - 0.9, footY - 0.1, 3.2, 1.35, 0.45, P.outline);
-      fillRoundRect(ctx, footX - 0.45, footY - 0.35, 2.5, 0.9, 0.35, bootsB);
+    const bootsH = P.boots.hl || bootsB;
+    const step = function (bend) {
+      bend = bend || 0;
+      if (bend > 1.25) return 1.25;
+      if (bend < -1.25) return -1.25;
+      return bend;
     };
-    // Spread stance — back leg on the left, front leg on the right.
-    drawLeg(tx + 0, ty + legOffsets.back, legOffsets.backBend);
-    drawLeg(tx + 5, ty + legOffsets.front, legOffsets.frontBend);
-    // Hip bridge between leg tops so HD silhouette stays solid.
-    fillRoundRect(ctx, tx + 2.7, ty - 0.1, 1.6, 1.0, 0.25, P.outline);
+    const drawSideLegHD = function (lx, ly, bend, front) {
+      bend = step(bend);
+      const outlineW = front ? 3.05 : 2.35;
+      const fillW = front ? 2.0 : 1.35;
+      const fill = front ? pants.base : pants.shade;
+      const hipX = lx;
+      const kneeX = lx + (front ? 0.3 : 0.18) + bend * 0.35;
+      const kneeY = ly + 3.2;
+      const footX = lx + (front ? 0.55 : 0.45) + bend * 0.75;
+      const footY = ly + 6.25;
+
+      strokePath(ctx, P.outline, outlineW, function () {
+        ctx.moveTo(hipX, ly + 0.2);
+        ctx.lineTo(kneeX, kneeY);
+        ctx.lineTo(footX, footY);
+      });
+      strokePath(ctx, fill, fillW, function () {
+        ctx.moveTo(hipX, ly + 0.2);
+        ctx.lineTo(kneeX, kneeY);
+        ctx.lineTo(footX, footY);
+      });
+      strokeLine(ctx, hipX + (front ? 0.45 : 0.25), ly + 0.8, footX + 0.1, footY - 0.5, pants.shade, front ? 0.55 : 0.38);
+
+      if (front) {
+        fillRoundRect(ctx, footX - 1.45, footY - 0.12, 4.55, 1.4, 0.42, P.outline);
+        fillRoundRect(ctx, footX - 0.95, footY - 0.35, 3.7, 0.9, 0.34, bootsB);
+        fillRoundRect(ctx, footX - 0.55, footY - 0.35, 0.75, 0.42, 0.18, bootsH);
+      } else {
+        fillRoundRect(ctx, footX - 0.85, footY - 0.02, 3.0, 1.25, 0.38, P.outline);
+        fillRoundRect(ctx, footX - 0.42, footY - 0.24, 2.25, 0.78, 0.3, bootsB);
+      }
+    };
+    // Rear leg sits slightly to the right; the wider front leg overlaps it.
+    drawSideLegHD(tx + 4.35, ty + legOffsets.back, legOffsets.backBend, false);
+    drawSideLegHD(tx + 1.75, ty + legOffsets.front, legOffsets.frontBend, true);
+    // Small colored hip plate removes the old black center bridge.
+    fillRoundRect(ctx, tx + 0.25, ty - 0.08, 6.75, 1.25, 0.3, P.outline);
+    fillRoundRect(ctx, tx + 0.75, ty + 0.12, 5.75, 0.78, 0.25, pants.base);
+    fillRoundRect(ctx, tx + 4.75, ty + 0.12, 1.3, 0.52, 0.18, pants.shade);
   };
 
   Parts.drawArmHD = function (ctx, sx, sy, hx, hy, uniform, glovesCol, opts) {
