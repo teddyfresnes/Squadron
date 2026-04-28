@@ -117,7 +117,7 @@
   Anims.run = {
     name: 'Run',
     frames: 8,
-    fps: 18,
+    fps: 16,
     get: function (i) {
       const d = mark(defaults(), 'run', i);
       const t = i / 8;
@@ -127,11 +127,11 @@
       const frontSwing = Math.max(0, planted);
       const backSwing = Math.max(0, -planted);
       const pushOff = 0.5 + 0.5 * Math.cos(phase * 2);
-      const bodyBob = 0.28 + 0.48 * pushOff;
+      const bodyBob = 0.16 + 0.24 * pushOff;
 
       // Run should read as a different gait, not just a faster walk: longer
-      // stride, higher knee lift, stronger body bounce, and a clear forward
-      // carry posture.
+      // stride, higher knee lift, and a forward carry posture. The vertical
+      // bob stays restrained so the vest does not shimmer around the pelvis.
       d.bodyDY = -bodyBob;
       d.torsoStretch = bodyBob;
       d.headDY = Math.sin(phase * 2) * 0.08;
@@ -147,8 +147,8 @@
       };
       d.aimAngle = 0.18;  // lower, non-aimed carry while running
       d.weaponAngle = Math.sin(phase) * 0.035;
-      d.weaponDY = Math.sin(phase * 2) * 0.45;
-      d.forwardLean = 1.1;
+      d.weaponDY = Math.sin(phase * 2) * 0.25;
+      d.forwardLean = 0.35;
       return d;
     }
   };
