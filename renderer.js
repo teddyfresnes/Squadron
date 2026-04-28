@@ -13,12 +13,12 @@
   const HOLD_PROFILES = {
     pistol: {
       support: true,
-      grip: { x: 23, y: -14 },
-      baseAngle: -0.03,
+      grip: { x: 23, y: -15 },
+      baseAngle: -0.04,
       aimWeight: 0.5,
-      rearElbow: { x: 9, y: 0 },
-      supportElbow: { x: 8, y: 4 },
-      foregripOffset: { x: 1, y: 3 },
+      rearElbow: { x: 8, y: 1 },
+      supportElbow: { x: 7, y: 3 },
+      foregripOffset: { x: 1, y: 1 },
       recoilBack: 0.7,
       recoilLift: -0.3,
       recoilAngleScale: 0.9,
@@ -31,12 +31,12 @@
     },
     smg: {
       support: true,
-      grip: { x: 19, y: -8 },
+      grip: { x: 19, y: -9 },
       baseAngle: 0.01,
       aimWeight: 0.5,
       rearElbow: { x: 7, y: 3 },
       supportElbow: { x: 9, y: 4 },
-      foregripOffset: { x: -2, y: 0 },
+      foregripOffset: { x: -2, y: -1 },
       recoilBack: 0.55,
       recoilLift: -0.15,
       recoilAngleScale: 0.45,
@@ -54,7 +54,7 @@
       aimWeight: 0.65,
       rearElbow: { x: 7, y: 1 },
       supportElbow: { x: 15, y: 2 },
-      foregripOffset: { x: -1, y: 1 },
+      foregripOffset: { x: -1, y: 0 },
       recoilBack: 0.8,
       recoilLift: -0.25,
       recoilAngleScale: 0.8,
@@ -67,12 +67,12 @@
     },
     shotgun: {
       support: true,
-      grip: { x: 19, y: -7 },
-      baseAngle: 0.09,
+      grip: { x: 19, y: -9 },
+      baseAngle: 0.07,
       aimWeight: 0.55,
       rearElbow: { x: 8, y: 4 },
-      supportElbow: { x: 20, y: 6 },
-      foregripOffset: { x: 2, y: 1 },
+      supportElbow: { x: 20, y: 5 },
+      foregripOffset: { x: 2, y: 0 },
       recoilBack: 1.35,
       recoilLift: -0.45,
       recoilAngleScale: 1.35,
@@ -90,7 +90,7 @@
       aimWeight: 0.45,
       rearElbow: { x: 9, y: 0 },
       supportElbow: { x: 25, y: 2 },
-      foregripOffset: { x: -2, y: 1 },
+      foregripOffset: { x: -3, y: 0 },
       recoilBack: 1.05,
       recoilLift: -0.3,
       recoilAngleScale: 1.05,
@@ -103,12 +103,12 @@
     },
     heavy: {
       support: true,
-      grip: { x: 19, y: -3 },
-      baseAngle: 0.11,
+      grip: { x: 19, y: -5 },
+      baseAngle: 0.08,
       aimWeight: 0.45,
-      rearElbow: { x: 8, y: 7 },
-      supportElbow: { x: 18, y: 8 },
-      foregripOffset: { x: -1, y: 2 },
+      rearElbow: { x: 8, y: 6 },
+      supportElbow: { x: 18, y: 6 },
+      foregripOffset: { x: -1, y: 1 },
       recoilBack: 1.1,
       recoilLift: -0.15,
       recoilAngleScale: 0.7,
@@ -124,83 +124,133 @@
 
   const HOLD_VARIANTS = {
     pocket: {
-      grip: { x: 21, y: -13 },
+      grip: { x: 21, y: -14 },
       rearElbow: { x: 8, y: 1 },
-      supportElbow: { x: 7, y: 4 },
-      foregripOffset: { x: 1, y: 3 },
+      supportElbow: { x: 7, y: 3 },
+      foregripOffset: { x: 1, y: 1 },
       recoilBack: 0.45
     },
     'long-slide': {
       grip: { x: 24, y: -15 },
       rearElbow: { x: 10, y: -1 },
       supportElbow: { x: 9, y: 3 },
-      foregripOffset: { x: 2, y: 3 },
+      foregripOffset: { x: 2, y: 1 },
       recoilBack: 0.8
     },
     compact: {
-      grip: { x: 17, y: -8 },
+      grip: { x: 17, y: -9 },
       rearElbow: { x: 7, y: 3 },
       supportElbow: { x: 8, y: 4 },
-      foregripOffset: { x: -2, y: 0 }
+      foregripOffset: { x: -2, y: -1 }
     },
     'tall-compact': {
-      grip: { x: 18, y: -5 },
-      baseAngle: 0.05,
-      supportElbow: { x: 9, y: 6 },
-      foregripOffset: { x: -2, y: 0 }
+      grip: { x: 18, y: -7 },
+      baseAngle: 0.03,
+      supportElbow: { x: 9, y: 5 },
+      foregripOffset: { x: -2, y: -4 }
     },
     'long-smg': {
-      grip: { x: 19, y: -9 },
+      grip: { x: 19, y: -10 },
       supportElbow: { x: 13, y: 4 },
-      foregripOffset: { x: -4, y: 0 }
+      foregripOffset: { x: -4, y: -1 }
     },
     'long-rifle': {
       grip: { x: 20, y: -12 },
       supportElbow: { x: 17, y: 2 },
-      foregripOffset: { x: -2, y: 1 }
+      foregripOffset: { x: -2, y: 0 }
     },
     'short-shotgun': {
-      grip: { x: 20, y: -7 },
-      supportElbow: { x: 17, y: 6 },
-      foregripOffset: { x: 1, y: 1 }
+      grip: { x: 20, y: -8 },
+      supportElbow: { x: 17, y: 5 },
+      foregripOffset: { x: 1, y: 0 }
     },
     'long-shotgun': {
-      grip: { x: 19, y: -8 },
-      supportElbow: { x: 24, y: 6 },
-      foregripOffset: { x: 2, y: 1 }
+      grip: { x: 19, y: -9 },
+      supportElbow: { x: 23, y: 5 },
+      foregripOffset: { x: 1, y: 0 }
     },
     'long-sniper': {
-      grip: { x: 20, y: -13 },
-      supportElbow: { x: 30, y: 1 },
-      foregripOffset: { x: -5, y: 1 },
+      grip: { x: 20, y: -14 },
+      supportElbow: { x: 28, y: 2 },
+      foregripOffset: { x: -8, y: 0 },
       recoilBack: 1.15
     },
     'compact-sniper': {
       grip: { x: 22, y: -13 },
       supportElbow: { x: 22, y: 2 },
-      foregripOffset: { x: -2, y: 1 }
+      foregripOffset: { x: -3, y: 0 }
     },
     launcher: {
-      grip: { x: 20, y: -12 },
+      grip: { x: 20, y: -13 },
       baseAngle: 0.03,
       aimWeight: 0.35,
       rearElbow: { x: 8, y: 2 },
-      supportElbow: { x: 18, y: 7 },
-      foregripOffset: { x: -5, y: 2 },
+      supportElbow: { x: 18, y: 5 },
+      foregripOffset: { x: -5, y: 1 },
       recoilLift: -0.08,
       runGrip: { x: -7, y: 5 },
       reloadGrip: { x: -3, y: 5 }
     },
     cannon: {
-      grip: { x: 18, y: 0 },
-      baseAngle: 0.13,
-      rearElbow: { x: 7, y: 8 },
-      supportElbow: { x: 19, y: 10 },
-      foregripOffset: { x: -2, y: 3 },
+      grip: { x: 18, y: -2 },
+      baseAngle: 0.1,
+      rearElbow: { x: 7, y: 7 },
+      supportElbow: { x: 18, y: 8 },
+      foregripOffset: { x: -2, y: 1 },
       recoilBack: 1.25,
       runGrip: { x: -7, y: 7 },
       reloadGrip: { x: -3, y: 8 }
     }
+  };
+
+  const HOLD_OVERRIDES = {
+    'PISTOL-01':  { grip: { x: 22, y: -14 }, rearElbow: { x: 7, y: 2 }, supportElbow: { x: 6, y: 3 }, foregripOffset: { x: 1, y: 1 } },
+    'PISTOL-05':  { grip: { x: 22, y: -15 }, rearElbow: { x: 8, y: 1 }, supportElbow: { x: 7, y: 3 }, foregripOffset: { x: 1, y: 1 } },
+    'PISTOL-07':  { grip: { x: 22, y: -15 }, rearElbow: { x: 8, y: 1 }, supportElbow: { x: 7, y: 3 }, foregripOffset: { x: 1, y: 1 } },
+    'PISTOL-08':  { grip: { x: 21, y: -14 }, rearElbow: { x: 7, y: 2 }, supportElbow: { x: 6, y: 3 }, foregripOffset: { x: 1, y: 1 } },
+
+    'SMG-02':     { grip: { x: 18, y: -8 }, supportElbow: { x: 8, y: 4 }, foregripOffset: { x: -1, y: -2 } },
+    'SMG-03':     { grip: { x: 18, y: -8 }, supportElbow: { x: 8, y: 4 }, foregripOffset: { x: -1, y: -2 } },
+    'SMG-04':     { grip: { x: 18, y: -7 }, supportElbow: { x: 9, y: 5 }, foregripOffset: { x: -3, y: -7 } },
+    'SMG-07':     { grip: { x: 19, y: -10 }, supportElbow: { x: 13, y: 4 }, foregripOffset: { x: -5, y: -2 } },
+    'SMG-10':     { grip: { x: 19, y: -9 }, supportElbow: { x: 10, y: 4 }, foregripOffset: { x: -3, y: -1 } },
+    'SMG-11':     { grip: { x: 18, y: -9 }, supportElbow: { x: 9, y: 4 }, foregripOffset: { x: -2, y: -1 } },
+
+    'RIFLE-03':   { supportElbow: { x: 16, y: 2 }, foregripOffset: { x: -3, y: 0 } },
+    'RIFLE-04':   { grip: { x: 20, y: -13 }, supportElbow: { x: 19, y: 2 }, foregripOffset: { x: -4, y: 0 } },
+    'RIFLE-05':   { grip: { x: 20, y: -13 }, supportElbow: { x: 18, y: 2 }, foregripOffset: { x: -4, y: 0 } },
+    'RIFLE-06':   { supportElbow: { x: 19, y: 2 }, foregripOffset: { x: -5, y: 0 } },
+    'RIFLE-08':   { grip: { x: 20, y: -13 }, supportElbow: { x: 19, y: 2 }, foregripOffset: { x: -5, y: 0 } },
+
+    'SHOTGUN-01': { grip: { x: 20, y: -8 }, supportElbow: { x: 17, y: 5 }, foregripOffset: { x: 1, y: 0 } },
+    'SHOTGUN-02': { supportElbow: { x: 22, y: 5 }, foregripOffset: { x: 0, y: 0 } },
+    'SHOTGUN-03': { grip: { x: 19, y: -9 }, supportElbow: { x: 24, y: 5 }, foregripOffset: { x: 0, y: 0 } },
+    'SHOTGUN-05': { grip: { x: 19, y: -9 }, supportElbow: { x: 23, y: 5 }, foregripOffset: { x: 0, y: 0 } },
+    'SHOTGUN-06': { grip: { x: 19, y: -9 }, supportElbow: { x: 23, y: 5 }, foregripOffset: { x: 0, y: 0 } },
+    'SHOTGUN-07': { grip: { x: 20, y: -8 }, supportElbow: { x: 17, y: 5 }, foregripOffset: { x: 1, y: 0 } },
+    'SHOTGUN-08': { grip: { x: 19, y: -9 }, supportElbow: { x: 24, y: 5 }, foregripOffset: { x: 0, y: 0 } },
+
+    'SNIPER-01':  { grip: { x: 20, y: -14 }, supportElbow: { x: 26, y: 2 }, foregripOffset: { x: -12, y: 0 } },
+    'SNIPER-02':  { grip: { x: 21, y: -13 }, supportElbow: { x: 25, y: 2 }, foregripOffset: { x: -9, y: 0 } },
+    'SNIPER-03':  { supportElbow: { x: 24, y: 2 }, foregripOffset: { x: -8, y: 0 } },
+    'SNIPER-04':  { supportElbow: { x: 23, y: 2 }, foregripOffset: { x: -7, y: 0 } },
+    'SNIPER-05':  { grip: { x: 20, y: -14 }, supportElbow: { x: 26, y: 2 }, foregripOffset: { x: -12, y: 0 } },
+    'SNIPER-06':  { grip: { x: 20, y: -14 }, supportElbow: { x: 26, y: 2 }, foregripOffset: { x: -11, y: 0 } },
+    'SNIPER-07':  { grip: { x: 20, y: -14 }, supportElbow: { x: 27, y: 2 }, foregripOffset: { x: -13, y: 0 } },
+    'SNIPER-08':  { grip: { x: 20, y: -14 }, supportElbow: { x: 27, y: 2 }, foregripOffset: { x: -13, y: 0 } },
+    'SNIPER-09':  { supportElbow: { x: 21, y: 2 }, foregripOffset: { x: -5, y: 0 } },
+    'SNIPER-10':  { supportElbow: { x: 21, y: 2 }, foregripOffset: { x: -5, y: 0 } },
+
+    'HEAVY-04':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -2, y: 0 } },
+    'HEAVY-05':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -2, y: 0 } },
+    'HEAVY-06':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -4, y: 0 } },
+    'HEAVY-07':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -4, y: 0 } },
+    'HEAVY-08':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -4, y: 0 } },
+    'HEAVY-10':   { grip: { x: 19, y: -6 }, supportElbow: { x: 17, y: 6 }, foregripOffset: { x: -3, y: 0 } },
+    'HEAVY-11':   { grip: { x: 19, y: -6 }, supportElbow: { x: 17, y: 6 }, foregripOffset: { x: -3, y: 0 } },
+    'HEAVY-12':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -4, y: 0 } },
+    'HEAVY-13':   { grip: { x: 18, y: -3 }, supportElbow: { x: 18, y: 7 }, foregripOffset: { x: -3, y: 1 } },
+    'HEAVY-14':   { grip: { x: 18, y: -3 }, supportElbow: { x: 18, y: 7 }, foregripOffset: { x: -3, y: 1 } }
   };
 
   function isObj(v) {
@@ -220,7 +270,7 @@
 
   function getHold(weapon) {
     const base = HOLD_PROFILES[weapon.holdStyle || weapon.type] || HOLD_PROFILES.rifle;
-    return mergeHold(base, HOLD_VARIANTS[weapon.holdVariant] || null);
+    return mergeHold(mergeHold(base, HOLD_VARIANTS[weapon.holdVariant] || null), HOLD_OVERRIDES[weapon.name] || null);
   }
 
   function add(a, b) {
@@ -321,6 +371,51 @@
       x: Math.round(grip.x + r.x),
       y: Math.round(grip.y + r.y)
     };
+  }
+
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
+  function resolveElbow(shoulder, preferred, hand, weapon, role) {
+    const dx = hand.x - shoulder.x;
+    const dy = hand.y - shoulder.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return preferred;
+
+    const compact = weapon.type === 'pistol' || weapon.type === 'smg';
+    const heavyCarry = weapon.type === 'shotgun' || weapon.type === 'heavy';
+    const isSupport = role === 'support';
+    const minT = isSupport ? (compact ? 0.25 : 0.3) : (compact ? 0.22 : 0.25);
+    const maxT = isSupport ? (compact ? 0.78 : 0.82) : 0.76;
+    const minBend = isSupport ? (compact ? 1.2 : 2.2) : (compact ? 0.8 : 1.4);
+    const maxBend = isSupport ? (heavyCarry ? 13 : 11) : (compact ? 8 : 10);
+    const liftAllowance = isSupport ? 2 : 3;
+    const dropAllowance = heavyCarry ? 16 : 13;
+
+    const ux = dx / len;
+    const uy = dy / len;
+    let nx = -uy;
+    let ny = ux;
+    if (ny < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+
+    const px = preferred.x - shoulder.x;
+    const py = preferred.y - shoulder.y;
+    let along = px * ux + py * uy;
+    let bend = px * nx + py * ny;
+
+    along = clamp(along, len * minT, len * maxT);
+    bend = clamp(bend, minBend, Math.min(maxBend, Math.max(minBend + 1, len * 0.45)));
+
+    let x = shoulder.x + ux * along + nx * bend;
+    let y = shoulder.y + uy * along + ny * bend;
+    x = clamp(x, Math.min(shoulder.x, hand.x) - 1, Math.max(shoulder.x, hand.x) + 1);
+    y = clamp(y, Math.min(shoulder.y, hand.y) - liftAllowance, Math.max(shoulder.y, hand.y) + dropAllowance);
+
+    return { x: Math.round(x), y: Math.round(y) };
   }
 
   function drawMuzzleFlash(ctx, weapon) {
@@ -489,10 +584,10 @@
     }
 
     if (supportHand && !frame.tuck) {
-      const elbow = {
+      const elbow = resolveElbow(shoulderBack, {
         x: Math.round(shoulderBack.x + (hold.supportElbow ? hold.supportElbow.x : 12)),
         y: Math.round(shoulderBack.y + (hold.supportElbow ? hold.supportElbow.y : 3))
-      };
+      }, supportHand, weapon, 'support');
       drawBentArm(ctx, shoulderBack, elbow, supportHand, uniform, smooth);
     }
 
@@ -554,10 +649,10 @@
       };
       drawBentArm(ctx, shoulderFront, elbow, throwHand, uniform, smooth);
     } else if (!frame.tuck) {
-      const elbow = {
+      const elbow = resolveElbow(shoulderFront, {
         x: Math.round(shoulderFront.x + (hold.rearElbow ? hold.rearElbow.x : 9)),
         y: Math.round(shoulderFront.y + (hold.rearElbow ? hold.rearElbow.y : 1))
-      };
+      }, weaponGrip, weapon, 'rear');
       drawBentArm(ctx, shoulderFront, elbow, weaponGrip, uniform, smooth);
     }
 
