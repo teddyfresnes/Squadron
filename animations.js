@@ -77,70 +77,78 @@
     }
   };
 
-  // ---------- WALK (16 frames, simple smooth side step) ----------
+  // ---------- WALK (16 frames, natural patrol step) ----------
   Anims.walk = {
     name: 'Walk',
     frames: 16,
-    fps: 12,
+    fps: 10,
     get: function (i) {
       const d = mark(defaults(), 'walk', i);
       const t = i / 16;
       const phase = t * TAU;
       const step = Math.sin(phase);
-      const bodyBob = 0.28 + 0.34 * (0.5 + 0.5 * Math.cos(phase * 2));
-      const frontLift = Math.max(0, step) * 0.75;
-      const backLift = Math.max(0, -step) * 0.75;
-      // Torso bob is absorbed by stretch so the hip line stays clean.
+      const passing = Math.cos(phase);
+      const passingRise = 0.5 + 0.5 * Math.cos(phase * 2);
+      const frontLift = Math.max(0, passing) * 0.52;
+      const backLift = Math.max(0, -passing) * 0.52;
+      const bodyBob = 0.14 + 0.22 * passingRise;
+
+      // Keep the walk upright and readable: smaller stride, soft passing rise,
+      // and just enough knee bend to avoid a sliding-foot look.
       d.bodyDY = -bodyBob;
       d.torsoStretch = bodyBob;
-      d.headDY = 0;
+      d.headDY = Math.sin(phase * 2) * 0.05;
       d.legs = {
         front: 0,
         back: 0,
-        frontStep: step * 0.9,
-        backStep: -step * 0.9,
+        frontStep: step * 0.72,
+        backStep: -step * 0.72,
         frontLift: frontLift,
         backLift: backLift,
-        frontBend: step * 0.65,
-        backBend: -step * 0.65
+        frontBend: step * 0.34 + frontLift * 0.24,
+        backBend: -step * 0.34 + backLift * 0.24
       };
-      d.aimAngle = 0.1;
+      d.aimAngle = 0.12 + Math.sin(phase * 2) * 0.01;
       return d;
     }
   };
 
-  // ---------- RUN (8 frames, fast side stride) ----------
+  // ---------- RUN (8 frames, pronounced sprint stride) ----------
   Anims.run = {
     name: 'Run',
     frames: 8,
-    fps: 16,
+    fps: 18,
     get: function (i) {
       const d = mark(defaults(), 'run', i);
       const t = i / 8;
       const phase = t * TAU;
       const stride = Math.sin(phase);
       const planted = Math.cos(phase);
-      const frontSwing = Math.max(0, stride);
-      const backSwing = Math.max(0, -stride);
-      const bodyBob = 0.18 + 0.34 * (0.5 + 0.5 * Math.cos(phase * 2));
+      const frontSwing = Math.max(0, planted);
+      const backSwing = Math.max(0, -planted);
+      const pushOff = 0.5 + 0.5 * Math.cos(phase * 2);
+      const bodyBob = 0.28 + 0.48 * pushOff;
 
-      // Keep the hip line locked: the body bob is subtle and absorbed by
-      // torso stretch instead of opening a large waist bridge.
+      // Run should read as a different gait, not just a faster walk: longer
+      // stride, higher knee lift, stronger body bounce, and a clear forward
+      // carry posture.
       d.bodyDY = -bodyBob;
       d.torsoStretch = bodyBob;
-      d.headDY = 0;
+      d.headDY = Math.sin(phase * 2) * 0.08;
       d.legs = {
         front: 0,
         back: 0,
-        frontStep: stride * 1.35,
-        backStep: -stride * 1.35,
-        frontLift: frontSwing * 0.95,
-        backLift: backSwing * 0.95,
-        frontBend: frontSwing * 0.85 - Math.max(0, -planted) * 0.2,
-        backBend: backSwing * 0.85 - Math.max(0, planted) * 0.2
+        frontStep: stride * 1.72,
+        backStep: -stride * 1.72,
+        frontLift: frontSwing * 1.25,
+        backLift: backSwing * 1.25,
+        frontBend: frontSwing * 0.95 + Math.max(0, stride) * 0.22 - Math.max(0, -stride) * 0.34,
+        backBend: backSwing * 0.95 + Math.max(0, -stride) * 0.22 - Math.max(0, stride) * 0.34
       };
-      d.aimAngle = -0.05;  // weapon slightly forward/up while running
-      d.forwardLean = 0.45;
+      d.aimAngle = 0.18;  // lower, non-aimed carry while running
+      d.weaponAngle = Math.sin(phase) * 0.035;
+      d.weaponDY = Math.sin(phase * 2) * 0.45;
+      d.forwardLean = 1.1;
       return d;
     }
   };

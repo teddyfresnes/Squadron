@@ -420,8 +420,8 @@
 
     const step = function (bend) {
       bend = bend || 0;
-      if (bend > 1) return 1;
-      if (bend < -1) return -1;
+      if (bend > 2) return 2;
+      if (bend < -2) return -2;
       return bend;
     };
 
@@ -430,7 +430,7 @@
       const w = 5;
       const modernStep = typeof stepX === 'number';
       const lowerShift = modernStep ? Math.round(step(stepX)) : (front ? -1 : step(bend));
-      const liftPx = Math.round(Math.max(0, Math.min(1, lift || 0)));
+      const liftPx = Math.round(Math.max(0, Math.min(1.35, lift || 0)));
 
       for (let i = 0; i < height; i++) {
         const lower = i >= 3;
@@ -932,15 +932,15 @@
     const bootsH = P.boots.hl || bootsB;
     const step = function (bend) {
       bend = bend || 0;
-      if (bend > 1.25) return 1.25;
-      if (bend < -1.25) return -1.25;
+      if (bend > 1.85) return 1.85;
+      if (bend < -1.85) return -1.85;
       return bend;
     };
     const drawSideLegHD = function (lx, ly, bend, front, stepX, lift) {
       const modernStep = typeof stepX === 'number';
       bend = step(bend);
       const stride = modernStep ? step(stepX) : 0;
-      const liftY = Math.max(0, Math.min(1, lift || 0));
+      const liftY = Math.max(0, Math.min(1.35, lift || 0));
       const outlineW = 3.05;
       const fillW = 2.0;
       const fill = front ? pants.base : pants.shade;

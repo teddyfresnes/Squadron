@@ -191,7 +191,7 @@ function App() {
   });
   const [animKey, setAnimKey] = useState(() => localStorage.getItem('char-anim') || 'idle');
   const [facing, setFacing] = useState(1);
-  const [bgMode, setBgMode] = useState('grid');
+  const [bgMode, setBgMode] = useState('light');
   const [showAll, setShowAll] = useState(false);
   const [scale, setScale] = useState(SCALE);
 
@@ -238,7 +238,7 @@ function App() {
                 onClick={() => setAnimKey(k)}
               >
                 <div className="anim-preview-wrap">
-                  <AnimPreview cfg={cfg} animKey={k} scale={1} facing={1} />
+                  <AnimPreview cfg={cfg} animKey={k} scale={0.42} facing={1} />
                 </div>
                 <div className="anim-label">{window.Anims[k].name}</div>
                 <div className="anim-meta">{window.Anims[k].frames}f</div>
