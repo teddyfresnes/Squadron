@@ -77,27 +77,32 @@
     }
   };
 
-  // ---------- WALK (8 frames) ----------
+  // ---------- WALK (16 frames, simple smooth side step) ----------
   Anims.walk = {
     name: 'Walk',
-    frames: 8,
-    fps: 10,
+    frames: 16,
+    fps: 12,
     get: function (i) {
       const d = mark(defaults(), 'walk', i);
-      const t = i / 8;
-      const cycle = Math.sin(t * TAU);
-      const cycle2 = Math.sin(t * TAU + Math.PI);
-      // Vertical bob — head rides with the body to keep the neck tight.
-      d.bodyDY = Math.abs(cycle) > 0.7 ? 0 : -1;
+      const t = i / 16;
+      const phase = t * TAU;
+      const step = Math.sin(phase);
+      const bodyBob = 0.28 + 0.34 * (0.5 + 0.5 * Math.cos(phase * 2));
+      const frontLift = Math.max(0, step) * 0.75;
+      const backLift = Math.max(0, -step) * 0.75;
+      // Torso bob is absorbed by stretch so the hip line stays clean.
+      d.bodyDY = -bodyBob;
+      d.torsoStretch = bodyBob;
       d.headDY = 0;
-      // Legs out of phase
-      const frontLift = Math.max(0, cycle) * 2;
-      const backLift = Math.max(0, cycle2) * 2;
       d.legs = {
-        front: -Math.round(frontLift),
-        back: -Math.round(backLift),
-        frontBend: cycle > 0.3 ? 1 : 0,
-        backBend: cycle2 > 0.3 ? 1 : 0
+        front: 0,
+        back: 0,
+        frontStep: step * 0.9,
+        backStep: -step * 0.9,
+        frontLift: frontLift,
+        backLift: backLift,
+        frontBend: step * 0.65,
+        backBend: -step * 0.65
       };
       d.aimAngle = 0.1;
       return d;

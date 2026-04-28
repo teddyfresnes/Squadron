@@ -407,8 +407,9 @@
 
   // ---------- LEGS ----------
   // Side-view legs with a wider front leg on the left and a narrower rear leg
-  // slightly to the right. legOffsets keeps the existing animation contract:
-  // front/back drive lift, frontBend/backBend drive the lower-leg step.
+  // slightly to the right. Legacy animations still use front/back as whole-leg
+  // lift, while walk can pass frontStep/backStep and frontLift/backLift so hips
+  // stay fixed to the body.
   Parts.drawLegs = function (ctx, tx, ty, pants, legOffsets) {
     legOffsets = legOffsets || { front: 0, back: 0, frontBend: 0, backBend: 0 };
     const b = pants.base, s = pants.shade;
@@ -424,14 +425,17 @@
       return bend;
     };
 
-    const drawSideLeg = function (lx, ly, bend, front) {
+    const drawSideLeg = function (lx, ly, bend, front, stepX, lift) {
       const height = 6;
       const w = 5;
-      const lowerShift = front ? -1 : step(bend);
+      const modernStep = typeof stepX === 'number';
+      const lowerShift = modernStep ? Math.round(step(stepX)) : (front ? -1 : step(bend));
+      const liftPx = Math.round(Math.max(0, Math.min(1, lift || 0)));
 
       for (let i = 0; i < height; i++) {
-        const dx = i >= 3 ? lowerShift : 0;
-        const y = ly + i;
+        const lower = i >= 3;
+        const dx = lower ? lowerShift : 0;
+        const y = ly + i - (lower ? liftPx : 0);
         for (let x = 0; x < w; x++) {
           let color;
           if (x === 0 || x === w - 1) color = O;
@@ -444,35 +448,52 @@
       }
 
       const bx = lx + lowerShift;
+      const by = ly + 6 - liftPx;
       if (front) {
-        E.px(ctx, bx + 0, ly + 6, O);
-        E.px(ctx, bx + 1, ly + 6, bootsB);
-        E.px(ctx, bx + 2, ly + 6, bootsH);
-        E.px(ctx, bx + 3, ly + 6, bootsB);
-        E.px(ctx, bx + 4, ly + 6, bootsB);
-        E.px(ctx, bx + 5, ly + 6, O);
-        E.px(ctx, bx + 1, ly + 7, O);
-        E.px(ctx, bx + 2, ly + 7, O);
-        E.px(ctx, bx + 3, ly + 7, O);
-        E.px(ctx, bx + 4, ly + 7, O);
+        E.px(ctx, bx + 0, by, O);
+        E.px(ctx, bx + 1, by, bootsB);
+        E.px(ctx, bx + 2, by, bootsH);
+        E.px(ctx, bx + 3, by, bootsB);
+        E.px(ctx, bx + 4, by, bootsB);
+        E.px(ctx, bx + 5, by, O);
+        E.px(ctx, bx + 1, by + 1, O);
+        E.px(ctx, bx + 2, by + 1, O);
+        E.px(ctx, bx + 3, by + 1, O);
+        E.px(ctx, bx + 4, by + 1, O);
       } else {
-        E.px(ctx, bx + 0, ly + 6, O);
-        E.px(ctx, bx + 1, ly + 6, bootsB);
-        E.px(ctx, bx + 2, ly + 6, bootsB);
-        E.px(ctx, bx + 3, ly + 6, bootsB);
-        E.px(ctx, bx + 4, ly + 6, bootsB);
-        E.px(ctx, bx + 5, ly + 6, O);
-        E.px(ctx, bx + 1, ly + 7, O);
-        E.px(ctx, bx + 2, ly + 7, O);
-        E.px(ctx, bx + 3, ly + 7, O);
-        E.px(ctx, bx + 4, ly + 7, O);
+        E.px(ctx, bx + 0, by, O);
+        E.px(ctx, bx + 1, by, bootsB);
+        E.px(ctx, bx + 2, by, bootsB);
+        E.px(ctx, bx + 3, by, bootsB);
+        E.px(ctx, bx + 4, by, bootsB);
+        E.px(ctx, bx + 5, by, O);
+        E.px(ctx, bx + 1, by + 1, O);
+        E.px(ctx, bx + 2, by + 1, O);
+        E.px(ctx, bx + 3, by + 1, O);
+        E.px(ctx, bx + 4, by + 1, O);
       }
     };
 
     // Rear/right leg drawn first, wider left leg on top and angled slightly
     // backward so the stance keeps a little side-view spread.
-    drawSideLeg(tx + 3, ty + legOffsets.back, legOffsets.backBend, false);
-    drawSideLeg(tx + 0, ty + legOffsets.front, legOffsets.frontBend, true);
+    const frontWalk = typeof legOffsets.frontStep === 'number' || typeof legOffsets.frontLift === 'number';
+    const backWalk = typeof legOffsets.backStep === 'number' || typeof legOffsets.backLift === 'number';
+    drawSideLeg(
+      tx + 3,
+      backWalk ? ty : ty + legOffsets.back,
+      legOffsets.backBend,
+      false,
+      backWalk ? legOffsets.backStep : null,
+      backWalk ? legOffsets.backLift : 0
+    );
+    drawSideLeg(
+      tx + 0,
+      frontWalk ? ty : ty + legOffsets.front,
+      legOffsets.frontBend,
+      true,
+      frontWalk ? legOffsets.frontStep : null,
+      frontWalk ? legOffsets.frontLift : 0
+    );
 
     // Colored hip plate keeps the side-view silhouette solid without a
     // separate black filler between the legs.
@@ -915,28 +936,38 @@
       if (bend < -1.25) return -1.25;
       return bend;
     };
-    const drawSideLegHD = function (lx, ly, bend, front) {
+    const drawSideLegHD = function (lx, ly, bend, front, stepX, lift) {
+      const modernStep = typeof stepX === 'number';
       bend = step(bend);
+      const stride = modernStep ? step(stepX) : 0;
+      const liftY = Math.max(0, Math.min(1, lift || 0));
       const outlineW = 3.05;
       const fillW = 2.0;
       const fill = front ? pants.base : pants.shade;
       const hipX = lx;
-      const kneeX = front ? lx + 0.05 - bend * 0.25 : lx + 0.18 + bend * 0.35;
-      const kneeY = ly + 3.2;
-      const footX = front ? lx - 0.25 - bend * 0.45 : lx + 0.45 + bend * 0.75;
-      const footY = ly + 6.25;
+      const hipY = ly + 0.2;
+      const kneeBaseX = front ? lx + 0.05 : lx + 0.18;
+      const footBaseX = front ? lx - 0.25 : lx + 0.45;
+      const kneeX = modernStep
+        ? kneeBaseX + stride * 0.45 + bend * 0.12
+        : (front ? lx + 0.05 - bend * 0.25 : lx + 0.18 + bend * 0.35);
+      const kneeY = ly + 3.2 - (modernStep ? liftY * 0.35 : 0);
+      const footX = modernStep
+        ? footBaseX + stride
+        : (front ? lx - 0.25 - bend * 0.45 : lx + 0.45 + bend * 0.75);
+      const footY = ly + 6.25 - (modernStep ? liftY : 0);
 
       strokePath(ctx, P.outline, outlineW, function () {
-        ctx.moveTo(hipX, ly + 0.2);
+        ctx.moveTo(hipX, hipY);
         ctx.lineTo(kneeX, kneeY);
         ctx.lineTo(footX, footY);
       });
       strokePath(ctx, fill, fillW, function () {
-        ctx.moveTo(hipX, ly + 0.2);
+        ctx.moveTo(hipX, hipY);
         ctx.lineTo(kneeX, kneeY);
         ctx.lineTo(footX, footY);
       });
-      strokeLine(ctx, hipX + 0.45, ly + 0.8, footX + 0.1, footY - 0.5, pants.shade, 0.55);
+      strokeLine(ctx, hipX + 0.45, hipY + 0.6, footX + 0.1, footY - 0.5, pants.shade, 0.55);
 
       if (front) {
         fillRoundRect(ctx, footX - 1.45, footY - 0.12, 4.55, 1.4, 0.42, P.outline);
@@ -948,9 +979,25 @@
       }
     };
     // Rear/right leg sits slightly to the right; the wider left leg overlaps
-    // it and angles back a touch to avoid both legs pointing the same way.
-    drawSideLegHD(tx + 4.35, ty + legOffsets.back, legOffsets.backBend, false);
-    drawSideLegHD(tx + 1.75, ty + legOffsets.front, legOffsets.frontBend, true);
+    // it. Walk keeps both hip anchors fixed and only shifts/lifts lower legs.
+    const frontWalk = typeof legOffsets.frontStep === 'number' || typeof legOffsets.frontLift === 'number';
+    const backWalk = typeof legOffsets.backStep === 'number' || typeof legOffsets.backLift === 'number';
+    drawSideLegHD(
+      tx + 4.35,
+      backWalk ? ty : ty + legOffsets.back,
+      legOffsets.backBend,
+      false,
+      backWalk ? legOffsets.backStep : null,
+      backWalk ? legOffsets.backLift : 0
+    );
+    drawSideLegHD(
+      tx + 1.75,
+      frontWalk ? ty : ty + legOffsets.front,
+      legOffsets.frontBend,
+      true,
+      frontWalk ? legOffsets.frontStep : null,
+      frontWalk ? legOffsets.frontLift : 0
+    );
     // Small colored hip plate removes the old black center bridge.
     fillRoundRect(ctx, tx + 0.25, ty - 0.08, 6.75, 1.25, 0.3, P.outline);
     fillRoundRect(ctx, tx + 0.75, ty + 0.12, 5.75, 0.78, 0.25, pants.base);
