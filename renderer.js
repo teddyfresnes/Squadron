@@ -351,16 +351,16 @@
 
   function stanceLegs(frame, hold) {
     const legs = Object.assign({ front: 0, back: 0, frontBend: 0, backBend: 0 }, frame.legs || {});
-    const smoothWalk = frame.motion === 'walk' && (
+    const strideLegs = (
       typeof legs.frontStep === 'number' ||
       typeof legs.backStep === 'number' ||
       typeof legs.frontLift === 'number' ||
       typeof legs.backLift === 'number'
     );
-    if (!smoothWalk && (frame.stance === 'wide' || hold.stanceWide)) {
+    if (!strideLegs && (frame.stance === 'wide' || hold.stanceWide)) {
       legs.frontBend = Math.max(legs.frontBend || 0, 1);
     }
-    if (!smoothWalk && hold.upperBodyX) {
+    if (!strideLegs && hold.upperBodyX) {
       legs.back = Math.min(legs.back || 0, -1);
       legs.frontBend = Math.max(legs.frontBend || 0, 1);
     }

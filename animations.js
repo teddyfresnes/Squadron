@@ -109,26 +109,38 @@
     }
   };
 
-  // ---------- RUN (6 frames, faster, bigger motion) ----------
+  // ---------- RUN (8 frames, fast side stride) ----------
   Anims.run = {
     name: 'Run',
-    frames: 6,
-    fps: 14,
+    frames: 8,
+    fps: 16,
     get: function (i) {
       const d = mark(defaults(), 'run', i);
-      const t = i / 6;
-      const cycle = Math.sin(t * TAU);
-      const cycle2 = Math.sin(t * TAU + Math.PI);
-      d.bodyDY = -Math.round((Math.abs(cycle) * 2));
+      const t = i / 8;
+      const phase = t * TAU;
+      const stride = Math.sin(phase);
+      const planted = Math.cos(phase);
+      const frontSwing = Math.max(0, stride);
+      const backSwing = Math.max(0, -stride);
+      const bodyBob = 0.18 + 0.34 * (0.5 + 0.5 * Math.cos(phase * 2));
+
+      // Keep the hip line locked: the body bob is subtle and absorbed by
+      // torso stretch instead of opening a large waist bridge.
+      d.bodyDY = -bodyBob;
+      d.torsoStretch = bodyBob;
       d.headDY = 0;
       d.legs = {
-        front: -Math.round(Math.max(0, cycle) * 3),
-        back: -Math.round(Math.max(0, cycle2) * 3),
-        frontBend: cycle > 0.2 ? 2 : 0,
-        backBend: cycle2 > 0.2 ? 2 : 0
+        front: 0,
+        back: 0,
+        frontStep: stride * 1.35,
+        backStep: -stride * 1.35,
+        frontLift: frontSwing * 0.95,
+        backLift: backSwing * 0.95,
+        frontBend: frontSwing * 0.85 - Math.max(0, -planted) * 0.2,
+        backBend: backSwing * 0.85 - Math.max(0, planted) * 0.2
       };
       d.aimAngle = -0.05;  // weapon slightly forward/up while running
-      d.forwardLean = 1;
+      d.forwardLean = 0.45;
       return d;
     }
   };
