@@ -1,14 +1,14 @@
 // Renderer - composes a full character frame onto a canvas.
-// Weapons keep their native sprite pixels. The soldier is drawn at 2x in the
-// same stage so a pistol reads small, rifles read shoulder-fired, and long
-// weapons stay impressive without dwarfing the body.
+// The soldier is drawn larger while weapon sprites are slightly reduced, so the
+// character reads about twice as large relative to the guns.
 
 (function () {
   const E = window.Engine;
   const P = window.Palette;
   const Parts = window.Parts;
 
-  const BODY_SCALE = 2;
+  const BODY_SCALE = 3;
+  const WEAPON_SCALE = 0.75;
 
   const HOLD_PROFILES = {
     pistol: {
@@ -305,7 +305,10 @@
   }
 
   function pointOnWeapon(grip, local, angle) {
-    const r = rotatePoint(local, angle);
+    const r = rotatePoint({
+      x: local.x * WEAPON_SCALE,
+      y: local.y * WEAPON_SCALE
+    }, angle);
     return {
       x: Math.round(grip.x + r.x),
       y: Math.round(grip.y + r.y)
@@ -521,6 +524,7 @@
         ctx.save();
         ctx.translate(weaponGrip.x, weaponGrip.y);
         ctx.rotate(aim);
+        ctx.scale(WEAPON_SCALE, WEAPON_SCALE);
         weapon.draw(ctx, 0, 0, false);
         if (frame.muzzleFlash) drawMuzzleFlash(ctx, weapon);
         ctx.restore();

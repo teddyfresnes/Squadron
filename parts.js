@@ -956,18 +956,19 @@
         ? footBaseX + stride
         : (front ? lx - 0.25 - bend * 0.45 : lx + 0.45 + bend * 0.75);
       const footY = ly + 6.25 - (modernStep ? liftY : 0);
+      const ankleY = footY - 0.55;
 
       strokePath(ctx, P.outline, outlineW, function () {
         ctx.moveTo(hipX, hipY);
         ctx.lineTo(kneeX, kneeY);
-        ctx.lineTo(footX, footY);
+        ctx.lineTo(footX, ankleY);
       });
       strokePath(ctx, fill, fillW, function () {
         ctx.moveTo(hipX, hipY);
         ctx.lineTo(kneeX, kneeY);
-        ctx.lineTo(footX, footY);
+        ctx.lineTo(footX, ankleY);
       });
-      strokeLine(ctx, hipX + 0.45, hipY + 0.6, footX + 0.1, footY - 0.5, pants.shade, 0.55);
+      strokeLine(ctx, hipX + 0.45, hipY + 0.6, footX + 0.1, ankleY, pants.shade, 0.55);
 
       if (front) {
         fillRoundRect(ctx, footX - 1.45, footY - 0.12, 4.55, 1.4, 0.42, P.outline);
