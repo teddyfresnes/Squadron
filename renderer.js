@@ -8,7 +8,7 @@
   const Parts = window.Parts;
 
   const BODY_SCALE = 3;
-  const WEAPON_SCALE = 0.82;
+  const WEAPON_SCALE = 1;
 
   const HOLD_PROFILES = {
     pistol: {
@@ -103,22 +103,22 @@
     },
     heavy: {
       support: true,
-      grip: { x: 19, y: -5 },
-      baseAngle: 0.08,
+      grip: { x: 20, y: -12 },
+      baseAngle: 0.03,
       aimWeight: 0.45,
-      rearElbow: { x: 8, y: 6 },
-      supportElbow: { x: 18, y: 6 },
-      foregripOffset: { x: -1, y: 1 },
+      rearElbow: { x: 7, y: 2 },
+      supportElbow: { x: 16, y: 6 },
+      foregripOffset: { x: 0, y: 1 },
       recoilBack: 1.1,
       recoilLift: -0.15,
       recoilAngleScale: 0.7,
       upperBodyX: 1,
-      runGrip: { x: -7, y: 6 },
-      runAngle: 0.16,
-      reloadGrip: { x: -2, y: 7 },
+      runGrip: { x: -6, y: 4 },
+      runAngle: 0.12,
+      reloadGrip: { x: -2, y: 5 },
       reloadAngle: 0.08,
-      hurtGrip: { x: -6, y: 7 },
-      deadGrip: { x: -10, y: 7 }
+      hurtGrip: { x: -6, y: 5 },
+      deadGrip: { x: -10, y: 6 }
     }
   };
 
@@ -181,25 +181,26 @@
       foregripOffset: { x: 0, y: 1 }
     },
     launcher: {
-      grip: { x: 20, y: -13 },
-      baseAngle: 0.03,
-      aimWeight: 0.35,
-      rearElbow: { x: 8, y: 2 },
-      supportElbow: { x: 18, y: 5 },
-      foregripOffset: { x: -5, y: 1 },
+      grip: { x: 17, y: -21 },
+      baseAngle: -0.03,
+      aimWeight: 0.22,
+      rearElbow: { x: 5, y: 0 },
+      supportElbow: { x: 9, y: 5 },
+      foregripOffset: { x: -3, y: 4 },
       recoilLift: -0.08,
-      runGrip: { x: -7, y: 5 },
-      reloadGrip: { x: -3, y: 5 }
+      runGrip: { x: -5, y: 3 },
+      runAngle: 0.08,
+      reloadGrip: { x: -3, y: 4 }
     },
     cannon: {
-      grip: { x: 18, y: -2 },
-      baseAngle: 0.1,
-      rearElbow: { x: 7, y: 7 },
-      supportElbow: { x: 18, y: 8 },
-      foregripOffset: { x: -2, y: 1 },
+      grip: { x: 19, y: -10 },
+      baseAngle: 0.05,
+      rearElbow: { x: 7, y: 3 },
+      supportElbow: { x: 16, y: 7 },
+      foregripOffset: { x: 0, y: 1 },
       recoilBack: 1.25,
-      runGrip: { x: -7, y: 7 },
-      reloadGrip: { x: -3, y: 8 }
+      runGrip: { x: -6, y: 5 },
+      reloadGrip: { x: -3, y: 6 }
     }
   };
 
@@ -256,16 +257,20 @@
     'SNIPER-09':  { supportElbow: { x: 20, y: 4 }, foregripOffset: { x: 0, y: 1 } },
     'SNIPER-10':  { supportElbow: { x: 20, y: 4 }, foregripOffset: { x: 0, y: 1 } },
 
-    'HEAVY-04':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -2, y: 0 } },
-    'HEAVY-05':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -2, y: 0 } },
-    'HEAVY-06':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -4, y: 0 } },
-    'HEAVY-07':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -4, y: 0 } },
-    'HEAVY-08':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -4, y: 0 } },
-    'HEAVY-10':   { grip: { x: 19, y: -6 }, supportElbow: { x: 17, y: 6 }, foregripOffset: { x: -3, y: 0 } },
-    'HEAVY-11':   { grip: { x: 19, y: -6 }, supportElbow: { x: 17, y: 6 }, foregripOffset: { x: -3, y: 0 } },
-    'HEAVY-12':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -4, y: 0 } },
-    'HEAVY-13':   { grip: { x: 18, y: -3 }, supportElbow: { x: 18, y: 7 }, foregripOffset: { x: -3, y: 1 } },
-    'HEAVY-14':   { grip: { x: 18, y: -3 }, supportElbow: { x: 18, y: 7 }, foregripOffset: { x: -3, y: 1 } }
+    'HEAVY-01':   { grip: { x: 17, y: -21 }, rearElbow: { x: 5, y: 0 }, supportElbow: { x: 9, y: 5 }, foregripOffset: { x: -2, y: 4 } },
+    'HEAVY-02':   { grip: { x: 17, y: -21 }, rearElbow: { x: 5, y: 0 }, supportElbow: { x: 9, y: 5 }, foregripOffset: { x: -3, y: 4 } },
+    'HEAVY-03':   { grip: { x: 17, y: -20 }, rearElbow: { x: 5, y: 0 }, supportElbow: { x: 10, y: 5 }, foregripOffset: { x: -2, y: 4 } },
+    'HEAVY-04':   { grip: { x: 20, y: -13 }, supportElbow: { x: 15, y: 6 }, foregripOffset: { x: 0, y: 1 } },
+    'HEAVY-05':   { grip: { x: 20, y: -12 }, supportElbow: { x: 12, y: 6 }, foregripOffset: { x: 0, y: 1 } },
+    'HEAVY-06':   { grip: { x: 20, y: -13 }, supportElbow: { x: 17, y: 6 }, foregripOffset: { x: 0, y: 1 } },
+    'HEAVY-07':   { grip: { x: 18, y: -20 }, rearElbow: { x: 5, y: 0 }, supportElbow: { x: 11, y: 5 }, foregripOffset: { x: -7, y: 4 } },
+    'HEAVY-08':   { grip: { x: 18, y: -20 }, rearElbow: { x: 5, y: 0 }, supportElbow: { x: 11, y: 5 }, foregripOffset: { x: -7, y: 4 } },
+    'HEAVY-09':   { grip: { x: 20, y: -10 }, supportElbow: { x: 15, y: 7 }, foregripOffset: { x: 0, y: 1 } },
+    'HEAVY-10':   { grip: { x: 20, y: -13 }, supportElbow: { x: 14, y: 6 }, foregripOffset: { x: 0, y: 1 } },
+    'HEAVY-11':   { grip: { x: 20, y: -13 }, supportElbow: { x: 16, y: 6 }, foregripOffset: { x: 0, y: 1 } },
+    'HEAVY-12':   { grip: { x: 20, y: -13 }, supportElbow: { x: 16, y: 6 }, foregripOffset: { x: 0, y: 1 } },
+    'HEAVY-13':   { grip: { x: 19, y: -11 }, supportElbow: { x: 14, y: 7 }, foregripOffset: { x: 0, y: 1 } },
+    'HEAVY-14':   { grip: { x: 19, y: -11 }, supportElbow: { x: 15, y: 7 }, foregripOffset: { x: 0, y: 1 } }
   };
 
   function isObj(v) {
