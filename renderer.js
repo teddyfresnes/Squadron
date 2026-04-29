@@ -85,12 +85,12 @@
     },
     sniper: {
       support: true,
-      grip: { x: 21, y: -13 },
+      grip: { x: 21, y: -17 },
       baseAngle: -0.05,
       aimWeight: 0.45,
-      rearElbow: { x: 9, y: 0 },
-      supportElbow: { x: 25, y: 2 },
-      foregripOffset: { x: -3, y: 0 },
+      rearElbow: { x: 8, y: -1 },
+      supportElbow: { x: 23, y: 4 },
+      foregripOffset: { x: 0, y: 1 },
       recoilBack: 1.05,
       recoilLift: -0.3,
       recoilAngleScale: 1.05,
@@ -170,15 +170,15 @@
       foregripOffset: { x: 0, y: 1 }
     },
     'long-sniper': {
-      grip: { x: 20, y: -14 },
-      supportElbow: { x: 28, y: 2 },
-      foregripOffset: { x: -8, y: 0 },
+      grip: { x: 20, y: -18 },
+      supportElbow: { x: 27, y: 4 },
+      foregripOffset: { x: 0, y: 1 },
       recoilBack: 1.15
     },
     'compact-sniper': {
-      grip: { x: 22, y: -13 },
-      supportElbow: { x: 22, y: 2 },
-      foregripOffset: { x: -3, y: 0 }
+      grip: { x: 22, y: -17 },
+      supportElbow: { x: 20, y: 4 },
+      foregripOffset: { x: 0, y: 1 }
     },
     launcher: {
       grip: { x: 20, y: -13 },
@@ -245,16 +245,16 @@
     'SHOTGUN-07': { grip: { x: 20, y: -13 }, supportElbow: { x: 17, y: 6 }, foregripOffset: { x: 5, y: 1 } },
     'SHOTGUN-08': { grip: { x: 19, y: -13 }, supportElbow: { x: 24, y: 6 }, foregripOffset: { x: 0, y: 1 } },
 
-    'SNIPER-01':  { grip: { x: 20, y: -14 }, supportElbow: { x: 26, y: 2 }, foregripOffset: { x: -12, y: 0 } },
-    'SNIPER-02':  { grip: { x: 21, y: -13 }, supportElbow: { x: 25, y: 2 }, foregripOffset: { x: -9, y: 0 } },
-    'SNIPER-03':  { supportElbow: { x: 24, y: 2 }, foregripOffset: { x: -8, y: 0 } },
-    'SNIPER-04':  { supportElbow: { x: 23, y: 2 }, foregripOffset: { x: -7, y: 0 } },
-    'SNIPER-05':  { grip: { x: 20, y: -14 }, supportElbow: { x: 26, y: 2 }, foregripOffset: { x: -12, y: 0 } },
-    'SNIPER-06':  { grip: { x: 20, y: -14 }, supportElbow: { x: 26, y: 2 }, foregripOffset: { x: -11, y: 0 } },
-    'SNIPER-07':  { grip: { x: 20, y: -14 }, supportElbow: { x: 27, y: 2 }, foregripOffset: { x: -13, y: 0 } },
-    'SNIPER-08':  { grip: { x: 20, y: -14 }, supportElbow: { x: 27, y: 2 }, foregripOffset: { x: -13, y: 0 } },
-    'SNIPER-09':  { supportElbow: { x: 21, y: 2 }, foregripOffset: { x: -5, y: 0 } },
-    'SNIPER-10':  { supportElbow: { x: 21, y: 2 }, foregripOffset: { x: -5, y: 0 } },
+    'SNIPER-01':  { grip: { x: 20, y: -18 }, supportElbow: { x: 26, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-02':  { grip: { x: 21, y: -17 }, supportElbow: { x: 25, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-03':  { supportElbow: { x: 23, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-04':  { supportElbow: { x: 22, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-05':  { grip: { x: 20, y: -18 }, supportElbow: { x: 26, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-06':  { grip: { x: 20, y: -18 }, supportElbow: { x: 26, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-07':  { grip: { x: 20, y: -18 }, supportElbow: { x: 27, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-08':  { grip: { x: 20, y: -18 }, supportElbow: { x: 27, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-09':  { supportElbow: { x: 20, y: 4 }, foregripOffset: { x: 0, y: 1 } },
+    'SNIPER-10':  { supportElbow: { x: 20, y: 4 }, foregripOffset: { x: 0, y: 1 } },
 
     'HEAVY-04':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -2, y: 0 } },
     'HEAVY-05':   { grip: { x: 19, y: -6 }, supportElbow: { x: 18, y: 6 }, foregripOffset: { x: -2, y: 0 } },
