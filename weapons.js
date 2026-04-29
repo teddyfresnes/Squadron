@@ -96,8 +96,8 @@
     { name: 'HEAVY-08',   type: 'heavy',   sx: 700, sy: 236, sw:  60, sh: 15, gripX: 18, gripY: 12, foregripX: 38, foregripY: 10, muzzleX: 59, muzzleY:  4 },
     { name: 'HEAVY-09',   type: 'heavy',   sx: 700, sy: 264, sw:  61, sh: 26, gripX: 24, gripY: 13, foregripX: 41, foregripY: 13, muzzleX: 60, muzzleY: 14 },
     { name: 'HEAVY-10',   type: 'heavy',   sx: 700, sy: 303, sw:  49, sh: 15, gripX: 18, gripY: 12, foregripX: 33, foregripY: 10, muzzleX: 48, muzzleY:  2 },
-    { name: 'HEAVY-11',   type: 'heavy',   sx: 700, sy: 331, sw:  51, sh: 15, gripX: 19, gripY: 12, foregripX: 38, foregripY: 11, muzzleX: 50, muzzleY:  3 },
-    { name: 'HEAVY-12',   type: 'heavy',   sx: 700, sy: 359, sw:  60, sh: 15, gripX: 21, gripY: 13, foregripX: 40, foregripY: 11, muzzleX: 59, muzzleY:  3 },
+    { name: 'HEAVY-11',   type: 'heavy',   sx: 700, sy: 331, sw:  51, sh: 15, gripX: 25, gripY: 12, foregripX: 38, foregripY: 11, muzzleX: 50, muzzleY:  3 },
+    { name: 'HEAVY-12',   type: 'heavy',   sx: 700, sy: 359, sw:  60, sh: 15, gripX: 24, gripY: 13, foregripX: 40, foregripY: 11, muzzleX: 59, muzzleY:  3 },
     { name: 'HEAVY-13',   type: 'heavy',   sx: 700, sy: 387, sw:  54, sh: 20, gripX: 20, gripY: 15, foregripX: 36, foregripY: 13, muzzleX: 53, muzzleY: 10 },
     { name: 'HEAVY-14',   type: 'heavy',   sx: 700, sy: 420, sw:  59, sh: 22, gripX: 20, gripY: 16, foregripX: 40, foregripY: 14, muzzleX: 58, muzzleY: 10 },
 
@@ -170,9 +170,12 @@
     'HEAVY-01':   { holdVariant: 'launcher' },
     'HEAVY-02':   { holdVariant: 'launcher' },
     'HEAVY-03':   { holdVariant: 'launcher' },
+    'HEAVY-05':   { holdVariant: 'launcher' },
     'HEAVY-07':   { holdVariant: 'launcher' },
     'HEAVY-08':   { holdVariant: 'launcher' },
-    'HEAVY-09':   { holdVariant: 'cannon' },
+    'HEAVY-09':   { holdVariant: 'launcher' },
+    'HEAVY-11':   { holdStyle: 'rifle', holdVariant: 'long-rifle' },
+    'HEAVY-12':   { holdStyle: 'rifle', holdVariant: 'long-rifle' },
     'HEAVY-13':   { holdVariant: 'cannon' },
     'HEAVY-14':   { holdVariant: 'cannon' }
   };
