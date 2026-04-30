@@ -9,6 +9,8 @@
 //   backArm       : { hx, hy } or null if hidden
 //   weaponAngle   : extra rotation for weapon (radians)
 //   weaponDX/DY   : small offsets (recoil)
+//   barrelAngle   : exact rendered barrel angle, bypassing hold aim weighting
+//   barrelLocked  : true keeps recoil from rotating a locked barrel
 //   muzzleFlash   : true on shoot frames
 //   blink / eyesClosed
 //   deathAngle    : rotation when dead
@@ -47,7 +49,10 @@
       handAtGrip: true,
       motion: 'idle',
       motionFrame: 0,
-      aimAngle: 0
+      aimAngle: 0,
+      barrelAngle: null,
+      barrelLocked: false,
+      gripOffset: null
     };
   }
 
@@ -55,6 +60,11 @@
     d.motion = motion;
     d.motionFrame = frameIdx || 0;
     return d;
+  }
+
+  function easeOutCubic(t) {
+    const inv = 1 - t;
+    return 1 - inv * inv * inv;
   }
 
   // ---------- IDLE (8 frames, soft breathing) ----------
@@ -153,16 +163,27 @@
     }
   };
 
-  // ---------- AIM (2 frames, hold) ----------
+  // ---------- AIM (smooth shoulder raise, then hold) ----------
   Anims.aim = {
     name: 'Aim',
-    frames: 2,
-    fps: 2,
+    frames: 12,
+    fps: 18,
+    loop: false,
     get: function (i) {
       const d = mark(defaults(), 'aim', i);
-      d.bodyDY = i === 1 ? -1 : 0;
-      d.headDY = 0;
-      d.aimAngle = -0.1;  // slight upward
+      const t = i / 11;
+      const raise = easeOutCubic(t);
+      const settle = Math.sin(t * Math.PI);
+      d.bodyDY = -0.35 * raise - 0.18 * settle;
+      d.torsoStretch = 0.18 * raise;
+      d.headDY = -0.08 * raise;
+      d.aimAngle = 0;
+      d.barrelAngle = 0;
+      d.barrelLocked = true;
+      d.gripOffset = {
+        x: -4 * (1 - raise),
+        y: 5 * (1 - raise)
+      };
       d.legs = { front: 0, back: 0, frontBend: 0, backBend: 0 };
       d.stance = 'wide';  // legs spread
       return d;
@@ -176,7 +197,9 @@
     fps: 14,
     get: function (i) {
       const d = mark(defaults(), 'shoot', i);
-      d.aimAngle = -0.1;
+      d.aimAngle = 0;
+      d.barrelAngle = 0;
+      d.barrelLocked = true;
       d.stance = 'wide';
       if (i === 0) {
         d.weaponDX = 0;
@@ -184,13 +207,13 @@
         d.recoilStage = 'pre';
       } else if (i === 1) {
         d.weaponDX = -2;
-        d.weaponAngle = -0.15;
+        d.weaponAngle = 0;
         d.muzzleFlash = true;
         d.bodyDY = -1;
         d.recoilStage = 'kick';
       } else if (i === 2) {
         d.weaponDX = -1;
-        d.weaponAngle = -0.08;
+        d.weaponAngle = 0;
         d.recoilStage = 'settle';
       } else {
         d.weaponDX = 0;

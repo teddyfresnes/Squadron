@@ -184,7 +184,7 @@
     return Object.assign(
       {},
       HOLD_BY_TYPE[def.type] || HOLD_BY_TYPE.rifle,
-      HOLD_OVERRIDES[def.name] || {}
+      HOLD_OVERRIDES[def.id] || HOLD_OVERRIDES[def.name] || {}
     );
   }
 
@@ -194,6 +194,7 @@
     const holdMeta = holdMetaFor(def);
     const w = {
       name: def.name,
+      id: def.id || def.name,
       type: def.type,
       holdStyle: holdMeta.holdStyle,
       holdVariant: holdMeta.holdVariant || 'standard',
@@ -233,7 +234,22 @@
     return w;
   }
 
-  const sheetList = MANIFEST.map(makeSheetWeapon);
+  const LEGACY_PREFIX_BY_TYPE = {
+    smg: 'SMG',
+    rifle: 'RIFLE',
+    heavy: 'HEAVY',
+    shotgun: 'SHOTGUN',
+    sniper: 'SNIPER',
+    pistol: 'PISTOL'
+  };
+
+  const legacyCountsByType = {};
+  const sheetList = MANIFEST.map(function (def) {
+    const prefix = LEGACY_PREFIX_BY_TYPE[def.type] || String(def.type || 'WEAPON').toUpperCase();
+    const n = (legacyCountsByType[def.type] || 0) + 1;
+    legacyCountsByType[def.type] = n;
+    return makeSheetWeapon(Object.assign({ id: prefix + '-' + String(n).padStart(2, '0') }, def));
+  });
 
   // ---------- Custom sprites (used by animations, not in the asset pack) ----------
   // Knife and grenade are tightly tied to specific animations (melee, throw)

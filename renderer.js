@@ -315,7 +315,11 @@
 
   function getHold(weapon) {
     const base = HOLD_PROFILES[weapon.holdStyle || weapon.type] || HOLD_PROFILES.rifle;
-    return mergeHold(mergeHold(base, HOLD_VARIANTS[weapon.holdVariant] || null), HOLD_OVERRIDES[weapon.name] || null);
+    const key = weapon.id || weapon.name;
+    return mergeHold(
+      mergeHold(base, HOLD_VARIANTS[weapon.holdVariant] || null),
+      HOLD_OVERRIDES[key] || HOLD_OVERRIDES[weapon.name] || null
+    );
   }
 
   function add(a, b) {
@@ -373,6 +377,7 @@
     else if (motion === 'dead') grip = add(grip, hold.deadGrip);
 
     if (isLowCarryMotion(motion)) grip = add(grip, hold.lowCarryGrip);
+    grip = add(grip, frame.gripOffset);
 
     const recoil = Math.abs(frame.weaponDX || 0);
     grip.x += (frame.weaponDX || 0) * (hold.recoilBack || 1);
@@ -386,6 +391,14 @@
 
   function computeAngle(hold, frame) {
     const motion = motionOf(frame);
+    if (frame.barrelAngle != null) {
+      let lockedAngle = frame.barrelAngle;
+      if (frame.barrelLocked !== true) {
+        lockedAngle += (frame.weaponAngle || 0) * (hold.recoilAngleScale == null ? 1 : hold.recoilAngleScale);
+      }
+      return lockedAngle;
+    }
+
     let angle = (hold.baseAngle || 0) +
       (frame.aimAngle || 0) * (hold.aimWeight == null ? 1 : hold.aimWeight) +
       (frame.weaponAngle || 0) * (hold.recoilAngleScale == null ? 1 : hold.recoilAngleScale);
