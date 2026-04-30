@@ -267,10 +267,6 @@
         '.OBBBBBO...',
         '..OBBO.....'
       ], map);
-      E.px(ctx, cx + 2, cy - 3, O);
-      E.px(ctx, cx + 2, cy - 2, b);
-      E.px(ctx, cx + 6, cy - 2, b);
-      E.px(ctx, cx + 7, cy - 1, O);
       E.px(ctx, cx + 1, cy + 3, s);
     } else if (style === 'Long') {
       E.stamp(ctx, cx - 1, cy - 2, [
@@ -283,9 +279,6 @@
         '.OBBBBBBO..',
         '.OBBBBOO...'
       ], map);
-      E.px(ctx, cx + 8, cy + 2, O);
-      E.px(ctx, cx + 8, cy + 3, b);
-      E.px(ctx, cx + 8, cy + 4, O);
       E.px(ctx, cx + 1, cy + 4, s);
     } else if (style === 'Ponytail') {
       E.stamp(ctx, cx - 1, cy - 2, [
@@ -1349,22 +1342,6 @@
       });
       strokeLine(ctx, cx + 1.55, cy + 0.35, cx + 5.9, cy + 0.75, h, 0.42);
       strokeLine(ctx, cx + 1.0, cy + 3.95, cx + 7.65, cy + 3.72, s, 0.42);
-      strokePath(ctx, O, 0.66, function () {
-        ctx.moveTo(cx + 1.35, cy - 0.35);
-        ctx.lineTo(cx + 0.82, cy - 1.92);
-        ctx.moveTo(cx + 4.55, cy - 0.72);
-        ctx.lineTo(cx + 5.1, cy - 2.05);
-        ctx.moveTo(cx + 7.1, cy + 0.78);
-        ctx.lineTo(cx + 8.42, cy - 0.42);
-      });
-      strokePath(ctx, b, 0.4, function () {
-        ctx.moveTo(cx + 1.35, cy - 0.32);
-        ctx.lineTo(cx + 0.92, cy - 1.62);
-        ctx.moveTo(cx + 4.55, cy - 0.68);
-        ctx.lineTo(cx + 5.0, cy - 1.78);
-        ctx.moveTo(cx + 7.1, cy + 0.8);
-        ctx.lineTo(cx + 8.15, cy - 0.18);
-      });
     } else if (style === 'Long') {
       fillPath(ctx, O, function () {
         ctx.moveTo(cx - 0.72, cy + 4.15);
@@ -1386,8 +1363,6 @@
       });
       strokeLine(ctx, cx + 2.0, cy + 0.12, cx + 6.45, cy + 0.82, h, 0.43);
       strokeLine(ctx, cx + 0.85, cy + 3.95, cx + 7.98, cy + 4.0, s, 0.42);
-      strokeLine(ctx, cx + 8.0, cy + 2.4, cx + 7.55, cy + 5.6, O, 0.92);
-      strokeLine(ctx, cx + 7.88, cy + 2.45, cx + 7.52, cy + 5.25, b, 0.52);
     } else if (style === 'Ponytail') {
       fillPath(ctx, O, function () {
         ctx.moveTo(cx - 0.58, cy + 4.0);
