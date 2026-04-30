@@ -70,7 +70,7 @@
     { name: 'SMG-05',     type: 'smg',     sx:  45, sy: 183, sw:  46, sh: 13, gripX: 15, gripY: 12, foregripX: 30, foregripY: 12, muzzleX: 45, muzzleY:  7 },
     { name: 'SMG-06',     type: 'smg',     sx:  45, sy: 214, sw:  43, sh: 22, gripX: 23, gripY: 17, foregripX: 31, foregripY: 13, muzzleX: 42, muzzleY: 10 },
     { name: 'SMG-07',     type: 'smg',     sx:  45, sy: 250, sw:  44, sh: 27, gripX: 17, gripY: 21, foregripX: 31, foregripY: 16, muzzleX: 43, muzzleY: 10 },
-    { name: 'SMG-08',     type: 'smg',     sx:  45, sy: 291, sw:  39, sh: 15, gripX: 26, gripY: 11, foregripX: 31, foregripY:  9, muzzleX: 38, muzzleY:  2 },
+    { name: 'SMG-08',     type: 'smg',     sx:  45, sy: 291, sw:  39, sh: 15, gripX: 22, gripY: 11, foregripX: 27, foregripY:  9, muzzleX: 34, muzzleY:  2 },
     { name: 'SMG-09',     type: 'smg',     sx:  45, sy: 320, sw:  27, sh: 15, gripX:  9, gripY: 10, foregripX: 17, foregripY:  8, muzzleX: 26, muzzleY:  3 },
     { name: 'SMG-10',     type: 'smg',     sx:  45, sy: 354, sw:  38, sh: 23, gripX: 13, gripY: 11, foregripX: 24, foregripY: 14, muzzleX: 37, muzzleY:  2 },
     { name: 'SMG-11',     type: 'smg',     sx:  45, sy: 392, sw:  27, sh: 23, gripX: 14, gripY: 11, foregripX: 16, foregripY: 11, muzzleX: 26, muzzleY:  4 },
