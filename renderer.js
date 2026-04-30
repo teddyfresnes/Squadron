@@ -9,6 +9,7 @@
 
   const BODY_SCALE = 3;
   const WEAPON_SCALE = 1;
+  const LOW_CARRY_ANGLE = 0.46;
 
   const HOLD_PROFILES = {
     pistol: {
@@ -19,6 +20,10 @@
       rearElbow: { x: 7, y: 0 },
       supportElbow: { x: 6, y: 2 },
       foregripOffset: { x: -1, y: 1 },
+      lowCarryGrip: { x: -7, y: 5 },
+      lowCarryAngle: 0.38,
+      lowCarryRearElbow: { x: 5, y: 8 },
+      lowCarrySupportElbow: { x: 4, y: 9 },
       recoilBack: 0.7,
       recoilLift: -0.3,
       recoilAngleScale: 0.9,
@@ -37,6 +42,10 @@
       rearElbow: { x: 6, y: 2 },
       supportElbow: { x: 11, y: 8 },
       foregripOffset: { x: 0, y: 1 },
+      lowCarryGrip: { x: -7, y: 6 },
+      lowCarryAngle: 0.43,
+      lowCarryRearElbow: { x: 5, y: 9 },
+      lowCarrySupportElbow: { x: 7, y: 11 },
       recoilBack: 0.55,
       recoilLift: -0.15,
       recoilAngleScale: 0.45,
@@ -55,6 +64,10 @@
       rearElbow: { x: 7, y: 0 },
       supportElbow: { x: 16, y: 4 },
       foregripOffset: { x: 0, y: 1 },
+      lowCarryGrip: { x: -9, y: 7 },
+      lowCarryAngle: 0.48,
+      lowCarryRearElbow: { x: 7, y: 10 },
+      lowCarrySupportElbow: { x: 10, y: 13 },
       recoilBack: 0.8,
       recoilLift: -0.25,
       recoilAngleScale: 0.8,
@@ -73,6 +86,10 @@
       rearElbow: { x: 8, y: 2 },
       supportElbow: { x: 21, y: 6 },
       foregripOffset: { x: 0, y: 1 },
+      lowCarryGrip: { x: -10, y: 7 },
+      lowCarryAngle: 0.5,
+      lowCarryRearElbow: { x: 7, y: 11 },
+      lowCarrySupportElbow: { x: 12, y: 14 },
       recoilBack: 1.35,
       recoilLift: -0.45,
       recoilAngleScale: 1.35,
@@ -91,6 +108,10 @@
       rearElbow: { x: 8, y: -1 },
       supportElbow: { x: 23, y: 4 },
       foregripOffset: { x: 0, y: 1 },
+      lowCarryGrip: { x: -11, y: 7 },
+      lowCarryAngle: 0.54,
+      lowCarryRearElbow: { x: 8, y: 11 },
+      lowCarrySupportElbow: { x: 14, y: 14 },
       recoilBack: 1.05,
       recoilLift: -0.3,
       recoilAngleScale: 1.05,
@@ -109,6 +130,10 @@
       rearElbow: { x: 7, y: 2 },
       supportElbow: { x: 16, y: 6 },
       foregripOffset: { x: 0, y: 1 },
+      lowCarryGrip: { x: -10, y: 8 },
+      lowCarryAngle: 0.54,
+      lowCarryRearElbow: { x: 7, y: 11 },
+      lowCarrySupportElbow: { x: 11, y: 14 },
       recoilBack: 1.1,
       recoilLift: -0.15,
       recoilAngleScale: 0.7,
@@ -330,6 +355,10 @@
     return 'idle';
   }
 
+  function isLowCarryMotion(motion) {
+    return motion === 'idle' || motion === 'walk';
+  }
+
   function computeGrip(originX, originY, hold, frame, upperBodyDXLocal) {
     const motion = motionOf(frame);
     let grip = {
@@ -342,6 +371,8 @@
     else if (motion === 'reload') grip = add(grip, hold.reloadGrip);
     else if (motion === 'hurt') grip = add(grip, hold.hurtGrip);
     else if (motion === 'dead') grip = add(grip, hold.deadGrip);
+
+    if (isLowCarryMotion(motion)) grip = add(grip, hold.lowCarryGrip);
 
     const recoil = Math.abs(frame.weaponDX || 0);
     grip.x += (frame.weaponDX || 0) * (hold.recoilBack || 1);
@@ -360,11 +391,21 @@
       (frame.weaponAngle || 0) * (hold.recoilAngleScale == null ? 1 : hold.recoilAngleScale);
 
     if (motion === 'run') angle += hold.runAngle || 0;
-    else if (motion === 'reload') angle += hold.reloadAngle || 0;
+    else if (isLowCarryMotion(motion)) {
+      angle += hold.lowCarryAngle == null ? LOW_CARRY_ANGLE : hold.lowCarryAngle;
+    } else if (motion === 'reload') angle += hold.reloadAngle || 0;
     else if (motion === 'hurt') angle += hold.hurtAngle || 0.08;
     else if (motion === 'dead') angle += hold.deadAngle || 0.18;
 
     return angle;
+  }
+
+  function elbowOffset(hold, role, motion) {
+    if (isLowCarryMotion(motion)) {
+      const relaxed = role === 'support' ? hold.lowCarrySupportElbow : hold.lowCarryRearElbow;
+      if (relaxed) return relaxed;
+    }
+    return role === 'support' ? hold.supportElbow : hold.rearElbow;
   }
 
   function supportLocalPoint(weapon, hold, frame) {
@@ -397,7 +438,7 @@
     return Math.max(min, Math.min(max, v));
   }
 
-  function resolveElbow(shoulder, preferred, hand, weapon, role) {
+  function resolveElbow(shoulder, preferred, hand, weapon, role, relaxed) {
     const dx = hand.x - shoulder.x;
     const dy = hand.y - shoulder.y;
     const len = Math.sqrt(dx * dx + dy * dy);
@@ -409,9 +450,9 @@
     const minT = isSupport ? (compact ? 0.25 : 0.3) : (compact ? 0.22 : 0.25);
     const maxT = isSupport ? (compact ? 0.78 : 0.82) : 0.76;
     const minBend = isSupport ? (compact ? 1.2 : 2.2) : (compact ? 0.8 : 1.4);
-    const maxBend = isSupport ? (heavyCarry ? 13 : 11) : (compact ? 8 : 10);
+    const maxBend = (isSupport ? (heavyCarry ? 13 : 11) : (compact ? 8 : 10)) + (relaxed ? 4 : 0);
     const liftAllowance = isSupport ? 2 : 3;
-    const dropAllowance = heavyCarry ? 16 : 13;
+    const dropAllowance = (heavyCarry ? 16 : 13) + (relaxed ? 4 : 0);
 
     const ux = dx / len;
     const uy = dy / len;
@@ -574,8 +615,10 @@
     const shoulderFront = worldPoint(originX, originY, torsoTL_x + 0, torsoTL_y + 1);
     const shoulderBack = worldPoint(originX, originY, torsoTL_x + 6, torsoTL_y + 1);
 
+    const motion = motionOf(frame);
     const weaponGrip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal);
     const aim = computeAngle(hold, frame);
+    const relaxedCarry = isLowCarryMotion(motion);
 
     let supportHand = null;
     if (
@@ -604,10 +647,11 @@
     }
 
     if (supportHand && !frame.tuck) {
+      const armElbow = elbowOffset(hold, 'support', motion);
       const elbow = resolveElbow(shoulderBack, {
-        x: Math.round(shoulderBack.x + (hold.supportElbow ? hold.supportElbow.x : 12)),
-        y: Math.round(shoulderBack.y + (hold.supportElbow ? hold.supportElbow.y : 3))
-      }, supportHand, weapon, 'support');
+        x: Math.round(shoulderBack.x + (armElbow ? armElbow.x : 12)),
+        y: Math.round(shoulderBack.y + (armElbow ? armElbow.y : 3))
+      }, supportHand, weapon, 'support', relaxedCarry);
       drawBentArm(ctx, shoulderBack, elbow, supportHand, uniform, smooth);
     }
 
@@ -669,10 +713,11 @@
       };
       drawBentArm(ctx, shoulderFront, elbow, throwHand, uniform, smooth);
     } else if (!frame.tuck) {
+      const armElbow = elbowOffset(hold, 'rear', motion);
       const elbow = resolveElbow(shoulderFront, {
-        x: Math.round(shoulderFront.x + (hold.rearElbow ? hold.rearElbow.x : 9)),
-        y: Math.round(shoulderFront.y + (hold.rearElbow ? hold.rearElbow.y : 1))
-      }, weaponGrip, weapon, 'rear');
+        x: Math.round(shoulderFront.x + (armElbow ? armElbow.x : 9)),
+        y: Math.round(shoulderFront.y + (armElbow ? armElbow.y : 1))
+      }, weaponGrip, weapon, 'rear', relaxedCarry);
       drawBentArm(ctx, shoulderFront, elbow, weaponGrip, uniform, smooth);
     }
 
