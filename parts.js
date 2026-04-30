@@ -97,38 +97,43 @@
     // smaller to fake perspective on a tiny sprite.
     const ex = cx + 5, ey = cy + 5;
     const lashes = opts.lashes === true;
+    const eyeOutline = lashes ? P.outline : P.outlineSoft;
     function drawLashes() {
       E.px(ctx, ex + 0, ey - 2, P.outline);
       E.px(ctx, ex + 1, ey - 2, P.outline);
       E.px(ctx, ex + 3, ey - 2, P.outline);
     }
     if (opts.closed) {
-      E.px(ctx, ex - 1, ey, P.outline);
-      E.px(ctx, ex, ey, P.outline);
-      E.px(ctx, ex + 1, ey, P.outline);
-      E.px(ctx, ex + 2, ey, P.outline);
+      if (lashes) E.px(ctx, ex - 1, ey, P.outline);
+      E.px(ctx, ex, ey, eyeOutline);
+      E.px(ctx, ex + 1, ey, eyeOutline);
+      E.px(ctx, ex + 2, ey, eyeOutline);
+      if (!lashes) E.px(ctx, ex + 3, ey, eyeOutline);
       if (lashes) drawLashes();
       return;
     }
-    // Big rear eye.
-    E.px(ctx, ex - 1, ey - 1, P.outline);
-    E.px(ctx, ex,     ey - 1, P.outline);
-    E.px(ctx, ex + 1, ey - 1, P.outline);
-    E.px(ctx, ex - 1, ey,     P.outline);
-    E.px(ctx, ex - 1, ey + 1, P.outline);
-    E.px(ctx, ex,     ey + 2, P.outline);
-    E.px(ctx, ex + 1, ey + 2, P.outline);
+    if (lashes) {
+      E.px(ctx, ex - 1, ey,     eyeOutline);
+      E.px(ctx, ex - 1, ey + 1, eyeOutline);
+      E.px(ctx, ex + 1, ey + 2, eyeOutline);
+      E.px(ctx, ex + 3, ey,     eyeOutline);
+      E.px(ctx, ex + 3, ey + 1, eyeOutline);
+      E.px(ctx, ex + 2, ey + 2, eyeOutline);
+    } else {
+      E.px(ctx, ex - 1, ey - 1, eyeOutline);
+      E.px(ctx, ex,     ey - 1, eyeOutline);
+      E.px(ctx, ex + 1, ey - 1, eyeOutline);
+      E.px(ctx, ex + 3, ey - 1, eyeOutline);
+      E.px(ctx, ex - 1, ey,     eyeOutline);
+      E.px(ctx, ex + 3, ey,     eyeOutline);
+      E.px(ctx, ex + 1, ey + 2, eyeOutline);
+      E.px(ctx, ex + 2, ey + 2, eyeOutline);
+    }
     E.px(ctx, ex,     ey,     P.white);
     E.px(ctx, ex,     ey + 1, P.white);
     E.px(ctx, ex + 1, ey,     eyeColor);
     E.px(ctx, ex + 1, ey + 1, eyeColor);
 
-    // Smaller front eye, glued to the big one.
-    E.px(ctx, ex + 2, ey - 1, P.outline);
-    E.px(ctx, ex + 3, ey - 1, P.outline);
-    E.px(ctx, ex + 3, ey,     P.outline);
-    E.px(ctx, ex + 3, ey + 1, P.outline);
-    E.px(ctx, ex + 2, ey + 2, P.outline);
     E.px(ctx, ex + 2, ey,     P.white);
     E.px(ctx, ex + 2, ey + 1, eyeColor);
     if (lashes) drawLashes();
@@ -1126,23 +1131,24 @@
     const ex = cx + 5.45;
     const ey = cy + 5.45;
     const lashes = opts.lashes === true;
+    const eyeOutline = lashes ? P.outline : P.outlineSoft;
     function drawLashesHD() {
       strokeLine(ctx, ex - 0.55, ey - 1.12, ex - 0.72, ey - 1.48, P.outline, 0.26);
       strokeLine(ctx, ex + 0.45, ey - 1.18, ex + 0.5, ey - 1.55, P.outline, 0.26);
       strokeLine(ctx, ex + 1.95, ey - 0.9, ex + 2.18, ey - 1.22, P.outline, 0.24);
     }
     if (opts.closed) {
-      strokeLine(ctx, ex - 1.25, ey, ex + 1.0, ey, P.outline, 0.35);
-      strokeLine(ctx, ex + 1.2, ey, ex + 2.55, ey, P.outline, 0.3);
+      strokeLine(ctx, ex - 1.25, ey, ex + 1.0, ey, eyeOutline, lashes ? 0.35 : 0.28);
+      strokeLine(ctx, ex + 1.2, ey, ex + 2.55, ey, eyeOutline, lashes ? 0.3 : 0.24);
       if (lashes) drawLashesHD();
       return;
     }
-    fillEllipse(ctx, ex, ey, 1.3, 1.45, P.outline);
-    fillEllipse(ctx, ex + 0.05, ey, 0.88, 1.05, P.white);
+    fillEllipse(ctx, ex, ey, lashes ? 1.3 : 1.16, lashes ? 1.45 : 1.24, eyeOutline);
+    fillEllipse(ctx, ex + 0.05, ey, lashes ? 0.88 : 0.84, lashes ? 1.05 : 0.96, P.white);
     fillEllipse(ctx, ex + 0.48, ey + 0.03, 0.38, 0.72, eyeColor);
 
-    fillEllipse(ctx, ex + 1.55, ey, 0.92, 1.12, P.outline);
-    fillEllipse(ctx, ex + 1.58, ey, 0.58, 0.78, P.white);
+    fillEllipse(ctx, ex + 1.55, ey, lashes ? 0.92 : 0.74, lashes ? 1.12 : 0.86, eyeOutline);
+    fillEllipse(ctx, ex + 1.58, ey, lashes ? 0.58 : 0.52, lashes ? 0.78 : 0.66, P.white);
     fillEllipse(ctx, ex + 1.88, ey + 0.03, 0.28, 0.54, eyeColor);
     if (lashes) drawLashesHD();
   };
