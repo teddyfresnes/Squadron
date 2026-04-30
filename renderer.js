@@ -18,21 +18,23 @@
       headLocalYOffset: 0,
       originYOffset: 0,
       armScale: BODY_SCALE,
-      handLarge: true,
-      slender: false,
-      shoulderFrontX: 0,
-      shoulderBackX: 6
+    handLarge: true,
+    lashes: false,
+    slender: false,
+    shoulderFrontX: 0,
+    shoulderBackX: 6
     },
     female: {
       scale: 2.76,
       headScale: BODY_SCALE,
       headLocalYOffset: 0.65,
       originYOffset: 2,
-      armScale: 2.42,
-      handLarge: false,
-      slender: true,
-      shoulderFrontX: 0.55,
-      shoulderBackX: 5.45
+    armScale: 2.42,
+    handLarge: false,
+    lashes: true,
+    slender: true,
+    shoulderFrontX: 0.55,
+    shoulderBackX: 5.45
     }
   };
 
@@ -162,7 +164,6 @@
       recoilBack: 1.1,
       recoilLift: -0.15,
       recoilAngleScale: 0.7,
-      upperBodyX: 1,
       runGrip: { x: -6, y: 4 },
       runAngle: 0.12,
       reloadGrip: { x: -2, y: 5 },
@@ -627,6 +628,12 @@
     return legs;
   }
 
+  function bodyLegs(frame, hold, bodyProfile) {
+    const legs = stanceLegs(frame, hold);
+    if (bodyProfile && bodyProfile.slender) legs.slender = true;
+    return legs;
+  }
+
   function renderFrame(ctx, stageW, stageH, cfg, anim, frameIdx, facing, options) {
     options = options || {};
     facing = facing || 1;
@@ -749,9 +756,10 @@
       drawBentArm(ctx, shoulderBack, elbow, supportHand, uniform, smooth, bodyProfile);
     }
 
+    const legs = bodyLegs(frame, hold, bodyProfile);
     withBodyScale(ctx, originX, originY, bodyProfile, function () {
-      drawLegs(ctx, legsTL_x, legsTL_y, pants, stanceLegs(frame, hold));
-      drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8 + (smooth ? torsoStretchY : Math.ceil(torsoStretchY)), legsTL_y, pants);
+      drawLegs(ctx, legsTL_x, legsTL_y, pants, legs);
+      drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8 + (smooth ? torsoStretchY : Math.ceil(torsoStretchY)), legsTL_y, pants, { slender: bodyProfile.slender });
       drawTorso(ctx, torsoTL_x, torsoTL_y, uniform, { stretchY: torsoStretchY, slender: bodyProfile.slender });
       if (vest) drawVest(ctx, torsoTL_x, torsoTL_y, vest, { slender: bodyProfile.slender });
       if (pack) {
@@ -778,7 +786,7 @@
         drawHat(ctx, headTL_x, headTL_y, hatKind, hatCol);
       }
 
-      drawEye(ctx, headTL_x, headTL_y, eye.base, { closed: frame.eyesClosed });
+      drawEye(ctx, headTL_x, headTL_y, eye.base, { closed: frame.eyesClosed, lashes: bodyProfile.lashes === true });
     });
 
     const showWeapon = frame.showWeapon !== false && !frame.weaponDropped;

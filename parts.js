@@ -44,11 +44,13 @@
   // Fills the rows between torso bottom and legs top when bodyDY lifts the
   // torso. Uses trouser colors so the connector reads as hips instead of a
   // black artifact.
-  Parts.drawWaistBridge = function (ctx, tx, topY, legsY, pants) {
+  Parts.drawWaistBridge = function (ctx, tx, topY, legsY, pants, opts) {
     if (topY >= legsY) return;
+    opts = opts || {};
     const O = P.outline;
     const b = pants && pants.base ? pants.base : P.outlineSoft;
     const s = pants && pants.shade ? pants.shade : b;
+    const slender = opts.slender === true;
     // Keep the bobbing connector colored like the hips instead of drawing a
     // thick black bar between torso and legs.
     for (let y = topY; y < legsY; y++) {
@@ -56,9 +58,14 @@
       E.px(ctx, tx + 1, y, b);
       E.px(ctx, tx + 2, y, b);
       E.px(ctx, tx + 3, y, b);
-      E.px(ctx, tx + 4, y, b);
-      E.px(ctx, tx + 5, y, s);
-      E.px(ctx, tx + 6, y, O);
+      if (slender) {
+        E.px(ctx, tx + 4, y, s);
+        E.px(ctx, tx + 5, y, O);
+      } else {
+        E.px(ctx, tx + 4, y, b);
+        E.px(ctx, tx + 5, y, s);
+        E.px(ctx, tx + 6, y, O);
+      }
     }
   };
 
@@ -89,11 +96,18 @@
     // Two low, right-shifted eyes. The rear eye is larger; the front eye is
     // smaller to fake perspective on a tiny sprite.
     const ex = cx + 5, ey = cy + 5;
+    const lashes = opts.lashes === true;
+    function drawLashes() {
+      E.px(ctx, ex + 0, ey - 2, P.outline);
+      E.px(ctx, ex + 1, ey - 2, P.outline);
+      E.px(ctx, ex + 3, ey - 2, P.outline);
+    }
     if (opts.closed) {
       E.px(ctx, ex - 1, ey, P.outline);
       E.px(ctx, ex, ey, P.outline);
       E.px(ctx, ex + 1, ey, P.outline);
       E.px(ctx, ex + 2, ey, P.outline);
+      if (lashes) drawLashes();
       return;
     }
     // Big rear eye.
@@ -117,6 +131,7 @@
     E.px(ctx, ex + 2, ey + 2, P.outline);
     E.px(ctx, ex + 2, ey,     P.white);
     E.px(ctx, ex + 2, ey + 1, eyeColor);
+    if (lashes) drawLashes();
   };
 
   // ---------- HAIR ----------
@@ -447,6 +462,7 @@
     const bootsB = P.boots.base;
     const bootsH = P.boots.hl || bootsB;
     const SO = P.outlineSoft || s;
+    const slender = legOffsets.slender === true;
 
     if (legOffsets.pose === 'kneel') {
       drawKneelLegs(Math.max(0, Math.min(1, legOffsets.kneel == null ? 1 : legOffsets.kneel)));
@@ -492,6 +508,21 @@
       for (let i = 0; i < 4; i++) E.px(ctx, x + i, y + 1, O);
     }
 
+    function drawHipPlate() {
+      E.px(ctx, tx + 0, ty, O);
+      E.px(ctx, tx + 1, ty, b);
+      E.px(ctx, tx + 2, ty, b);
+      E.px(ctx, tx + 3, ty, b);
+      if (slender) {
+        E.px(ctx, tx + 4, ty, s);
+        E.px(ctx, tx + 5, ty, O);
+      } else {
+        E.px(ctx, tx + 4, ty, b);
+        E.px(ctx, tx + 5, ty, s);
+        E.px(ctx, tx + 6, ty, O);
+      }
+    }
+
     function drawKneelLegs(t) {
       const backStand = [
         { x: tx + 5, y: ty + 0 },
@@ -521,13 +552,7 @@
       drawBoot(back[2].x - 1, back[2].y, false);
       drawBoot(front[2].x, front[2].y, true);
 
-      E.px(ctx, tx + 0, ty, O);
-      E.px(ctx, tx + 1, ty, b);
-      E.px(ctx, tx + 2, ty, b);
-      E.px(ctx, tx + 3, ty, b);
-      E.px(ctx, tx + 4, ty, b);
-      E.px(ctx, tx + 5, ty, s);
-      E.px(ctx, tx + 6, ty, O);
+      drawHipPlate();
     }
 
     const step = function (bend) {
@@ -609,13 +634,7 @@
 
     // Colored hip plate keeps the side-view silhouette solid without a
     // separate black filler between the legs.
-    E.px(ctx, tx + 0, ty, O);
-    E.px(ctx, tx + 1, ty, b);
-    E.px(ctx, tx + 2, ty, b);
-    E.px(ctx, tx + 3, ty, b);
-    E.px(ctx, tx + 4, ty, b);
-    E.px(ctx, tx + 5, ty, s);
-    E.px(ctx, tx + 6, ty, O);
+    drawHipPlate();
   };
 
   // ---------- ARM ----------
@@ -793,9 +812,16 @@
     opts = opts || {};
     const ex = cx + 5.45;
     const ey = cy + 5.45;
+    const lashes = opts.lashes === true;
+    function drawLashesHD() {
+      strokeLine(ctx, ex - 0.55, ey - 1.12, ex - 0.72, ey - 1.48, P.outline, 0.26);
+      strokeLine(ctx, ex + 0.45, ey - 1.18, ex + 0.5, ey - 1.55, P.outline, 0.26);
+      strokeLine(ctx, ex + 1.95, ey - 0.9, ex + 2.18, ey - 1.22, P.outline, 0.24);
+    }
     if (opts.closed) {
       strokeLine(ctx, ex - 1.25, ey, ex + 1.0, ey, P.outline, 0.35);
       strokeLine(ctx, ex + 1.2, ey, ex + 2.55, ey, P.outline, 0.3);
+      if (lashes) drawLashesHD();
       return;
     }
     fillEllipse(ctx, ex, ey, 1.3, 1.45, P.outline);
@@ -805,6 +831,7 @@
     fillEllipse(ctx, ex + 1.55, ey, 0.92, 1.12, P.outline);
     fillEllipse(ctx, ex + 1.58, ey, 0.58, 0.78, P.white);
     fillEllipse(ctx, ex + 1.88, ey + 0.03, 0.28, 0.54, eyeColor);
+    if (lashes) drawLashesHD();
   };
 
   Parts.drawHairHD = function (ctx, cx, cy, style, hairCol) {
@@ -1031,20 +1058,23 @@
     strokeLine(ctx, tx - 2.0, ty + 4.9, tx + 0.75, ty + 4.9, pack.shade, 0.55);
   };
 
-  Parts.drawWaistBridgeHD = function (ctx, tx, topY, legsY, pants) {
+  Parts.drawWaistBridgeHD = function (ctx, tx, topY, legsY, pants, opts) {
     if (topY >= legsY) return;
+    opts = opts || {};
     const h = legsY - topY + 0.35;
     const b = pants && pants.base ? pants.base : P.outlineSoft;
     const s = pants && pants.shade ? pants.shade : b;
-    fillRoundRect(ctx, tx + 0.1, topY - 0.08, 6.9, h, 0.25, P.outline);
-    fillRoundRect(ctx, tx + 0.55, topY + 0.05, 5.95, Math.max(0.15, h - 0.25), 0.18, b);
-    strokeLine(ctx, tx + 4.7, topY + 0.2, tx + 5.9, topY + 0.2, s, 0.35);
+    const slim = opts.slender === true ? 0.85 : 0;
+    fillRoundRect(ctx, tx + 0.1, topY - 0.08, 6.9 - slim, h, 0.25, P.outline);
+    fillRoundRect(ctx, tx + 0.55, topY + 0.05, 5.95 - slim, Math.max(0.15, h - 0.25), 0.18, b);
+    strokeLine(ctx, tx + 4.7 - slim * 0.55, topY + 0.2, tx + 5.9 - slim, topY + 0.2, s, 0.35);
   };
 
   Parts.drawLegsHD = function (ctx, tx, ty, pants, legOffsets) {
     legOffsets = legOffsets || { front: 0, back: 0, frontBend: 0, backBend: 0 };
     const bootsB = P.boots.base;
     const bootsH = P.boots.hl || bootsB;
+    const slender = legOffsets.slender === true;
 
     if (legOffsets.pose === 'kneel') {
       drawKneelLegsHD(Math.max(0, Math.min(1, legOffsets.kneel == null ? 1 : legOffsets.kneel)));
@@ -1078,6 +1108,13 @@
       if (front) fillRoundRect(ctx, footX - 0.55, footY - 0.35, 0.75, 0.42, 0.18, bootsH);
     }
 
+    function drawHipPlateHD() {
+      const slim = slender ? 0.85 : 0;
+      fillRoundRect(ctx, tx + 0.25, ty - 0.08, 6.75 - slim, 1.25, 0.3, P.outline);
+      fillRoundRect(ctx, tx + 0.75, ty + 0.12, 5.75 - slim, 0.78, 0.25, pants.base);
+      fillRoundRect(ctx, tx + 4.75 - slim * 0.55, ty + 0.12, Math.max(0.65, 1.3 - slim * 0.35), 0.52, 0.18, pants.shade);
+    }
+
     function drawKneelLegsHD(t) {
       const backStand = [
         { x: tx + 4.35, y: ty + 0.2 },
@@ -1104,9 +1141,7 @@
       const front = frontStand.map((p, i) => pt(p, frontKneel[i], t));
       drawKneelPath(back, pants.shade, pants.base, false);
       drawKneelPath(front, pants.base, pants.shade, true);
-      fillRoundRect(ctx, tx + 0.25, ty - 0.08, 6.75, 1.25, 0.3, P.outline);
-      fillRoundRect(ctx, tx + 0.75, ty + 0.12, 5.75, 0.78, 0.25, pants.base);
-      fillRoundRect(ctx, tx + 4.75, ty + 0.12, 1.3, 0.52, 0.18, pants.shade);
+      drawHipPlateHD();
     }
 
     const step = function (bend) {
@@ -1179,9 +1214,7 @@
       frontWalk ? legOffsets.frontLift : 0
     );
     // Small colored hip plate removes the old black center bridge.
-    fillRoundRect(ctx, tx + 0.25, ty - 0.08, 6.75, 1.25, 0.3, P.outline);
-    fillRoundRect(ctx, tx + 0.75, ty + 0.12, 5.75, 0.78, 0.25, pants.base);
-    fillRoundRect(ctx, tx + 4.75, ty + 0.12, 1.3, 0.52, 0.18, pants.shade);
+    drawHipPlateHD();
   };
 
   Parts.drawArmHD = function (ctx, sx, sy, hx, hy, uniform, glovesCol, opts) {
