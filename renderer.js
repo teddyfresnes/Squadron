@@ -365,6 +365,29 @@
     return BODY_PROFILES[(cfg && cfg.bodyType) || 'male'] || BODY_PROFILES.male;
   }
 
+  function hairHasLowerLayer(style) {
+    return (
+      style === 'Messy' ||
+      style === 'Long' ||
+      style === 'Ponytail' ||
+      style === 'Bob' ||
+      style === 'Wavy' ||
+      style === 'Flowing' ||
+      style === 'High Ponytail'
+    );
+  }
+
+  function hairVisibilityForHat(hatKind, hairStyle, bodyType) {
+    const hat = hatKind || 'None';
+    if (hat === 'None' || hat === 'Bandana') return { back: true, front: true };
+    if (hat === 'Cap' || hat === 'Boonie') {
+      const lower = hairHasLowerLayer(hairStyle);
+      if (bodyType === 'female') return { back: lower, front: false };
+      return { back: false, front: lower };
+    }
+    return { back: false, front: false };
+  }
+
   function worldPoint(originX, originY, x, y, bodyProfile) {
     const profile = bodyProfile || BODY_PROFILES.male;
     return {
@@ -653,11 +676,13 @@
     const hairStyle = P.hairstyles[cfg.hairStyleIdx].name;
     const weapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
     const hold = getHold(weapon);
+    const bodyType = cfg.bodyType || 'male';
     const bodyProfile = getBodyProfile(cfg);
     const drawBackpack = smooth && Parts.drawBackpackHD ? Parts.drawBackpackHD : Parts.drawBackpack;
     const drawWaistBridge = smooth && Parts.drawWaistBridgeHD ? Parts.drawWaistBridgeHD : Parts.drawWaistBridge;
     const drawNeck = smooth && Parts.drawNeckHD ? Parts.drawNeckHD : Parts.drawNeck;
     const drawHead = smooth && Parts.drawHeadHD ? Parts.drawHeadHD : Parts.drawHead;
+    const drawHairBack = smooth && Parts.drawHairBackHD ? Parts.drawHairBackHD : Parts.drawHairBack;
     const drawHair = smooth && Parts.drawHairHD ? Parts.drawHairHD : Parts.drawHair;
     const drawHat = smooth && Parts.drawHatHD ? Parts.drawHatHD : Parts.drawHat;
     const drawEye = smooth && Parts.drawEyeHD ? Parts.drawEyeHD : Parts.drawEye;
@@ -771,16 +796,17 @@
     });
 
     withScale(ctx, originX, originY, bodyProfile.headScale || BODY_SCALE, function () {
+      const hairOpts = { bodyType };
+      const hairVisibility = hairVisibilityForHat(hatKind, hairStyle, bodyType);
+      if (hairVisibility.back && drawHairBack) {
+        drawHairBack(ctx, headTL_x, headTL_y, hairStyle, hair, hairOpts);
+      }
+
       drawNeck(ctx, originX + upperBodyDXLocal, headTL_y + 8, torsoTL_y, skin);
       drawHead(ctx, headTL_x, headTL_y, skin, { hurt: frame.mouthHurt });
 
-      const hairOpts = { slender: bodyProfile.slender === true };
-      if (!hatCol || hatKind === 'None' || hatKind === 'Bandana') {
+      if (hairVisibility.front) {
         drawHair(ctx, headTL_x, headTL_y, hairStyle, hair, hairOpts);
-      } else if (hatKind === 'Cap' || hatKind === 'Boonie') {
-        if (hairStyle === 'Long' || hairStyle === 'Ponytail' || hairStyle === 'Messy') {
-          drawHair(ctx, headTL_x, headTL_y, hairStyle, hair, hairOpts);
-        }
       }
 
       if (hatCol && hatKind !== 'None') {

@@ -91,6 +91,10 @@ window.Palette = {
     { name: 'Long' },
     { name: 'Mohawk' },
     { name: 'Ponytail' },
+    { name: 'Bob' },
+    { name: 'Wavy' },
+    { name: 'Flowing' },
+    { name: 'High Ponytail' },
     { name: 'Bald' }
   ],
 

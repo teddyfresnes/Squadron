@@ -31,7 +31,7 @@ const BODY_TYPES = [
 
 const HAIRSTYLES_BY_BODY = {
   male: ['Short', 'Buzz', 'Messy', 'Mohawk', 'Bald'],
-  female: ['Short', 'Messy', 'Long', 'Ponytail']
+  female: ['Short', 'Messy', 'Long', 'Ponytail', 'Bob', 'Wavy', 'Flowing', 'High Ponytail']
 };
 
 function hairStyleOptionsForBody(bodyType) {

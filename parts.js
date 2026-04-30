@@ -135,8 +135,233 @@
   };
 
   // ---------- HAIR ----------
+  function isFemaleHairStyle(style) {
+    return (
+      style === 'Short' ||
+      style === 'Messy' ||
+      style === 'Long' ||
+      style === 'Ponytail' ||
+      style === 'Bob' ||
+      style === 'Wavy' ||
+      style === 'Flowing' ||
+      style === 'High Ponytail'
+    );
+  }
+
+  function usesFemaleHair(opts, style) {
+    return opts && opts.bodyType === 'female' && isFemaleHairStyle(style);
+  }
+
+  function drawFemaleHairBackPixel(ctx, cx, cy, style, hairCol) {
+    const b = hairCol.base, s = hairCol.shade, h = hairCol.hl;
+    const O = P.outline;
+    const map = { O, B: b, S: s, H: h };
+
+    if (style === 'Short') {
+      E.stamp(ctx, cx - 2, cy + 4, [
+        '.OOO.',
+        'OBBBO',
+        '.OBSO'
+      ], map);
+    } else if (style === 'Messy') {
+      E.stamp(ctx, cx - 3, cy + 3, [
+        '..OOO.',
+        '.OBBBO',
+        'OBBBBO',
+        'OBBBSO',
+        '.OBBS.',
+        '..OO..'
+      ], map);
+    } else if (style === 'Long') {
+      E.stamp(ctx, cx - 3, cy + 2, [
+        '..OOOO.',
+        '.OBBBBO',
+        'OBBBBBBO',
+        'OBBBBBBO',
+        'OBBBBSO.',
+        'OBBBBSO.',
+        '.OBBBSO.',
+        '.OBBBS..',
+        '..OOO...'
+      ], map);
+      E.px(ctx, cx - 1, cy + 5, h);
+      E.px(ctx, cx - 1, cy + 6, h);
+    } else if (style === 'Ponytail') {
+      E.stamp(ctx, cx - 4, cy + 3, [
+        '..OO...',
+        '.OBBO..',
+        'OBBBBO.',
+        'OBBBBO.',
+        '.OBBBSO',
+        '..OBBSO',
+        '...OO.'
+      ], map);
+      E.px(ctx, cx - 1, cy + 4, s);
+      E.px(ctx, cx + 0, cy + 4, O);
+    } else if (style === 'Bob') {
+      E.stamp(ctx, cx - 2, cy + 3, [
+        '.OOO..',
+        'OBBBO.',
+        'OBBBSO',
+        'OBBBSO',
+        '.OOO..'
+      ], map);
+      E.px(ctx, cx + 7, cy + 4, O);
+      E.px(ctx, cx + 7, cy + 5, b);
+      E.px(ctx, cx + 7, cy + 6, O);
+    } else if (style === 'Wavy') {
+      E.stamp(ctx, cx - 3, cy + 3, [
+        '..OO..',
+        '.OBBO.',
+        'OBBBO.',
+        'OBBBSO',
+        '.OBBSO',
+        '..OO..'
+      ], map);
+      E.px(ctx, cx - 1, cy + 6, h);
+    } else if (style === 'Flowing') {
+      for (let i = 0; i < 9; i++) {
+        E.px(ctx, cx - 2, cy + 4 + i, O);
+        E.px(ctx, cx - 1, cy + 4 + i, b);
+        E.px(ctx, cx + 0, cy + 4 + i, b);
+      }
+      E.px(ctx, cx - 1, cy + 13, O);
+      E.px(ctx, cx + 0, cy + 13, O);
+      E.px(ctx, cx - 1, cy + 7, h);
+      E.px(ctx, cx + 0, cy + 10, h);
+    } else if (style === 'High Ponytail') {
+      E.px(ctx, cx - 1, cy + 3, b); E.px(ctx, cx - 2, cy + 3, O);
+      E.px(ctx, cx - 2, cy + 4, b); E.px(ctx, cx - 1, cy + 4, b); E.px(ctx, cx - 3, cy + 4, O);
+      E.px(ctx, cx - 3, cy + 5, b); E.px(ctx, cx - 2, cy + 5, b); E.px(ctx, cx - 4, cy + 5, O);
+      E.px(ctx, cx - 4, cy + 6, b); E.px(ctx, cx - 3, cy + 6, b); E.px(ctx, cx - 5, cy + 6, O);
+      E.px(ctx, cx - 4, cy + 7, b); E.px(ctx, cx - 3, cy + 7, b); E.px(ctx, cx - 5, cy + 7, O);
+      E.px(ctx, cx - 4, cy + 8, O); E.px(ctx, cx - 3, cy + 8, O);
+    }
+  }
+
+  function drawFemaleHairFrontPixel(ctx, cx, cy, style, hairCol) {
+    const b = hairCol.base, s = hairCol.shade, h = hairCol.hl;
+    const O = P.outline;
+    const map = { O, B: b, S: s, H: h };
+
+    if (style === 'Short') {
+      E.stamp(ctx, cx - 1, cy - 2, [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBHHBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBBBBBBO..',
+        '..OBBBO....'
+      ], map);
+      E.px(ctx, cx + 1, cy + 2, s);
+      E.px(ctx, cx + 6, cy + 1, h);
+    } else if (style === 'Messy') {
+      E.stamp(ctx, cx - 1, cy - 2, [
+        '..OO.OOO...',
+        '.OBBBBBBO..',
+        'OBBHHHBBBO.',
+        'OBHHBBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBBBBBO...',
+        '..OBBO.....'
+      ], map);
+      E.px(ctx, cx + 2, cy - 3, O);
+      E.px(ctx, cx + 2, cy - 2, b);
+      E.px(ctx, cx + 6, cy - 2, b);
+      E.px(ctx, cx + 7, cy - 1, O);
+      E.px(ctx, cx + 1, cy + 3, s);
+    } else if (style === 'Long') {
+      E.stamp(ctx, cx - 1, cy - 2, [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBHHBBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBBBBBBO..',
+        '.OBBBBOO...'
+      ], map);
+      E.px(ctx, cx + 8, cy + 2, O);
+      E.px(ctx, cx + 8, cy + 3, b);
+      E.px(ctx, cx + 8, cy + 4, O);
+      E.px(ctx, cx + 1, cy + 4, s);
+    } else if (style === 'Ponytail') {
+      E.stamp(ctx, cx - 1, cy - 2, [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBHHHBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBBBBBBBO.',
+        '..BBBBBBO..'
+      ], map);
+      E.px(ctx, cx + 1, cy + 2, s);
+      E.px(ctx, cx + 2, cy + 1, s);
+      E.px(ctx, cx + 6, cy + 0, h);
+    } else if (style === 'Bob') {
+      E.stamp(ctx, cx - 1, cy - 1, [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        'OB......BO.',
+        'OB......BO.',
+        '.OBBBBBBO..'
+      ], map);
+      E.px(ctx, cx + 4, cy + 0, h);
+    } else if (style === 'Wavy') {
+      E.stamp(ctx, cx - 1, cy - 2, [
+        '.OOOOOOOO..',
+        'OBBBBBBBBO.',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.BBBBBBBBO.',
+        '..BBBBBBO..'
+      ], map);
+      E.px(ctx, cx + 1, cy - 2, h);
+      E.px(ctx, cx + 6, cy - 2, h);
+      E.px(ctx, cx + 1, cy + 3, s);
+    } else if (style === 'Flowing') {
+      E.stamp(ctx, cx - 1, cy - 1, [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBBBBBBO..'
+      ], map);
+      E.px(ctx, cx + 8, cy + 4, b);
+      E.px(ctx, cx + 8, cy + 5, O);
+      E.px(ctx, cx + 1, cy + 4, s);
+    } else if (style === 'High Ponytail') {
+      E.stamp(ctx, cx - 1, cy - 2, [
+        '...OOOO....',
+        '..OBBBBO...',
+        '.OBBHHBBO..',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBBBBBBO..'
+      ], map);
+      E.px(ctx, cx + 1, cy + 1, s);
+      E.px(ctx, cx + 2, cy + 1, s);
+      E.px(ctx, cx + 6, cy + 0, h);
+    }
+  }
+
+  Parts.drawHairBack = function (ctx, cx, cy, style, hairCol, opts) {
+    if (!style || style === 'Bald' || !hairCol) return;
+    if (usesFemaleHair(opts, style)) drawFemaleHairBackPixel(ctx, cx, cy, style, hairCol);
+  };
+
   Parts.drawHair = function (ctx, cx, cy, style, hairCol, opts) {
     if (!style || style === 'Bald') return;
+    if (usesFemaleHair(opts, style)) {
+      drawFemaleHairFrontPixel(ctx, cx, cy, style, hairCol);
+      return;
+    }
     const b = hairCol.base, s = hairCol.shade, h = hairCol.hl;
     const O = P.outline;
     const slender = opts && opts.slender === true;
@@ -929,8 +1154,374 @@
     if (lashes) drawLashesHD();
   };
 
+  function drawFemaleHairBackHD(ctx, cx, cy, style, hairCol) {
+    const O = P.outline;
+    const b = hairCol.base;
+    const s = hairCol.shade;
+    const h = hairCol.hl;
+
+    if (style === 'Short') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 1.25, cy + 4.15);
+        ctx.quadraticCurveTo(cx - 2.0, cy + 5.8, cx - 0.35, cy + 7.25);
+        ctx.quadraticCurveTo(cx + 1.35, cy + 6.95, cx + 1.6, cy + 5.25);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 4.05, cx - 1.25, cy + 4.15);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.8, cy + 4.55);
+        ctx.quadraticCurveTo(cx - 1.35, cy + 5.75, cx - 0.25, cy + 6.7);
+        ctx.quadraticCurveTo(cx + 0.95, cy + 6.45, cx + 1.12, cy + 5.35);
+        ctx.quadraticCurveTo(cx + 0.28, cy + 4.48, cx - 0.8, cy + 4.55);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx - 0.55, cy + 5.0, cx + 0.6, cy + 6.25, s, 0.38);
+    } else if (style === 'Messy') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 1.0, cy + 3.25);
+        ctx.quadraticCurveTo(cx - 3.0, cy + 5.0, cx - 2.25, cy + 8.55);
+        ctx.quadraticCurveTo(cx - 0.85, cy + 10.0, cx + 1.45, cy + 8.55);
+        ctx.quadraticCurveTo(cx + 2.15, cy + 5.7, cx + 0.75, cy + 3.55);
+        ctx.quadraticCurveTo(cx - 0.05, cy + 3.1, cx - 1.0, cy + 3.25);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.78, cy + 3.85);
+        ctx.quadraticCurveTo(cx - 2.28, cy + 5.25, cx - 1.7, cy + 8.05);
+        ctx.quadraticCurveTo(cx - 0.65, cy + 9.0, cx + 0.9, cy + 8.0);
+        ctx.quadraticCurveTo(cx + 1.45, cy + 5.75, cx + 0.45, cy + 4.0);
+        ctx.quadraticCurveTo(cx - 0.1, cy + 3.68, cx - 0.78, cy + 3.85);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx - 1.25, cy + 5.15, cx - 0.75, cy + 8.0, s, 0.42);
+      strokeLine(ctx, cx - 0.15, cy + 4.25, cx - 0.95, cy + 6.45, h, 0.32);
+    } else if (style === 'Long') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.55, cy + 2.95);
+        ctx.quadraticCurveTo(cx - 3.25, cy + 4.8, cx - 3.05, cy + 8.65);
+        ctx.quadraticCurveTo(cx - 2.85, cy + 12.35, cx + 0.1, cy + 12.75);
+        ctx.quadraticCurveTo(cx + 2.35, cy + 10.65, cx + 1.5, cy + 6.35);
+        ctx.quadraticCurveTo(cx + 1.1, cy + 4.15, cx - 0.55, cy + 2.95);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.35, cy + 3.55);
+        ctx.quadraticCurveTo(cx - 2.45, cy + 5.05, cx - 2.35, cy + 8.45);
+        ctx.quadraticCurveTo(cx - 2.1, cy + 11.35, cx - 0.05, cy + 11.85);
+        ctx.quadraticCurveTo(cx + 1.52, cy + 10.0, cx + 0.88, cy + 6.55);
+        ctx.quadraticCurveTo(cx + 0.62, cy + 4.72, cx - 0.35, cy + 3.55);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx - 1.35, cy + 5.2, cx - 1.2, cy + 10.25, s, 0.5);
+      strokeLine(ctx, cx - 0.35, cy + 4.6, cx - 0.65, cy + 8.0, h, 0.32);
+    } else if (style === 'Ponytail') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.5, cy + 4.45);
+        ctx.quadraticCurveTo(cx - 3.8, cy + 5.55, cx - 3.55, cy + 8.4);
+        ctx.quadraticCurveTo(cx - 2.6, cy + 11.0, cx - 0.2, cy + 10.25);
+        ctx.quadraticCurveTo(cx + 0.75, cy + 7.9, cx + 0.05, cy + 4.95);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.55, cy + 5.05);
+        ctx.quadraticCurveTo(cx - 2.9, cy + 5.9, cx - 2.82, cy + 8.2);
+        ctx.quadraticCurveTo(cx - 2.18, cy + 10.0, cx - 0.55, cy + 9.55);
+        ctx.quadraticCurveTo(cx + 0.12, cy + 7.78, cx - 0.32, cy + 5.25);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx - 1.62, cy + 6.25, cx - 1.35, cy + 9.0, s, 0.48);
+      fillEllipse(ctx, cx + 0.08, cy + 4.42, 1.08, 0.9, O);
+      fillEllipse(ctx, cx + 0.08, cy + 4.42, 0.62, 0.5, s);
+    } else if (style === 'Bob') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.45, cy + 7.5);
+        ctx.quadraticCurveTo(cx - 0.95, cy + 4.4, cx - 0.7, cy + 2.0);
+        ctx.quadraticCurveTo(cx + 0.2, cy - 1.7, cx + 4.25, cy - 1.85);
+        ctx.quadraticCurveTo(cx + 8.7, cy - 1.5, cx + 9.25, cy + 2.0);
+        ctx.quadraticCurveTo(cx + 9.45, cy + 4.4, cx + 8.85, cy + 7.5);
+        ctx.quadraticCurveTo(cx + 7.95, cy + 8.5, cx + 7.05, cy + 7.55);
+        ctx.lineTo(cx + 7.4, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.7, cx + 1.5, cy + 4.05);
+        ctx.lineTo(cx + 1.35, cy + 7.55);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 8.5, cx - 0.45, cy + 7.5);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.15, cy + 7.3);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 4.4, cx - 0.1, cy + 2.2);
+        ctx.quadraticCurveTo(cx + 0.75, cy - 1.0, cx + 4.25, cy - 1.1);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 0.8, cx + 8.6, cy + 2.2);
+        ctx.quadraticCurveTo(cx + 8.85, cy + 4.4, cx + 8.3, cy + 7.3);
+        ctx.quadraticCurveTo(cx + 7.85, cy + 7.95, cx + 7.5, cy + 7.45);
+        ctx.lineTo(cx + 7.85, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 5.15, cx + 1.05, cy + 4.55);
+        ctx.lineTo(cx + 0.9, cy + 7.45);
+        ctx.quadraticCurveTo(cx + 0.55, cy + 7.95, cx + 0.15, cy + 7.3);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 1.6, cy + 3.95, cx + 7.4, cy + 3.95, s, 0.4);
+    } else if (style === 'Wavy') {
+      strokeLine(ctx, cx - 0.45, cy + 4.0, cx - 1.05, cy + 7.5, O, 1.45);
+      strokeLine(ctx, cx - 0.4, cy + 3.95, cx - 0.9, cy + 7.3, b, 0.9);
+      strokeLine(ctx, cx - 0.65, cy + 5.3, cx - 0.88, cy + 7.0, h, 0.3);
+    } else if (style === 'Flowing') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx + 0.25, cy + 3.85);
+        ctx.quadraticCurveTo(cx - 1.15, cy + 7.0, cx - 1.55, cy + 11.85);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 12.85, cx + 0.85, cy + 12.0);
+        ctx.quadraticCurveTo(cx + 1.45, cy + 7.0, cx + 1.5, cy + 4.0);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.4, cy + 4.05);
+        ctx.quadraticCurveTo(cx - 0.85, cy + 7.0, cx - 1.2, cy + 11.55);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 12.35, cx + 0.55, cy + 11.7);
+        ctx.quadraticCurveTo(cx + 1.15, cy + 7.0, cx + 1.2, cy + 4.15);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx - 0.4, cy + 6.5, cx - 0.7, cy + 11.0, s, 0.55);
+      strokeLine(ctx, cx + 0.5, cy + 6.0, cx + 0.7, cy + 10.5, h, 0.35);
+    } else if (style === 'High Ponytail') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx + 0.55, cy + 3.4);
+        ctx.quadraticCurveTo(cx - 1.85, cy + 5.5, cx - 2.95, cy + 8.6);
+        ctx.quadraticCurveTo(cx - 2.55, cy + 9.45, cx - 1.75, cy + 9.0);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 7.0, cx + 1.55, cy + 4.5);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.6, cy + 3.7);
+        ctx.quadraticCurveTo(cx - 1.5, cy + 5.6, cx - 2.55, cy + 8.45);
+        ctx.quadraticCurveTo(cx - 2.25, cy + 9.05, cx - 1.7, cy + 8.7);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 6.85, cx + 1.35, cy + 4.55);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx - 0.4, cy + 6.5, cx - 1.6, cy + 8.4, h, 0.35);
+      fillEllipse(ctx, cx + 0.7, cy + 3.6, 0.55, 0.35, s);
+    }
+  }
+
+  function drawFemaleHairFrontHD(ctx, cx, cy, style, hairCol) {
+    const O = P.outline;
+    const b = hairCol.base;
+    const s = hairCol.shade;
+    const h = hairCol.hl;
+
+    if (style === 'Short') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.65, cy + 4.25);
+        ctx.quadraticCurveTo(cx + 0.12, cy - 1.9, cx + 4.25, cy - 2.05);
+        ctx.quadraticCurveTo(cx + 8.72, cy - 1.6, cx + 9.15, cy + 3.3);
+        ctx.quadraticCurveTo(cx + 7.8, cy + 4.95, cx + 6.1, cy + 4.75);
+        ctx.quadraticCurveTo(cx + 4.55, cy + 3.78, cx + 2.72, cy + 4.72);
+        ctx.quadraticCurveTo(cx + 0.85, cy + 5.32, cx - 0.65, cy + 4.25);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.02, cy + 3.8);
+        ctx.quadraticCurveTo(cx + 0.72, cy - 1.08, cx + 4.2, cy - 1.25);
+        ctx.quadraticCurveTo(cx + 7.88, cy - 0.9, cx + 8.38, cy + 3.0);
+        ctx.quadraticCurveTo(cx + 7.12, cy + 4.2, cx + 5.82, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 4.32, cy + 3.32, cx + 2.7, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 1.0, cy + 4.55, cx + 0.02, cy + 3.8);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.0, cy + 0.25, cx + 6.2, cy + 0.95, h, 0.42);
+      strokeLine(ctx, cx + 1.0, cy + 3.85, cx + 7.55, cy + 3.9, s, 0.38);
+    } else if (style === 'Messy') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.72, cy + 4.35);
+        ctx.quadraticCurveTo(cx + 0.1, cy - 1.7, cx + 3.95, cy - 2.12);
+        ctx.quadraticCurveTo(cx + 7.65, cy - 1.82, cx + 9.0, cy + 2.72);
+        ctx.quadraticCurveTo(cx + 7.95, cy + 5.15, cx + 5.9, cy + 5.05);
+        ctx.quadraticCurveTo(cx + 4.0, cy + 3.8, cx + 2.15, cy + 4.75);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 5.55, cx - 0.72, cy + 4.35);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.02, cy + 3.92);
+        ctx.quadraticCurveTo(cx + 0.72, cy - 0.95, cx + 3.92, cy - 1.28);
+        ctx.quadraticCurveTo(cx + 7.02, cy - 1.02, cx + 8.22, cy + 2.65);
+        ctx.quadraticCurveTo(cx + 7.25, cy + 4.45, cx + 5.82, cy + 4.38);
+        ctx.quadraticCurveTo(cx + 4.08, cy + 3.38, cx + 2.25, cy + 4.15);
+        ctx.quadraticCurveTo(cx + 0.9, cy + 4.75, cx - 0.02, cy + 3.92);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 1.55, cy + 0.35, cx + 5.9, cy + 0.75, h, 0.42);
+      strokeLine(ctx, cx + 1.0, cy + 3.95, cx + 7.65, cy + 3.72, s, 0.42);
+      strokePath(ctx, O, 0.66, function () {
+        ctx.moveTo(cx + 1.35, cy - 0.35);
+        ctx.lineTo(cx + 0.82, cy - 1.92);
+        ctx.moveTo(cx + 4.55, cy - 0.72);
+        ctx.lineTo(cx + 5.1, cy - 2.05);
+        ctx.moveTo(cx + 7.1, cy + 0.78);
+        ctx.lineTo(cx + 8.42, cy - 0.42);
+      });
+      strokePath(ctx, b, 0.4, function () {
+        ctx.moveTo(cx + 1.35, cy - 0.32);
+        ctx.lineTo(cx + 0.92, cy - 1.62);
+        ctx.moveTo(cx + 4.55, cy - 0.68);
+        ctx.lineTo(cx + 5.0, cy - 1.78);
+        ctx.moveTo(cx + 7.1, cy + 0.8);
+        ctx.lineTo(cx + 8.15, cy - 0.18);
+      });
+    } else if (style === 'Long') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.72, cy + 4.15);
+        ctx.quadraticCurveTo(cx + 0.1, cy - 2.05, cx + 4.25, cy - 2.22);
+        ctx.quadraticCurveTo(cx + 8.7, cy - 1.7, cx + 9.25, cy + 3.28);
+        ctx.quadraticCurveTo(cx + 8.22, cy + 5.32, cx + 6.35, cy + 5.35);
+        ctx.quadraticCurveTo(cx + 4.2, cy + 3.9, cx + 2.22, cy + 4.85);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 5.35, cx - 0.72, cy + 4.15);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.02, cy + 3.7);
+        ctx.quadraticCurveTo(cx + 0.78, cy - 1.2, cx + 4.22, cy - 1.42);
+        ctx.quadraticCurveTo(cx + 7.92, cy - 1.02, cx + 8.48, cy + 3.02);
+        ctx.quadraticCurveTo(cx + 7.52, cy + 4.58, cx + 6.12, cy + 4.62);
+        ctx.quadraticCurveTo(cx + 4.1, cy + 3.45, cx + 2.32, cy + 4.15);
+        ctx.quadraticCurveTo(cx + 0.95, cy + 4.52, cx + 0.02, cy + 3.7);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.0, cy + 0.12, cx + 6.45, cy + 0.82, h, 0.43);
+      strokeLine(ctx, cx + 0.85, cy + 3.95, cx + 7.98, cy + 4.0, s, 0.42);
+      strokeLine(ctx, cx + 8.0, cy + 2.4, cx + 7.55, cy + 5.6, O, 0.92);
+      strokeLine(ctx, cx + 7.88, cy + 2.45, cx + 7.52, cy + 5.25, b, 0.52);
+    } else if (style === 'Ponytail') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.58, cy + 4.0);
+        ctx.quadraticCurveTo(cx + 0.3, cy - 1.88, cx + 4.4, cy - 2.0);
+        ctx.quadraticCurveTo(cx + 8.2, cy - 1.55, cx + 9.02, cy + 2.85);
+        ctx.quadraticCurveTo(cx + 7.42, cy + 4.62, cx + 5.55, cy + 4.35);
+        ctx.quadraticCurveTo(cx + 3.62, cy + 3.6, cx + 1.82, cy + 4.42);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 4.9, cx - 0.58, cy + 4.0);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.12, cy + 3.62);
+        ctx.quadraticCurveTo(cx + 0.9, cy - 1.02, cx + 4.38, cy - 1.24);
+        ctx.quadraticCurveTo(cx + 7.42, cy - 0.9, cx + 8.22, cy + 2.65);
+        ctx.quadraticCurveTo(cx + 6.98, cy + 3.98, cx + 5.48, cy + 3.82);
+        ctx.quadraticCurveTo(cx + 3.72, cy + 3.25, cx + 1.95, cy + 3.92);
+        ctx.quadraticCurveTo(cx + 0.9, cy + 4.28, cx + 0.12, cy + 3.62);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 1.2, cy + 3.48, cx + 6.55, cy + 0.28, s, 0.36);
+      strokeLine(ctx, cx + 2.15, cy + 0.1, cx + 6.25, cy + 0.5, h, 0.4);
+      strokeLine(ctx, cx + 0.95, cy + 3.85, cx + 7.25, cy + 3.65, s, 0.36);
+    } else if (style === 'Bob') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.45, cy + 7.5);
+        ctx.quadraticCurveTo(cx - 0.95, cy + 4.4, cx - 0.7, cy + 2.0);
+        ctx.quadraticCurveTo(cx + 0.2, cy - 1.7, cx + 4.25, cy - 1.85);
+        ctx.quadraticCurveTo(cx + 8.7, cy - 1.5, cx + 9.25, cy + 2.0);
+        ctx.quadraticCurveTo(cx + 9.45, cy + 4.4, cx + 8.85, cy + 7.5);
+        ctx.quadraticCurveTo(cx + 7.95, cy + 8.5, cx + 7.05, cy + 7.55);
+        ctx.lineTo(cx + 7.4, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.7, cx + 1.5, cy + 4.05);
+        ctx.lineTo(cx + 1.35, cy + 7.55);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 8.5, cx - 0.45, cy + 7.5);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.15, cy + 7.3);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 4.4, cx - 0.1, cy + 2.2);
+        ctx.quadraticCurveTo(cx + 0.75, cy - 1.0, cx + 4.25, cy - 1.1);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 0.8, cx + 8.6, cy + 2.2);
+        ctx.quadraticCurveTo(cx + 8.85, cy + 4.4, cx + 8.3, cy + 7.3);
+        ctx.quadraticCurveTo(cx + 7.85, cy + 7.95, cx + 7.5, cy + 7.45);
+        ctx.lineTo(cx + 7.85, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 5.15, cx + 1.05, cy + 4.55);
+        ctx.lineTo(cx + 0.9, cy + 7.45);
+        ctx.quadraticCurveTo(cx + 0.55, cy + 7.95, cx + 0.15, cy + 7.3);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.2, cy + 0.4, cx + 6.1, cy + 1.0, h, 0.45);
+      strokeLine(ctx, cx + 1.6, cy + 3.95, cx + 7.4, cy + 3.95, s, 0.4);
+    } else if (style === 'Wavy') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.7, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.1, cy - 2.05, cx + 4.25, cy - 2.15);
+        ctx.quadraticCurveTo(cx + 8.75, cy - 1.85, cx + 9.2, cy + 3.45);
+        ctx.quadraticCurveTo(cx + 8.05, cy + 4.95, cx + 6.25, cy + 5.25);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.05, cx + 2.35, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 5.05, cx - 0.7, cy + 4.05);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.05, cy + 3.65);
+        ctx.quadraticCurveTo(cx + 0.65, cy - 1.35, cx + 4.25, cy - 1.45);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 1.15, cx + 8.45, cy + 3.15);
+        ctx.quadraticCurveTo(cx + 7.35, cy + 4.35, cx + 5.9, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 4.1, cy + 3.55, cx + 2.3, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.75, cy + 4.45, cx + 0.05, cy + 3.65);
+        ctx.closePath();
+      });
+      strokePath(ctx, h, 0.45, function () {
+        ctx.moveTo(cx + 1.4, cy - 0.2);
+        ctx.quadraticCurveTo(cx + 2.6, cy - 1.05, cx + 3.7, cy - 0.2);
+        ctx.moveTo(cx + 4.6, cy - 0.4);
+        ctx.quadraticCurveTo(cx + 5.8, cy - 1.25, cx + 6.9, cy - 0.4);
+      });
+      strokeLine(ctx, cx + 1.0, cy + 3.85, cx + 7.85, cy + 3.95, s, 0.4);
+    } else if (style === 'Flowing') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.85, cy + 4.45);
+        ctx.quadraticCurveTo(cx + 0.2, cy - 1.85, cx + 4.25, cy - 1.95);
+        ctx.quadraticCurveTo(cx + 8.75, cy - 1.65, cx + 9.3, cy + 3.55);
+        ctx.quadraticCurveTo(cx + 8.1, cy + 5.05, cx + 6.25, cy + 5.35);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.15, cx + 2.35, cy + 4.65);
+        ctx.quadraticCurveTo(cx + 0.4, cy + 5.35, cx - 0.85, cy + 4.45);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.05, cy + 3.95);
+        ctx.quadraticCurveTo(cx + 0.75, cy - 1.15, cx + 4.25, cy - 1.25);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 0.95, cx + 8.5, cy + 3.25);
+        ctx.quadraticCurveTo(cx + 7.35, cy + 4.45, cx + 5.9, cy + 4.65);
+        ctx.quadraticCurveTo(cx + 4.1, cy + 3.65, cx + 2.3, cy + 4.15);
+        ctx.quadraticCurveTo(cx + 0.7, cy + 4.65, cx - 0.05, cy + 3.95);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.2, cy + 0.3, cx + 6.1, cy + 0.9, h, 0.5);
+      strokeLine(ctx, cx + 1.0, cy + 3.95, cx + 7.85, cy + 4.05, s, 0.4);
+    } else if (style === 'High Ponytail') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.7, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.05, cy - 2.05, cx + 4.25, cy - 2.15);
+        ctx.quadraticCurveTo(cx + 8.75, cy - 1.85, cx + 9.2, cy + 3.45);
+        ctx.quadraticCurveTo(cx + 8.05, cy + 4.95, cx + 6.25, cy + 5.25);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.05, cx + 2.35, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 5.05, cx - 0.7, cy + 4.05);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.05, cy + 3.65);
+        ctx.quadraticCurveTo(cx + 0.65, cy - 1.4, cx + 4.25, cy - 1.5);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 1.2, cx + 8.45, cy + 3.15);
+        ctx.quadraticCurveTo(cx + 7.35, cy + 4.35, cx + 5.9, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 4.1, cy + 3.55, cx + 2.3, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.75, cy + 4.45, cx + 0.05, cy + 3.65);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.2, cy + 0.2, cx + 6.1, cy + 0.8, h, 0.5);
+      strokeLine(ctx, cx + 1.0, cy + 3.85, cx + 7.85, cy + 3.95, s, 0.4);
+      fillEllipse(ctx, cx + 0.7, cy + 3.6, 0.55, 0.35, s);
+    }
+  }
+
+  Parts.drawHairBackHD = function (ctx, cx, cy, style, hairCol, opts) {
+    if (!style || style === 'Bald' || !hairCol) return;
+    if (usesFemaleHair(opts, style)) drawFemaleHairBackHD(ctx, cx, cy, style, hairCol);
+  };
+
   Parts.drawHairHD = function (ctx, cx, cy, style, hairCol, opts) {
     if (!style || style === 'Bald') return;
+    if (usesFemaleHair(opts, style)) {
+      drawFemaleHairFrontHD(ctx, cx, cy, style, hairCol);
+      return;
+    }
     const O = P.outline;
     const b = hairCol.base;
     const s = hairCol.shade;
