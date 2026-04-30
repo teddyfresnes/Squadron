@@ -774,11 +774,12 @@
       drawNeck(ctx, originX + upperBodyDXLocal, headTL_y + 8, torsoTL_y, skin);
       drawHead(ctx, headTL_x, headTL_y, skin, { hurt: frame.mouthHurt });
 
+      const hairOpts = { slender: bodyProfile.slender === true };
       if (!hatCol || hatKind === 'None' || hatKind === 'Bandana') {
-        drawHair(ctx, headTL_x, headTL_y, hairStyle, hair);
+        drawHair(ctx, headTL_x, headTL_y, hairStyle, hair, hairOpts);
       } else if (hatKind === 'Cap' || hatKind === 'Boonie') {
         if (hairStyle === 'Long' || hairStyle === 'Ponytail' || hairStyle === 'Messy') {
-          drawHair(ctx, headTL_x, headTL_y, hairStyle, hair);
+          drawHair(ctx, headTL_x, headTL_y, hairStyle, hair, hairOpts);
         }
       }
 

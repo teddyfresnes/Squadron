@@ -135,10 +135,105 @@
   };
 
   // ---------- HAIR ----------
-  Parts.drawHair = function (ctx, cx, cy, style, hairCol) {
+  Parts.drawHair = function (ctx, cx, cy, style, hairCol, opts) {
     if (!style || style === 'Bald') return;
     const b = hairCol.base, s = hairCol.shade, h = hairCol.hl;
     const O = P.outline;
+    const slender = opts && opts.slender === true;
+
+    if (slender && style === 'Short') {
+      // Chin-length bob: covers crown, sides flow down past the cheek and curl
+      // under the chin so the silhouette reads distinctly feminine.
+      const tpl = [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        'OB......BO.',
+        'OB......BO.',
+        '.OBBBBBBO..'
+      ];
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, H: h });
+      // Side highlight strand on the crown for sheen
+      E.px(ctx, cx + 4, cy + 0, h);
+      return;
+    }
+
+    if (slender && style === 'Messy') {
+      // Soft tousled mid-length: wavy crown, side-swept fringe, back wisps.
+      const tpl = [
+        '.OOOOOOOO..',
+        'OBBBBBBBBO.',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.BBBBBBBBO.',
+        '..BBBBBBO..'
+      ];
+      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, H: h });
+      // Wisps trailing down the back
+      for (let i = 0; i < 4; i++) {
+        E.px(ctx, cx - 1, cy + 3 + i, O);
+        E.px(ctx, cx + 0, cy + 3 + i, b);
+      }
+      E.px(ctx, cx + 0, cy + 7, O);
+      // Wave highlights up top
+      E.px(ctx, cx + 1, cy - 2, h);
+      E.px(ctx, cx + 6, cy - 2, h);
+      return;
+    }
+
+    if (slender && style === 'Long') {
+      // Voluminous long hair flowing well past the shoulder.
+      const tpl = [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHHBBBBO.',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBBBBBBO..'
+      ];
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, H: h });
+      // 3-px wide trail down the back
+      for (let i = 0; i < 9; i++) {
+        E.px(ctx, cx - 2, cy + 4 + i, O);
+        E.px(ctx, cx - 1, cy + 4 + i, b);
+        E.px(ctx, cx + 0, cy + 4 + i, b);
+      }
+      E.px(ctx, cx - 1, cy + 13, O);
+      E.px(ctx, cx + 0, cy + 13, O);
+      // Sheen highlights along the trail
+      E.px(ctx, cx - 1, cy + 7, h);
+      E.px(ctx, cx + 0, cy + 10, h);
+      // Front side strand framing the cheek
+      E.px(ctx, cx + 8, cy + 4, b);
+      return;
+    }
+
+    if (slender && style === 'Ponytail') {
+      // High pony with extra crown volume and a curving tail behind.
+      const tpl = [
+        '...OOOO....',
+        '..OBBBBO...',
+        '.OBBHHBBO..',
+        'OBBBBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBBBBBBO..'
+      ];
+      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, H: h });
+      // Tail behind (left side, curving down-back)
+      E.px(ctx, cx - 1, cy + 3, b); E.px(ctx, cx - 2, cy + 3, O);
+      E.px(ctx, cx - 2, cy + 4, b); E.px(ctx, cx - 1, cy + 4, b); E.px(ctx, cx - 3, cy + 4, O);
+      E.px(ctx, cx - 3, cy + 5, b); E.px(ctx, cx - 2, cy + 5, b); E.px(ctx, cx - 4, cy + 5, O);
+      E.px(ctx, cx - 4, cy + 6, b); E.px(ctx, cx - 3, cy + 6, b); E.px(ctx, cx - 5, cy + 6, O);
+      E.px(ctx, cx - 4, cy + 7, b); E.px(ctx, cx - 3, cy + 7, b); E.px(ctx, cx - 5, cy + 7, O);
+      E.px(ctx, cx - 4, cy + 8, O); E.px(ctx, cx - 3, cy + 8, O);
+      // Hair-tie band hint
+      E.px(ctx, cx + 1, cy + 1, s);
+      E.px(ctx, cx + 2, cy + 1, s);
+      return;
+    }
 
     if (style === 'Short') {
       // Heavy cap across the upper half of the head.
@@ -834,12 +929,165 @@
     if (lashes) drawLashesHD();
   };
 
-  Parts.drawHairHD = function (ctx, cx, cy, style, hairCol) {
+  Parts.drawHairHD = function (ctx, cx, cy, style, hairCol, opts) {
     if (!style || style === 'Bald') return;
     const O = P.outline;
     const b = hairCol.base;
     const s = hairCol.shade;
     const h = hairCol.hl;
+    const slender = opts && opts.slender === true;
+
+    if (slender && style === 'Short') {
+      // Chin-length bob: rounded crown with side strands flowing past the cheek.
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.45, cy + 7.5);
+        ctx.quadraticCurveTo(cx - 0.95, cy + 4.4, cx - 0.7, cy + 2.0);
+        ctx.quadraticCurveTo(cx + 0.2, cy - 1.7, cx + 4.25, cy - 1.85);
+        ctx.quadraticCurveTo(cx + 8.7, cy - 1.5, cx + 9.25, cy + 2.0);
+        ctx.quadraticCurveTo(cx + 9.45, cy + 4.4, cx + 8.85, cy + 7.5);
+        ctx.quadraticCurveTo(cx + 7.95, cy + 8.5, cx + 7.05, cy + 7.55);
+        ctx.lineTo(cx + 7.4, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.7, cx + 1.5, cy + 4.05);
+        ctx.lineTo(cx + 1.35, cy + 7.55);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 8.5, cx - 0.45, cy + 7.5);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.15, cy + 7.3);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 4.4, cx - 0.1, cy + 2.2);
+        ctx.quadraticCurveTo(cx + 0.75, cy - 1.0, cx + 4.25, cy - 1.1);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 0.8, cx + 8.6, cy + 2.2);
+        ctx.quadraticCurveTo(cx + 8.85, cy + 4.4, cx + 8.3, cy + 7.3);
+        ctx.quadraticCurveTo(cx + 7.85, cy + 7.95, cx + 7.5, cy + 7.45);
+        ctx.lineTo(cx + 7.85, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 5.15, cx + 1.05, cy + 4.55);
+        ctx.lineTo(cx + 0.9, cy + 7.45);
+        ctx.quadraticCurveTo(cx + 0.55, cy + 7.95, cx + 0.15, cy + 7.3);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.2, cy + 0.4, cx + 6.1, cy + 1.0, h, 0.45);
+      strokeLine(ctx, cx + 1.6, cy + 3.95, cx + 7.4, cy + 3.95, s, 0.4);
+      return;
+    }
+
+    if (slender && style === 'Messy') {
+      // Soft tousled with gentle waves and back wisps.
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.7, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.1, cy - 2.05, cx + 4.25, cy - 2.15);
+        ctx.quadraticCurveTo(cx + 8.75, cy - 1.85, cx + 9.2, cy + 3.45);
+        ctx.quadraticCurveTo(cx + 8.05, cy + 4.95, cx + 6.25, cy + 5.25);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.05, cx + 2.35, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 5.05, cx - 0.7, cy + 4.05);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.05, cy + 3.65);
+        ctx.quadraticCurveTo(cx + 0.65, cy - 1.35, cx + 4.25, cy - 1.45);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 1.15, cx + 8.45, cy + 3.15);
+        ctx.quadraticCurveTo(cx + 7.35, cy + 4.35, cx + 5.9, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 4.1, cy + 3.55, cx + 2.3, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.75, cy + 4.45, cx + 0.05, cy + 3.65);
+        ctx.closePath();
+      });
+      // Soft wave highlights along the crown
+      strokePath(ctx, h, 0.45, function () {
+        ctx.moveTo(cx + 1.4, cy - 0.2);
+        ctx.quadraticCurveTo(cx + 2.6, cy - 1.05, cx + 3.7, cy - 0.2);
+        ctx.moveTo(cx + 4.6, cy - 0.4);
+        ctx.quadraticCurveTo(cx + 5.8, cy - 1.25, cx + 6.9, cy - 0.4);
+      });
+      strokeLine(ctx, cx + 1.0, cy + 3.85, cx + 7.85, cy + 3.95, s, 0.4);
+      // Back wisps trailing down
+      strokeLine(ctx, cx - 0.45, cy + 4.0, cx - 1.05, cy + 7.5, O, 1.45);
+      strokeLine(ctx, cx - 0.4, cy + 3.95, cx - 0.9, cy + 7.3, b, 0.9);
+      return;
+    }
+
+    if (slender && style === 'Long') {
+      // Voluminous flowing hair — wider crown plus long trailing locks.
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.85, cy + 4.45);
+        ctx.quadraticCurveTo(cx + 0.2, cy - 1.85, cx + 4.25, cy - 1.95);
+        ctx.quadraticCurveTo(cx + 8.75, cy - 1.65, cx + 9.3, cy + 3.55);
+        ctx.quadraticCurveTo(cx + 8.1, cy + 5.05, cx + 6.25, cy + 5.35);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.15, cx + 2.35, cy + 4.65);
+        ctx.quadraticCurveTo(cx + 0.4, cy + 5.35, cx - 0.85, cy + 4.45);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.05, cy + 3.95);
+        ctx.quadraticCurveTo(cx + 0.75, cy - 1.15, cx + 4.25, cy - 1.25);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 0.95, cx + 8.5, cy + 3.25);
+        ctx.quadraticCurveTo(cx + 7.35, cy + 4.45, cx + 5.9, cy + 4.65);
+        ctx.quadraticCurveTo(cx + 4.1, cy + 3.65, cx + 2.3, cy + 4.15);
+        ctx.quadraticCurveTo(cx + 0.7, cy + 4.65, cx - 0.05, cy + 3.95);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.2, cy + 0.3, cx + 6.1, cy + 0.9, h, 0.5);
+      strokeLine(ctx, cx + 1.0, cy + 3.95, cx + 7.85, cy + 4.05, s, 0.4);
+      // Long flowing trail down the back, wider and longer than male Long
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx + 0.25, cy + 3.85);
+        ctx.quadraticCurveTo(cx - 1.15, cy + 7.0, cx - 1.55, cy + 11.85);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 12.85, cx + 0.85, cy + 12.0);
+        ctx.quadraticCurveTo(cx + 1.45, cy + 7.0, cx + 1.5, cy + 4.0);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.4, cy + 4.05);
+        ctx.quadraticCurveTo(cx - 0.85, cy + 7.0, cx - 1.2, cy + 11.55);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 12.35, cx + 0.55, cy + 11.7);
+        ctx.quadraticCurveTo(cx + 1.15, cy + 7.0, cx + 1.2, cy + 4.15);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx - 0.4, cy + 6.5, cx - 0.7, cy + 11.0, s, 0.55);
+      strokeLine(ctx, cx + 0.5, cy + 6.0, cx + 0.7, cy + 10.5, h, 0.35);
+      return;
+    }
+
+    if (slender && style === 'Ponytail') {
+      // High pony with extra crown volume and a thick curving tail.
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.7, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.05, cy - 2.05, cx + 4.25, cy - 2.15);
+        ctx.quadraticCurveTo(cx + 8.75, cy - 1.85, cx + 9.2, cy + 3.45);
+        ctx.quadraticCurveTo(cx + 8.05, cy + 4.95, cx + 6.25, cy + 5.25);
+        ctx.quadraticCurveTo(cx + 4.3, cy + 4.05, cx + 2.35, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 5.05, cx - 0.7, cy + 4.05);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.05, cy + 3.65);
+        ctx.quadraticCurveTo(cx + 0.65, cy - 1.4, cx + 4.25, cy - 1.5);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 1.2, cx + 8.45, cy + 3.15);
+        ctx.quadraticCurveTo(cx + 7.35, cy + 4.35, cx + 5.9, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 4.1, cy + 3.55, cx + 2.3, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.75, cy + 4.45, cx + 0.05, cy + 3.65);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.2, cy + 0.2, cx + 6.1, cy + 0.8, h, 0.5);
+      strokeLine(ctx, cx + 1.0, cy + 3.85, cx + 7.85, cy + 3.95, s, 0.4);
+      // Tail — shaped path curving down-back from the crown
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx + 0.55, cy + 3.4);
+        ctx.quadraticCurveTo(cx - 1.85, cy + 5.5, cx - 2.95, cy + 8.6);
+        ctx.quadraticCurveTo(cx - 2.55, cy + 9.45, cx - 1.75, cy + 9.0);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 7.0, cx + 1.55, cy + 4.5);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.6, cy + 3.7);
+        ctx.quadraticCurveTo(cx - 1.5, cy + 5.6, cx - 2.55, cy + 8.45);
+        ctx.quadraticCurveTo(cx - 2.25, cy + 9.05, cx - 1.7, cy + 8.7);
+        ctx.quadraticCurveTo(cx - 0.4, cy + 6.85, cx + 1.35, cy + 4.55);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx - 0.4, cy + 6.5, cx - 1.6, cy + 8.4, h, 0.35);
+      // Hair-tie band hint
+      fillEllipse(ctx, cx + 0.7, cy + 3.6, 0.55, 0.35, s);
+      return;
+    }
 
     if (style === 'Mohawk') {
       fillRoundRect(ctx, cx + 2.05, cy - 4.0, 5.15, 7.7, 1.05, O);
