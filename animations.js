@@ -11,6 +11,8 @@
 //   weaponDX/DY   : small offsets (recoil)
 //   barrelAngle   : exact rendered barrel angle, bypassing hold aim weighting
 //   barrelLocked  : true keeps recoil from rotating a locked barrel
+//   reloadHandT   : 0 ammo pouch -> 1 receiver/chamber while reloading
+//   reloadRoundT  : matching local position for the visible round/shell
 //   muzzleFlash   : true on shoot frames
 //   blink / eyesClosed
 //   deathAngle    : rotation when dead
@@ -52,7 +54,10 @@
       aimAngle: 0,
       barrelAngle: null,
       barrelLocked: false,
-      gripOffset: null
+      gripOffset: null,
+      reloadHandT: null,
+      reloadRoundT: null,
+      reloadRoundVisible: false
     };
   }
 
@@ -65,6 +70,10 @@
   function easeOutCubic(t) {
     const inv = 1 - t;
     return 1 - inv * inv * inv;
+  }
+
+  function easeInOutSine(t) {
+    return 0.5 - Math.cos(Math.PI * t) * 0.5;
   }
 
   // ---------- IDLE (8 frames, soft breathing) ----------
@@ -224,20 +233,64 @@
     }
   };
 
-  // ---------- RELOAD (6 frames) ----------
+  // ---------- RELOAD (kneel, then load round-by-round) ----------
   Anims.reload = {
     name: 'Reload',
-    frames: 6,
-    fps: 8,
+    frames: 32,
+    fps: 12,
+    loop: false,
     get: function (i) {
       const d = mark(defaults(), 'reload', i);
-      d.stance = 'wide';
-      // Weapon tilts downward, back hand moves to magazine
-      const t = i / 5;
-      d.weaponAngle = 0.3 + 0.2 * Math.sin(t * Math.PI);  // tilt down then back
-      d.aimAngle = 0.25;
-      d.reloadPhase = i < 3 ? 'eject' : 'insert';
-      d.backHandToMag = true;
+      const kneelFrames = 6;
+      const roundFrames = 6;
+      const roundCount = 4;
+      const kneel = i < kneelFrames ? easeOutCubic(i / (kneelFrames - 1)) : 1;
+      const settle = Math.sin(Math.min(1, i / (kneelFrames - 1)) * Math.PI);
+
+      d.stance = 'kneel';
+      d.legs = { pose: 'kneel', kneel };
+      d.bodyDY = 2.15 * kneel - 0.15 * settle;
+      d.torsoStretch = 0.1 * kneel;
+      d.headDY = -0.08 * kneel;
+      d.forwardLean = 0.22 * kneel;
+      d.aimAngle = 0.16;
+      d.weaponAngle = 0.28 + 0.2 * kneel + Math.sin(i * 0.7) * 0.018;
+      d.gripOffset = {
+        x: -2.5 * kneel,
+        y: 3.5 * kneel
+      };
+
+      if (i < kneelFrames) {
+        d.reloadPhase = 'kneel';
+        return d;
+      }
+
+      const workFrame = i - kneelFrames;
+      const roundIdx = Math.floor(workFrame / roundFrames);
+      if (roundIdx >= roundCount) {
+        d.reloadPhase = 'check';
+        d.reloadHandT = 1;
+        d.gripOffset.y += 0.4;
+        return d;
+      }
+
+      const cycleT = (workFrame % roundFrames) / (roundFrames - 1);
+      let handT;
+      if (cycleT < 0.18) {
+        handT = 0;
+      } else if (cycleT < 0.62) {
+        handT = easeOutCubic((cycleT - 0.18) / 0.44);
+      } else if (cycleT < 0.82) {
+        handT = 1;
+      } else {
+        handT = 1 - easeInOutSine((cycleT - 0.82) / 0.18) * 0.72;
+      }
+
+      d.reloadPhase = cycleT < 0.55 ? 'fetch-round' : (cycleT < 0.82 ? 'seat-round' : 'reach-round');
+      d.reloadHandT = handT;
+      d.reloadRoundT = handT;
+      d.reloadRoundVisible = cycleT >= 0.08 && cycleT <= 0.82;
+      d.reloadRoundIndex = roundIdx + 1;
       return d;
     }
   };

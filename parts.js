@@ -301,9 +301,29 @@
     const b = uniform.base, s = uniform.shade, h = uniform.hl;
     const O = P.outline;
     const stretchRows = (opts.stretchY || 0) >= 0.5 ? 1 : 0;
+    const slender = opts.slender === true;
 
     // Slightly-tapered base silhouette (collar narrower than shoulders).
-    const tpl = stretchRows ? [
+    const tpl = slender ? (stretchRows ? [
+      '..OBBO.',
+      '.OBBBSO',
+      '.OBBBSO',
+      '.OBBBSO',
+      '.OBBBSO',
+      '.OBBBSO',
+      '.OSSSO.',
+      '.OBBBO.',
+      '.OOOOO.'
+    ] : [
+      '..OBBO.',
+      '.OBBBSO',
+      '.OBBBSO',
+      '.OBBBSO',
+      '.OBBBSO',
+      '.OBBBSO',
+      '.OSSSO.',
+      '.OOOOO.'
+    ]) : (stretchRows ? [
       '.OBSBO.',
       'OBHBBSO',
       'OBBBBSO',
@@ -322,7 +342,7 @@
       'OBBBBSO', // y5
       'OSSSSSO', // y6 belt band
       'OOOOOOO'  // y7 base outline (flush with leg tops)
-    ];
+    ]);
     E.stamp(ctx, tx, ty, tpl, { O, B: b, H: h, S: s });
 
     // Placket + buttons down the front (right side = closer to viewer).
@@ -343,26 +363,36 @@
     // ---- Shoulder accents (3/4 perspective without protruding silhouette) ----
     // Front shoulder ball (left, closer to viewer): bigger highlight + a
     // darker seam so it visually pops as the near shoulder.
-    E.px(ctx, tx + 0, ty + 0, O);   // top-left corner outline
-    E.px(ctx, tx + 0, ty + 1, h);   // front deltoid highlight (top)
-    E.px(ctx, tx + 1, ty + 2, h);   // front deltoid highlight (inner)
-    E.px(ctx, tx + 0, ty + 2, s);   // armhole seam shadow
+    const nearX = slender ? 1 : 0;
+    const farX = slender ? 5 : 6;
+    E.px(ctx, tx + nearX, ty + 0, O);   // top-left corner outline
+    E.px(ctx, tx + nearX, ty + 1, h);   // front deltoid highlight (top)
+    E.px(ctx, tx + nearX + 1, ty + 2, h);   // front deltoid highlight (inner)
+    E.px(ctx, tx + nearX, ty + 2, s);   // armhole seam shadow
 
     // Back shoulder ball (right, further from viewer): tiny shaded bump above
     // the corner so the shoulder reads as a rounded joint at distance.
-    E.px(ctx, tx + 6, ty + 0, O);   // top-right corner outline
-    E.px(ctx, tx + 6, ty + 1, h);   // back deltoid highlight (top)
-    E.px(ctx, tx + 5, ty + 2, h);   // back deltoid highlight (inner)
+    E.px(ctx, tx + farX, ty + 0, O);   // top-right corner outline
+    E.px(ctx, tx + farX, ty + 1, h);   // back deltoid highlight (top)
+    E.px(ctx, tx + farX - 1, ty + 2, h);   // back deltoid highlight (inner)
   };
 
   // ---------- VEST ----------
-  Parts.drawVest = function (ctx, tx, ty, vest) {
+  Parts.drawVest = function (ctx, tx, ty, vest, opts) {
     if (!vest) return;
+    opts = opts || {};
     const b = vest.base, s = vest.shade, h = vest.hl, st = vest.strap;
     const O = P.outline;
     // Overlays the torso; spans y ty+1..ty+6
     // Plate carrier body
-    const tpl = [
+    const tpl = opts.slender === true ? [
+      '.OBBBO.',
+      '.OHBBO.',
+      '.OBBBO.',
+      '.OBBBO.',
+      '.OBBBO.',
+      '.OOOOO.'
+    ] : [
       'OBBBBBO',
       'OBHBBBO',
       'OBBBBBO',
@@ -417,6 +447,88 @@
     const bootsB = P.boots.base;
     const bootsH = P.boots.hl || bootsB;
     const SO = P.outlineSoft || s;
+
+    if (legOffsets.pose === 'kneel') {
+      drawKneelLegs(Math.max(0, Math.min(1, legOffsets.kneel == null ? 1 : legOffsets.kneel)));
+      return;
+    }
+
+    function mix(a, b2, t) {
+      return a + (b2 - a) * t;
+    }
+
+    function pt(a, b2, t) {
+      return { x: mix(a.x, b2.x, t), y: mix(a.y, b2.y, t) };
+    }
+
+    function drawLegPath(points, fill) {
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b2 = points[i + 1];
+        const seg = linePoints(Math.round(a.x), Math.round(a.y), Math.round(b2.x), Math.round(b2.y));
+        for (const p of seg) {
+          E.px(ctx, p[0] - 1, p[1], O);
+          E.px(ctx, p[0] + 1, p[1], O);
+          E.px(ctx, p[0], p[1] - 1, O);
+          E.px(ctx, p[0], p[1] + 1, O);
+        }
+        for (const p of seg) {
+          E.px(ctx, p[0], p[1], fill);
+          E.px(ctx, p[0], p[1] + 1, fill);
+        }
+      }
+    }
+
+    function drawBoot(x, y, front) {
+      x = Math.round(x);
+      y = Math.round(y);
+      E.px(ctx, x - 1, y, O);
+      E.px(ctx, x + 0, y, bootsB);
+      E.px(ctx, x + 1, y, bootsH);
+      E.px(ctx, x + 2, y, bootsB);
+      E.px(ctx, x + 3, y, bootsB);
+      E.px(ctx, x + 4, y, O);
+      if (front) E.px(ctx, x + 4, y - 1, O);
+      for (let i = 0; i < 4; i++) E.px(ctx, x + i, y + 1, O);
+    }
+
+    function drawKneelLegs(t) {
+      const backStand = [
+        { x: tx + 5, y: ty + 0 },
+        { x: tx + 5, y: ty + 3 },
+        { x: tx + 5, y: ty + 6 }
+      ];
+      const backKneel = [
+        { x: tx + 5, y: ty + 1 },
+        { x: tx + 7, y: ty + 5 },
+        { x: tx + 2, y: ty + 6 }
+      ];
+      const frontStand = [
+        { x: tx + 2, y: ty + 0 },
+        { x: tx + 2, y: ty + 3 },
+        { x: tx + 1, y: ty + 6 }
+      ];
+      const frontKneel = [
+        { x: tx + 2, y: ty + 1 },
+        { x: tx + 4, y: ty + 4 },
+        { x: tx + 8, y: ty + 6 }
+      ];
+
+      const back = backStand.map((p, i) => pt(p, backKneel[i], t));
+      const front = frontStand.map((p, i) => pt(p, frontKneel[i], t));
+      drawLegPath(back, s);
+      drawLegPath(front, b);
+      drawBoot(back[2].x - 1, back[2].y, false);
+      drawBoot(front[2].x, front[2].y, true);
+
+      E.px(ctx, tx + 0, ty, O);
+      E.px(ctx, tx + 1, ty, b);
+      E.px(ctx, tx + 2, ty, b);
+      E.px(ctx, tx + 3, ty, b);
+      E.px(ctx, tx + 4, ty, b);
+      E.px(ctx, tx + 5, ty, s);
+      E.px(ctx, tx + 6, ty, O);
+    }
 
     const step = function (bend) {
       bend = bend || 0;
@@ -863,44 +975,47 @@
     opts = opts || {};
     const O = P.outline;
     const stretchY = Math.max(0, Math.min(1.2, opts.stretchY || 0));
+    const slim = opts.slender === true ? 0.42 : 0;
     // Trapezoidal torso: shoulders wider than belt, with two distinct shoulder
     // balls bulging at the top corners for a 3/4 chibi perspective.
     fillPath(ctx, O, function () {
-      ctx.moveTo(tx - 0.5, ty + 1.6);
-      ctx.quadraticCurveTo(tx - 0.2, ty + 0.3, tx + 1.2, ty + 0.15);
+      ctx.moveTo(tx - 0.5 + slim, ty + 1.6);
+      ctx.quadraticCurveTo(tx - 0.2 + slim, ty + 0.3, tx + 1.2 + slim * 0.5, ty + 0.15);
       ctx.quadraticCurveTo(tx + 3.5, ty - 0.4, tx + 5.8, ty + 0.15);
-      ctx.quadraticCurveTo(tx + 7.2, ty + 0.3, tx + 7.55, ty + 1.6);
-      ctx.lineTo(tx + 7.0, ty + 8.1 + stretchY);
-      ctx.lineTo(tx - 0.05, ty + 8.1 + stretchY);
+      ctx.quadraticCurveTo(tx + 7.2 - slim, ty + 0.3, tx + 7.55 - slim, ty + 1.6);
+      ctx.lineTo(tx + 7.0 - slim, ty + 8.1 + stretchY);
+      ctx.lineTo(tx - 0.05 + slim, ty + 8.1 + stretchY);
       ctx.closePath();
     });
     fillPath(ctx, uniform.base, function () {
-      ctx.moveTo(tx + 0.2, ty + 1.7);
-      ctx.quadraticCurveTo(tx + 0.5, ty + 0.85, tx + 1.5, ty + 0.7);
+      ctx.moveTo(tx + 0.2 + slim, ty + 1.7);
+      ctx.quadraticCurveTo(tx + 0.5 + slim, ty + 0.85, tx + 1.5 + slim * 0.5, ty + 0.7);
       ctx.quadraticCurveTo(tx + 3.5, ty + 0.2, tx + 5.5, ty + 0.7);
-      ctx.quadraticCurveTo(tx + 6.5, ty + 0.85, tx + 6.85, ty + 1.7);
-      ctx.lineTo(tx + 6.25, ty + 7.25 + stretchY);
-      ctx.lineTo(tx + 0.75, ty + 7.25 + stretchY);
+      ctx.quadraticCurveTo(tx + 6.5 - slim, ty + 0.85, tx + 6.85 - slim, ty + 1.7);
+      ctx.lineTo(tx + 6.25 - slim, ty + 7.25 + stretchY);
+      ctx.lineTo(tx + 0.75 + slim, ty + 7.25 + stretchY);
       ctx.closePath();
     });
     // Front-side shading column (right = front in 3/4 view)
-    fillRoundRect(ctx, tx + 5.0, ty + 1.6, 1.35, 5.25 + stretchY * 0.55, 0.4, uniform.shade);
+    fillRoundRect(ctx, tx + 5.0 - slim, ty + 1.6, 1.35, 5.25 + stretchY * 0.55, 0.4, uniform.shade);
     // Belt band
-    fillRoundRect(ctx, tx + 0.85, ty + 6.35 + stretchY * 0.35, 5.95, 1.15, 0.25, uniform.shade);
+    fillRoundRect(ctx, tx + 0.85 + slim, ty + 6.35 + stretchY * 0.35, 5.95 - slim * 2, 1.15, 0.25, uniform.shade);
     // Front shoulder highlight (bigger / closer to viewer — now on the LEFT)
-    fillEllipse(ctx, tx + 1.2, ty + 1.4, 0.7, 0.55, uniform.hl);
+    fillEllipse(ctx, tx + 1.2 + slim * 0.5, ty + 1.4, 0.7, 0.55, uniform.hl);
     // Back shoulder highlight (smaller — now on the RIGHT)
-    fillEllipse(ctx, tx + 5.7, ty + 1.4, 0.55, 0.45, uniform.hl);
+    fillEllipse(ctx, tx + 5.7 - slim * 0.5, ty + 1.4, 0.55, 0.45, uniform.hl);
     // Buttons
-    fillEllipse(ctx, tx + 4.5, ty + 3.3, 0.28, 0.28, uniform.hl);
-    fillEllipse(ctx, tx + 4.45, ty + 5.1, 0.28, 0.28, uniform.hl);
+    fillEllipse(ctx, tx + 4.5 - slim * 0.35, ty + 3.3, 0.28, 0.28, uniform.hl);
+    fillEllipse(ctx, tx + 4.45 - slim * 0.35, ty + 5.1, 0.28, 0.28, uniform.hl);
   };
 
-  Parts.drawVestHD = function (ctx, tx, ty, vest) {
+  Parts.drawVestHD = function (ctx, tx, ty, vest, opts) {
     if (!vest) return;
-    fillRoundRect(ctx, tx + 0.2, ty + 1.1, 6.75, 6.7, 0.8, P.outline);
-    fillRoundRect(ctx, tx + 0.75, ty + 1.55, 5.7, 5.65, 0.65, vest.base);
-    fillRoundRect(ctx, tx + 4.9, ty + 1.9, 0.9, 4.8, 0.35, vest.shade);
+    opts = opts || {};
+    const slim = opts.slender === true ? 0.42 : 0;
+    fillRoundRect(ctx, tx + 0.2 + slim, ty + 1.1, 6.75 - slim * 2, 6.7, 0.8, P.outline);
+    fillRoundRect(ctx, tx + 0.75 + slim, ty + 1.55, 5.7 - slim * 2, 5.65, 0.65, vest.base);
+    fillRoundRect(ctx, tx + 4.9 - slim, ty + 1.9, 0.9, 4.8, 0.35, vest.shade);
     strokeLine(ctx, tx + 2.1, ty + 0.65, tx + 2.5, ty + 2.1, vest.strap, 0.6);
     strokeLine(ctx, tx + 4.7, ty + 0.65, tx + 4.25, ty + 2.1, vest.strap, 0.6);
     fillRoundRect(ctx, tx + 1.65, ty + 4.7, 1.2, 1.2, 0.25, vest.shade);
@@ -930,6 +1045,70 @@
     legOffsets = legOffsets || { front: 0, back: 0, frontBend: 0, backBend: 0 };
     const bootsB = P.boots.base;
     const bootsH = P.boots.hl || bootsB;
+
+    if (legOffsets.pose === 'kneel') {
+      drawKneelLegsHD(Math.max(0, Math.min(1, legOffsets.kneel == null ? 1 : legOffsets.kneel)));
+      return;
+    }
+
+    function mix(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function pt(a, b, t) {
+      return { x: mix(a.x, b.x, t), y: mix(a.y, b.y, t) };
+    }
+
+    function drawKneelPath(points, fill, shade, front) {
+      strokePath(ctx, P.outline, 3.05, function () {
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+      });
+      strokePath(ctx, fill, 2.0, function () {
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+      });
+      strokeLine(ctx, points[0].x + 0.35, points[0].y + 0.45, points[2].x + 0.05, points[2].y - 0.4, shade, 0.45);
+      const footX = points[2].x;
+      const footY = points[2].y + 0.45;
+      fillRoundRect(ctx, footX - 1.45, footY - 0.12, 4.75, 1.4, 0.42, P.outline);
+      fillRoundRect(ctx, footX - 0.95, footY - 0.35, 3.85, 0.9, 0.34, bootsB);
+      if (front) fillRoundRect(ctx, footX - 0.55, footY - 0.35, 0.75, 0.42, 0.18, bootsH);
+    }
+
+    function drawKneelLegsHD(t) {
+      const backStand = [
+        { x: tx + 4.35, y: ty + 0.2 },
+        { x: tx + 4.53, y: ty + 3.2 },
+        { x: tx + 4.8, y: ty + 5.7 }
+      ];
+      const backKneel = [
+        { x: tx + 4.7, y: ty + 1.15 },
+        { x: tx + 6.7, y: ty + 5.25 },
+        { x: tx + 2.7, y: ty + 6.35 }
+      ];
+      const frontStand = [
+        { x: tx + 1.75, y: ty + 0.2 },
+        { x: tx + 1.8, y: ty + 3.2 },
+        { x: tx + 1.5, y: ty + 5.7 }
+      ];
+      const frontKneel = [
+        { x: tx + 1.65, y: ty + 1.1 },
+        { x: tx + 3.3, y: ty + 3.75 },
+        { x: tx + 7.65, y: ty + 6.15 }
+      ];
+
+      const back = backStand.map((p, i) => pt(p, backKneel[i], t));
+      const front = frontStand.map((p, i) => pt(p, frontKneel[i], t));
+      drawKneelPath(back, pants.shade, pants.base, false);
+      drawKneelPath(front, pants.base, pants.shade, true);
+      fillRoundRect(ctx, tx + 0.25, ty - 0.08, 6.75, 1.25, 0.3, P.outline);
+      fillRoundRect(ctx, tx + 0.75, ty + 0.12, 5.75, 0.78, 0.25, pants.base);
+      fillRoundRect(ctx, tx + 4.75, ty + 0.12, 1.3, 0.52, 0.18, pants.shade);
+    }
+
     const step = function (bend) {
       bend = bend || 0;
       if (bend > 1.85) return 1.85;

@@ -8,6 +8,7 @@ const { useState, useEffect, useRef, useMemo, useCallback } = React;
 const DEFAULT_WEAPON_IDX = 11;
 
 const DEFAULT_CFG = {
+  bodyType: 'male',
   skinIdx: 0,
   hairIdx: 1,
   hairStyleIdx: 2,  // Messy
@@ -22,6 +23,35 @@ const DEFAULT_CFG = {
   weaponIdx: DEFAULT_WEAPON_IDX,
   weaponSkinIdx: 33  // sheet 33.png — default texture style
 };
+
+const BODY_TYPES = [
+  { name: 'Male', value: 'male' },
+  { name: 'Female', value: 'female' }
+];
+
+const HAIRSTYLES_BY_BODY = {
+  male: ['Short', 'Buzz', 'Messy', 'Mohawk', 'Bald'],
+  female: ['Short', 'Messy', 'Long', 'Ponytail']
+};
+
+function hairStyleOptionsForBody(bodyType) {
+  const allowed = HAIRSTYLES_BY_BODY[bodyType || 'male'] || HAIRSTYLES_BY_BODY.male;
+  return window.Palette.hairstyles
+    .map((style, idx) => ({ ...style, idx }))
+    .filter((style) => allowed.includes(style.name));
+}
+
+function fallbackHairStyleIdx(bodyType) {
+  const options = hairStyleOptionsForBody(bodyType);
+  return options.length ? options[0].idx : 0;
+}
+
+function normalizeHairStyleForBody(cfg) {
+  const bodyType = cfg.bodyType || 'male';
+  const options = hairStyleOptionsForBody(bodyType);
+  if (options.some((style) => style.idx === cfg.hairStyleIdx)) return cfg;
+  return { ...cfg, hairStyleIdx: fallbackHairStyleIdx(bodyType) };
+}
 
 // Stage is sized to fit the largest weapons plus the 2x soldier body. Snipers
 // can now sit on the shoulder without clipping in either facing direction.
@@ -197,6 +227,9 @@ function App() {
 
   useEffect(() => { localStorage.setItem('char-cfg', JSON.stringify(cfg)); }, [cfg]);
   useEffect(() => { localStorage.setItem('char-anim', animKey); }, [animKey]);
+  useEffect(() => {
+    setCfg((c) => normalizeHairStyleForBody(c));
+  }, [cfg.bodyType, cfg.hairStyleIdx]);
 
   // Push the active weapon skin into the Weapons module whenever it changes.
   useEffect(() => {
@@ -206,8 +239,11 @@ function App() {
   }, [cfg.weaponSkinIdx]);
 
   const set = (key) => (v) => setCfg((c) => ({ ...c, [key]: v }));
+  const setBodyType = (bodyType) => setCfg((c) => normalizeHairStyleForBody({ ...c, bodyType }));
 
   const currentWeapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
+  const hairStyleOptions = useMemo(() => hairStyleOptionsForBody(cfg.bodyType || 'male'), [cfg.bodyType]);
+  const selectedHairStyleOptionIdx = Math.max(0, hairStyleOptions.findIndex((style) => style.idx === cfg.hairStyleIdx));
 
   return (
     <div className="app">
@@ -289,12 +325,24 @@ function App() {
         <aside className="panel panel-right">
           <div className="panel-title">CHARACTER</div>
 
+          <Section title="Body">
+            <Chips
+              options={BODY_TYPES}
+              selectedIdx={Math.max(0, BODY_TYPES.findIndex((t) => t.value === (cfg.bodyType || 'male')))}
+              onPick={(i) => setBodyType(BODY_TYPES[i].value)}
+            />
+          </Section>
+
           <Section title="Skin">
             <ColorSwatches options={window.Palette.skin} selectedIdx={cfg.skinIdx} onPick={set('skinIdx')} field="base" />
           </Section>
 
           <Section title="Hair Style">
-            <Chips options={window.Palette.hairstyles} selectedIdx={cfg.hairStyleIdx} onPick={set('hairStyleIdx')} />
+            <Chips
+              options={hairStyleOptions}
+              selectedIdx={selectedHairStyleOptionIdx}
+              onPick={(i) => set('hairStyleIdx')(hairStyleOptions[i].idx)}
+            />
           </Section>
 
           <Section title="Hair Color">

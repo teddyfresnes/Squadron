@@ -11,6 +11,31 @@
   const WEAPON_SCALE = 1;
   const LOW_CARRY_ANGLE = 0.46;
 
+  const BODY_PROFILES = {
+    male: {
+      scale: BODY_SCALE,
+      headScale: BODY_SCALE,
+      headLocalYOffset: 0,
+      originYOffset: 0,
+      armScale: BODY_SCALE,
+      handLarge: true,
+      slender: false,
+      shoulderFrontX: 0,
+      shoulderBackX: 6
+    },
+    female: {
+      scale: 2.76,
+      headScale: BODY_SCALE,
+      headLocalYOffset: 0.65,
+      originYOffset: 2,
+      armScale: 2.42,
+      handLarge: false,
+      slender: true,
+      shoulderFrontX: 0.55,
+      shoulderBackX: 5.45
+    }
+  };
+
   const HOLD_PROFILES = {
     pistol: {
       support: true,
@@ -335,20 +360,30 @@
     };
   }
 
-  function worldPoint(originX, originY, x, y) {
+  function getBodyProfile(cfg) {
+    return BODY_PROFILES[(cfg && cfg.bodyType) || 'male'] || BODY_PROFILES.male;
+  }
+
+  function worldPoint(originX, originY, x, y, bodyProfile) {
+    const profile = bodyProfile || BODY_PROFILES.male;
     return {
-      x: Math.round(originX + (x - originX) * BODY_SCALE),
-      y: Math.round(originY + (y - originY) * BODY_SCALE)
+      x: Math.round(originX + (x - originX) * profile.scale),
+      y: Math.round(originY + (y - originY) * profile.scale)
     };
   }
 
-  function withBodyScale(ctx, originX, originY, fn) {
+  function withScale(ctx, originX, originY, scale, fn) {
     ctx.save();
     ctx.translate(originX, originY);
-    ctx.scale(BODY_SCALE, BODY_SCALE);
+    ctx.scale(scale, scale);
     ctx.translate(-originX, -originY);
     fn();
     ctx.restore();
+  }
+
+  function withBodyScale(ctx, originX, originY, bodyProfile, fn) {
+    const profile = bodyProfile || BODY_PROFILES.male;
+    withScale(ctx, originX, originY, profile.scale, fn);
   }
 
   function motionOf(frame) {
@@ -363,11 +398,12 @@
     return motion === 'idle' || motion === 'walk';
   }
 
-  function computeGrip(originX, originY, hold, frame, upperBodyDXLocal) {
+  function computeGrip(originX, originY, hold, frame, upperBodyDXLocal, bodyProfile) {
+    const profile = bodyProfile || BODY_PROFILES.male;
     const motion = motionOf(frame);
     let grip = {
-      x: originX + hold.grip.x + upperBodyDXLocal * BODY_SCALE,
-      y: originY + hold.grip.y + (frame.bodyDY || 0) * BODY_SCALE
+      x: originX + hold.grip.x + upperBodyDXLocal * profile.scale,
+      y: originY + hold.grip.y + (frame.bodyDY || 0) * profile.scale
     };
 
     if (motion === 'run') grip = add(grip, hold.runGrip);
@@ -422,6 +458,10 @@
   }
 
   function supportLocalPoint(weapon, hold, frame) {
+    if (frame.reloadHandT != null) {
+      return reloadLocalPoint(weapon, frame.reloadHandT);
+    }
+
     if (frame.backHandToMag) {
       const magX = Math.max(weapon.gripX + 3, Math.min(weapon.foregripX - 2, weapon.gripX + 12));
       return {
@@ -433,6 +473,28 @@
     return {
       x: weapon.foregripX - weapon.gripX + ((hold.foregripOffset && hold.foregripOffset.x) || 0),
       y: weapon.foregripY - weapon.gripY + ((hold.foregripOffset && hold.foregripOffset.y) || 0)
+    };
+  }
+
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function reloadLocalPoint(weapon, t) {
+    t = clamp(t == null ? 1 : t, 0, 1);
+    const muzzleLocal = weapon.muzzleX - weapon.gripX;
+    const foreLocal = weapon.foregripX - weapon.gripX;
+    const port = {
+      x: clamp(foreLocal - 1, 5, Math.max(6, muzzleLocal - 4)),
+      y: clamp((weapon.foregripY - weapon.gripY) + 3, -2, 12)
+    };
+    const pouch = {
+      x: -5,
+      y: Math.max(8, port.y + 7)
+    };
+    return {
+      x: lerp(pouch.x, port.x, t),
+      y: lerp(pouch.y, port.y, t)
     };
   }
 
@@ -505,11 +567,25 @@
     ctx.fillRect(mx, my + 2, 1, 1);
   }
 
-  function drawBentArm(ctx, shoulder, elbow, hand, uniform, smooth) {
+  function drawReloadRound(ctx, weapon, frame) {
+    if (!frame.reloadRoundVisible) return;
+    const p = reloadLocalPoint(weapon, frame.reloadRoundT == null ? frame.reloadHandT : frame.reloadRoundT);
+    const x = Math.round(p.x);
+    const y = Math.round(p.y);
+    ctx.fillStyle = '#5a3518';
+    ctx.fillRect(x - 1, y - 1, 3, 3);
+    ctx.fillStyle = '#d99a32';
+    ctx.fillRect(x - 1, y, 3, 1);
+    ctx.fillStyle = '#ffe0a0';
+    ctx.fillRect(x + 1, y, 1, 1);
+  }
+
+  function drawBentArm(ctx, shoulder, elbow, hand, uniform, smooth, bodyProfile) {
+    const profile = bodyProfile || BODY_PROFILES.male;
     if (smooth && Parts.drawBentArmHD) {
       Parts.drawBentArmHD(ctx, shoulder.x, shoulder.y, elbow.x, elbow.y, hand.x, hand.y, uniform, P.gloves, {
-        scale: BODY_SCALE,
-        handLarge: true
+        scale: profile.armScale || profile.scale,
+        handLarge: profile.handLarge !== false
       });
     } else if (Parts.drawBentArm) {
       Parts.drawBentArm(ctx, shoulder.x, shoulder.y, elbow.x, elbow.y, hand.x, hand.y, uniform, P.gloves, {
@@ -521,9 +597,13 @@
     }
   }
 
-  function drawGripHand(ctx, hand, smooth) {
+  function drawGripHand(ctx, hand, smooth, bodyProfile) {
+    const profile = bodyProfile || BODY_PROFILES.male;
     if (smooth && Parts.drawHandHD) {
-      Parts.drawHandHD(ctx, hand.x, hand.y, P.gloves, { scale: BODY_SCALE, large: true });
+      Parts.drawHandHD(ctx, hand.x, hand.y, P.gloves, {
+        scale: profile.armScale || profile.scale,
+        large: profile.handLarge !== false
+      });
     } else if (Parts.drawHand) {
       Parts.drawHand(ctx, hand.x, hand.y, P.gloves, { large: true });
     }
@@ -566,6 +646,7 @@
     const hairStyle = P.hairstyles[cfg.hairStyleIdx].name;
     const weapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
     const hold = getHold(weapon);
+    const bodyProfile = getBodyProfile(cfg);
     const drawBackpack = smooth && Parts.drawBackpackHD ? Parts.drawBackpackHD : Parts.drawBackpack;
     const drawWaistBridge = smooth && Parts.drawWaistBridgeHD ? Parts.drawWaistBridgeHD : Parts.drawWaistBridge;
     const drawNeck = smooth && Parts.drawNeckHD ? Parts.drawNeckHD : Parts.drawNeck;
@@ -590,7 +671,7 @@
 
     ctx.save();
     const originX = (stageW / 2) | 0;
-    const originY = Math.round(stageH * 0.63);
+    const originY = Math.round(stageH * 0.63) + (bodyProfile.originYOffset || 0);
     const upperBodyDXLocal = (hold.upperBodyX || 0) + (frame.forwardLean || 0);
 
     if (frame.rollAngle) {
@@ -617,7 +698,7 @@
     const torsoTL_x = originX - 3 + upperBodyDXLocal;
     const torsoTL_y = originY - 8 + bodyDY;
     const headTL_x = originX - 4 + upperBodyDXLocal;
-    const headTL_y = originY - 16 + bodyDY + headDY + (frame.headBack ? -1 : 0);
+    const headTL_y = originY - 16 + bodyDY + headDY + (frame.headBack ? -1 : 0) + (bodyProfile.headLocalYOffset || 0);
     const legsTL_x = originX - 3;
     const legsTL_y = originY;
 
@@ -625,11 +706,11 @@
     // is on the LEFT (closer to viewer in this 3/4 rotation); back on the
     // RIGHT (further from viewer). The trigger arm therefore reaches across
     // the body to the weapon grip — the classic minitroopers shooting pose.
-    const shoulderFront = worldPoint(originX, originY, torsoTL_x + 0, torsoTL_y + 1);
-    const shoulderBack = worldPoint(originX, originY, torsoTL_x + 6, torsoTL_y + 1);
+    const shoulderFront = worldPoint(originX, originY, torsoTL_x + bodyProfile.shoulderFrontX, torsoTL_y + 1, bodyProfile);
+    const shoulderBack = worldPoint(originX, originY, torsoTL_x + bodyProfile.shoulderBackX, torsoTL_y + 1, bodyProfile);
 
     const motion = motionOf(frame);
-    const weaponGrip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal);
+    const weaponGrip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal, bodyProfile);
     const aim = computeAngle(hold, frame);
     const relaxedCarry = isLowCarryMotion(motion);
 
@@ -654,7 +735,7 @@
     }
 
     if (pack) {
-      withBodyScale(ctx, originX, originY, function () {
+      withBodyScale(ctx, originX, originY, bodyProfile, function () {
         drawBackpack(ctx, torsoTL_x, torsoTL_y, pack);
       });
     }
@@ -665,20 +746,23 @@
         x: Math.round(shoulderBack.x + (armElbow ? armElbow.x : 12)),
         y: Math.round(shoulderBack.y + (armElbow ? armElbow.y : 3))
       }, supportHand, weapon, 'support', relaxedCarry);
-      drawBentArm(ctx, shoulderBack, elbow, supportHand, uniform, smooth);
+      drawBentArm(ctx, shoulderBack, elbow, supportHand, uniform, smooth, bodyProfile);
     }
 
-    withBodyScale(ctx, originX, originY, function () {
+    withBodyScale(ctx, originX, originY, bodyProfile, function () {
       drawLegs(ctx, legsTL_x, legsTL_y, pants, stanceLegs(frame, hold));
       drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8 + (smooth ? torsoStretchY : Math.ceil(torsoStretchY)), legsTL_y, pants);
-      drawTorso(ctx, torsoTL_x, torsoTL_y, uniform, { stretchY: torsoStretchY });
-      if (vest) drawVest(ctx, torsoTL_x, torsoTL_y, vest);
+      drawTorso(ctx, torsoTL_x, torsoTL_y, uniform, { stretchY: torsoStretchY, slender: bodyProfile.slender });
+      if (vest) drawVest(ctx, torsoTL_x, torsoTL_y, vest, { slender: bodyProfile.slender });
       if (pack) {
         const strap = pack.shade;
         for (let i = 0; i < 5; i++) {
           E.px(ctx, torsoTL_x + 1 + i, torsoTL_y + 1 + i, strap);
         }
       }
+    });
+
+    withScale(ctx, originX, originY, bodyProfile.headScale || BODY_SCALE, function () {
       drawNeck(ctx, originX + upperBodyDXLocal, headTL_y + 8, torsoTL_y, skin);
       drawHead(ctx, headTL_x, headTL_y, skin, { hurt: frame.mouthHurt });
 
@@ -712,26 +796,27 @@
         ctx.rotate(aim);
         ctx.scale(WEAPON_SCALE, WEAPON_SCALE);
         weapon.draw(ctx, 0, 0, false);
+        drawReloadRound(ctx, weapon, frame);
         if (frame.muzzleFlash) drawMuzzleFlash(ctx, weapon);
         ctx.restore();
       }
     }
 
-    if (supportHand && showWeapon) drawGripHand(ctx, supportHand, smooth);
+    if (supportHand && showWeapon) drawGripHand(ctx, supportHand, smooth, bodyProfile);
 
     if (frame.useGrenade) {
       const elbow = {
         x: Math.round((shoulderFront.x + throwHand.x) / 2),
         y: Math.round((shoulderFront.y + throwHand.y) / 2) - 4
       };
-      drawBentArm(ctx, shoulderFront, elbow, throwHand, uniform, smooth);
+      drawBentArm(ctx, shoulderFront, elbow, throwHand, uniform, smooth, bodyProfile);
     } else if (!frame.tuck) {
       const armElbow = elbowOffset(hold, 'rear', motion);
       const elbow = resolveElbow(shoulderFront, {
         x: Math.round(shoulderFront.x + (armElbow ? armElbow.x : 9)),
         y: Math.round(shoulderFront.y + (armElbow ? armElbow.y : 1))
       }, weaponGrip, weapon, 'rear', relaxedCarry);
-      drawBentArm(ctx, shoulderFront, elbow, weaponGrip, uniform, smooth);
+      drawBentArm(ctx, shoulderFront, elbow, weaponGrip, uniform, smooth, bodyProfile);
     }
 
     if (frame.grenadeReleased) {
