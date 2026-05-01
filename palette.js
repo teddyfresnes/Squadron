@@ -11,9 +11,7 @@ const SOLDIER_COLORS = [
   { name: 'Pink',       base: '#d778a8', shade: '#9a3f70', hl: '#f0a6ca' },
   { name: 'Yellow',     base: '#d8b64a', shade: '#9a7a24', hl: '#f2d978' },
   { name: 'Orange',     base: '#d47a32', shade: '#914514', hl: '#f0a15a' },
-  { name: 'Black',      base: '#2a2a30', shade: '#10101a', hl: '#44444c' },
-  { name: 'Grey',       base: '#74747c', shade: '#44444c', hl: '#a0a0a8' },
-  { name: 'White',      base: '#d8d2c2', shade: '#a8a494', hl: '#f0ecd8' }
+  { name: 'Grey',       base: '#74747c', shade: '#44444c', hl: '#a0a0a8' }
 ];
 
 window.Palette = {
@@ -23,12 +21,16 @@ window.Palette = {
   white: '#f4f0e6',
   whiteShade: '#c9c2b0',
 
-  // Skin tones (4 options)
+  // Skin tones (8 options)
   skin: [
-    { name: 'Light',   base: '#f0c9a4', shade: '#c89879', hl: '#ffe0c2' },
-    { name: 'Tan',     base: '#d69464', shade: '#a66842', hl: '#eab089' },
-    { name: 'Brown',   base: '#8a5636', shade: '#5c3620', hl: '#a86f4a' },
-    { name: 'Dark',    base: '#4f2e1d', shade: '#2e1a11', hl: '#6a4126' }
+    { name: 'Light',       base: '#f0c9a4', shade: '#c89879', hl: '#ffe0c2' },
+    { name: 'Light-Mid',   base: '#e5b99a', shade: '#bd8464', hl: '#f5d4bc' },
+    { name: 'Mid',         base: '#daa87e', shade: '#b08551', hl: '#efcfa8' },
+    { name: 'Tan',         base: '#d69464', shade: '#a66842', hl: '#eab089' },
+    { name: 'Tan-Brown',   base: '#9f6b47', shade: '#714d32', hl: '#b8865c' },
+    { name: 'Brown',       base: '#8a5636', shade: '#5c3620', hl: '#a86f4a' },
+    { name: 'Brown-Dark',  base: '#6a4226', shade: '#462a16', hl: '#843c1e' },
+    { name: 'Dark',        base: '#4f2e1d', shade: '#2e1a11', hl: '#6a4126' }
   ],
 
   // Hair colors
@@ -37,30 +39,27 @@ window.Palette = {
     { name: 'Very Dark Brown', base: '#24160d', shade: '#100805', hl: '#3a2418' },
     { name: 'Dark Brown',  base: '#3f2818', shade: '#211208', hl: '#5a3824' },
     { name: 'Brown',       base: '#5a3a22', shade: '#35200f', hl: '#7a5132' },
+    { name: 'Ginger',      base: '#b8642a', shade: '#6f3218', hl: '#dda24f' },
     { name: 'Blonde',      base: '#e4c37a', shade: '#b89448', hl: '#f7e0a4' },
     { name: 'Grey',        base: '#9a9588', shade: '#66645c', hl: '#d8d4c8' }
   ],
 
   // Eye colors
   eye: [
-    { name: 'Brown',  base: '#5a3a22' },
-    { name: 'Blue',   base: '#3a7aa8' },
-    { name: 'Green',  base: '#3a7a4a' },
-    { name: 'Grey',   base: '#6a6a7a' },
-    { name: 'Amber',  base: '#b88a2a' }
+    { name: 'Black',       base: '#1a1a22' },
+    { name: 'Dark Brown',  base: '#3f2818' },
+    { name: 'Brown',       base: '#5a3a22' },
+    { name: 'Tan Brown',   base: '#7a5a3a' },
+    { name: 'Light Brown', base: '#9a7555' },
+    { name: 'Blue',        base: '#3a7aa8' },
+    { name: 'Dark Blue',   base: '#1f4a6a' },
+    { name: 'Green',       base: '#3a7a4a' },
+    { name: 'Grey',        base: '#6a6a7a' }
   ],
 
-  // Uniform / clothing presets (top = shirt)
+  // Uniform / clothing presets. Renderer reuses this single color for shirt,
+  // pants, backpack and helmet.
   uniforms: SOLDIER_COLORS,
-
-  // Pants
-  pants: [
-    { name: 'Black',    base: '#20202a', shade: '#0a0a10', hl: '#36363e' },
-    { name: 'Brown',    base: '#4a3a22', shade: '#2a200f', hl: '#6a5432' },
-    { name: 'Jeans',    base: '#2a4a7a', shade: '#12305a', hl: '#4a6aa0' },
-    { name: 'Camo',     base: '#5a6a3a', shade: '#3a4a22', hl: '#7a8a52' },
-    { name: 'Grey',     base: '#52525a', shade: '#32323a', hl: '#72727a' }
-  ],
 
   // Vest (armor/tactical)
   vest: [
@@ -68,18 +67,12 @@ window.Palette = {
     { name: 'White', base: '#e6e0d2', shade: '#b4ada0', hl: '#ffffff', strap: '#9c9588' }
   ],
 
-  // Backpack
-  backpack: SOLDIER_COLORS,
-
-  // Headwear type. Helmet color is picked separately.
+  // Headwear type. Helmet color follows the uniform color.
   hat: [
     { name: 'None' },
     { name: 'Pilot Helmet' },
     { name: 'Helmet' }
   ],
-
-  // Helmet colors
-  helmet: SOLDIER_COLORS,
 
   // Hairstyles
   hairstyles: [

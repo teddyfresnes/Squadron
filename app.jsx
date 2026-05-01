@@ -14,13 +14,10 @@ const DEFAULT_CFG = {
   hairStyleIdx: 0,  // Textured Crop
   eyeIdx: 1,
   uniformIdx: 0,
-  pantsIdx: 0,
   vestOn: true,
   vestIdx: 0,
   backpackOn: false,
-  backpackIdx: 1,
   hatIdx: 1,
-  helmetColorIdx: 0,
   weaponIdx: DEFAULT_WEAPON_IDX,
   weaponSkinIdx: 33  // sheet 33.png — default texture style
 };
@@ -56,16 +53,13 @@ function normalizeHairStyleForBody(cfg) {
 
 function normalizeHeadwear(cfg) {
   const hats = window.Palette.hat || [];
-  const helmetColors = window.Palette.helmet || [];
   let hatIdx = Number.isInteger(cfg.hatIdx) ? cfg.hatIdx : DEFAULT_CFG.hatIdx;
-  let helmetColorIdx = Number.isInteger(cfg.helmetColorIdx) ? cfg.helmetColorIdx : DEFAULT_CFG.helmetColorIdx;
 
   if (hatIdx < 0 || !hats[hatIdx]) hatIdx = DEFAULT_CFG.hatIdx;
   if (!hats[hatIdx]) hatIdx = 0;
-  if (helmetColorIdx < 0 || helmetColorIdx >= helmetColors.length) helmetColorIdx = DEFAULT_CFG.helmetColorIdx;
 
-  if (hatIdx === cfg.hatIdx && helmetColorIdx === cfg.helmetColorIdx) return cfg;
-  return { ...cfg, hatIdx, helmetColorIdx };
+  if (hatIdx === cfg.hatIdx) return cfg;
+  return { ...cfg, hatIdx };
 }
 
 function clampPaletteIdx(value, list, fallback) {
@@ -82,9 +76,7 @@ function normalizePaletteIndices(cfg) {
     hairIdx: clampPaletteIdx(cfg.hairIdx, window.Palette.hair, DEFAULT_CFG.hairIdx),
     eyeIdx: clampPaletteIdx(cfg.eyeIdx, window.Palette.eye, DEFAULT_CFG.eyeIdx),
     uniformIdx: clampPaletteIdx(cfg.uniformIdx, window.Palette.uniforms, DEFAULT_CFG.uniformIdx),
-    pantsIdx: clampPaletteIdx(cfg.pantsIdx, window.Palette.pants, DEFAULT_CFG.pantsIdx),
-    vestIdx: clampPaletteIdx(cfg.vestIdx, window.Palette.vest, DEFAULT_CFG.vestIdx),
-    backpackIdx: clampPaletteIdx(cfg.backpackIdx, window.Palette.backpack, DEFAULT_CFG.backpackIdx)
+    vestIdx: clampPaletteIdx(cfg.vestIdx, window.Palette.vest, DEFAULT_CFG.vestIdx)
   };
 }
 
@@ -200,7 +192,7 @@ function Section({ title, children }) {
   return (
     <div className="section">
       <h3>{title}</h3>
-      <div className="section-body">{children}</div>
+      {children ? <div className="section-body">{children}</div> : null}
     </div>
   );
 }
@@ -261,14 +253,13 @@ function App() {
   const [animKey, setAnimKey] = useState(() => localStorage.getItem('char-anim') || 'idle');
   const [facing, setFacing] = useState(1);
   const [bgMode, setBgMode] = useState('light');
-  const [showAll, setShowAll] = useState(false);
   const [scale, setScale] = useState(SCALE);
 
   useEffect(() => { localStorage.setItem('char-cfg', JSON.stringify(cfg)); }, [cfg]);
   useEffect(() => { localStorage.setItem('char-anim', animKey); }, [animKey]);
   useEffect(() => {
     setCfg((c) => normalizeCharacterConfig(c));
-  }, [cfg.bodyType, cfg.hairStyleIdx, cfg.hatIdx, cfg.helmetColorIdx]);
+  }, [cfg.bodyType, cfg.hairStyleIdx, cfg.hatIdx]);
 
   // Push the active weapon skin into the Weapons module whenever it changes.
   useEffect(() => {
@@ -283,7 +274,11 @@ function App() {
   const currentWeapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
   const hairStyleOptions = useMemo(() => hairStyleOptionsForBody(cfg.bodyType || 'male'), [cfg.bodyType]);
   const selectedHairStyleOptionIdx = Math.max(0, hairStyleOptions.findIndex((style) => style.idx === cfg.hairStyleIdx));
-  const selectedHeadwearIdx = Math.max(0, Math.min(cfg.hatIdx || 0, window.Palette.hat.length - 1));
+  
+  // Headwear: index 0 is "None", indices 1+ are actual hats
+  const headwearOn = (cfg.hatIdx || 0) > 0;
+  const headwearHats = (window.Palette.hat || []).slice(1); // All except "None"
+  const selectedHeadwearIdx = Math.max(0, Math.min((cfg.hatIdx || 1) - 1, headwearHats.length - 1));
 
   return (
     <div className="app">
@@ -291,38 +286,15 @@ function App() {
         <div className="brand">
           <div className="brand-dot" />
           <div className="brand-text">
-            <div className="brand-title">SPRITE.FORGE</div>
-            <div className="brand-sub">32×32 character system · side profile · minitroopers-inspired</div>
+            <div className="brand-title">SQUADRON DEV PART</div>
           </div>
-        </div>
-        <div className="topbar-right">
-          <div className="pill">{currentWeapon.name}</div>
-          <div className="pill">{window.Anims[animKey].name}</div>
-          <div className="pill">{window.Anims[animKey].frames}f @ {window.Anims[animKey].fps}fps</div>
         </div>
       </header>
 
       <div className="main">
-        {/* Left: animation list */}
+        {/* Left: weapons and skins */}
         <aside className="panel panel-left">
-          <div className="panel-title">ANIMATIONS</div>
-          <div className="anim-grid">
-            {window.AnimList.map((k) => (
-              <button
-                key={k}
-                className={'anim-card' + (animKey === k ? ' selected' : '')}
-                onClick={() => setAnimKey(k)}
-              >
-                <div className="anim-preview-wrap">
-                  <AnimPreview cfg={cfg} animKey={k} scale={0.42} facing={1} />
-                </div>
-                <div className="anim-label">{window.Anims[k].name}</div>
-                <div className="anim-meta">{window.Anims[k].frames}f</div>
-              </button>
-            ))}
-          </div>
-
-          <div className="panel-title" style={{marginTop: 16}}>WEAPON SKIN</div>
+          <div className="panel-title">WEAPON SKIN</div>
           <WeaponSkinPicker
             value={cfg.weaponSkinIdx}
             onChange={set('weaponSkinIdx')}
@@ -337,28 +309,51 @@ function App() {
           />
         </aside>
 
-        {/* Center: main preview */}
+        {/* Center: main preview + animations */}
         <main className="stage-wrap">
+          <div className="center-controls">
+            <button onClick={() => setBgMode('light')} className={bgMode === 'light' ? 'on' : ''} title="Light background">light</button>
+            <button onClick={() => setBgMode('grid')} className={bgMode === 'grid' ? 'on' : ''} title="Grid background">grid</button>
+            <button onClick={() => setBgMode('dark')} className={bgMode === 'dark' ? 'on' : ''} title="Dark background">dark</button>
+            <span style={{ marginLeft: 'auto' }} />
+            <button onClick={() => setFacing(f => -f)} title="Flip facing">⇄</button>
+            <button onClick={() => setScale(s => Math.max(1, s - 1))} title="Zoom out">−</button>
+            <button onClick={() => setScale(s => Math.min(8, s + 1))} title="Zoom in">+</button>
+            <span style={{ fontSize: '10px', color: 'var(--text-dim)', marginLeft: '8px' }}>{STAGE_W} × {STAGE_H} px · ×{scale}</span>
+          </div>
+
           <div className={'stage bg-' + bgMode}>
             <div className="stage-inner">
               <AnimPreview cfg={cfg} animKey={animKey} scale={scale} facing={facing} running={true} />
             </div>
-            <div className="stage-chrome">
-              <div className="stage-coords">{STAGE_W} × {STAGE_H} px · ×{scale}</div>
-              <div className="stage-controls">
-                <button onClick={() => setFacing(f => -f)} title="Flip facing">⇄</button>
-                <button onClick={() => setBgMode('grid')} className={bgMode === 'grid' ? 'on' : ''}>grid</button>
-                <button onClick={() => setBgMode('dark')} className={bgMode === 'dark' ? 'on' : ''}>dark</button>
-                <button onClick={() => setBgMode('light')} className={bgMode === 'light' ? 'on' : ''}>light</button>
-                <button onClick={() => setScale(s => Math.max(1, s - 1))}>−</button>
-                <button onClick={() => setScale(s => Math.min(8, s + 1))}>+</button>
-              </div>
-            </div>
           </div>
 
-          <FrameStrip cfg={cfg} animKey={animKey} facing={facing} />
-
-          <AllAnimsRow cfg={cfg} facing={facing} />
+          <div className="anims-section">
+            <div className="anims-section-label">ANIMATIONS</div>
+            <div className="anim-grid">
+              {window.AnimList.map((k) => (
+                <button
+                  key={k}
+                  className={'anim-card' + (animKey === k ? ' selected' : '')}
+                  onClick={() => setAnimKey(k)}
+                >
+                  <div className="anim-preview-wrap">
+                    <AnimPreview cfg={cfg} animKey={k} scale={0.35} facing={1} />
+                  </div>
+                  <div className="anim-label">{window.Anims[k].name}</div>
+                  <div className="anim-meta">{window.Anims[k].frames}f</div>
+                  <div className="anim-frames-tooltip">
+                    {(() => {
+                      const anim = window.Anims[k];
+                      const frames = [];
+                      for (let i = 0; i < anim.frames; i++) frames.push(i);
+                      return frames.map(i => <div key={i} className="anim-frames-item">{String(i).padStart(2, '0')}</div>);
+                    })()}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </main>
 
         {/* Right: customization */}
@@ -389,26 +384,16 @@ function App() {
             <ColorSwatches options={window.Palette.hair} selectedIdx={cfg.hairIdx} onPick={set('hairIdx')} field="base" />
           </Section>
 
-          <Section title="Headwear">
-            <Chips options={window.Palette.hat} selectedIdx={selectedHeadwearIdx} onPick={set('hatIdx')} />
+          <Section title={<>Headwear <Toggle on={headwearOn} onChange={(on) => set('hatIdx')(on ? 1 : 0)} label="" /></>}>
+            {headwearOn && <Chips options={headwearHats} selectedIdx={selectedHeadwearIdx} onPick={(i) => set('hatIdx')(i + 1)} />}
           </Section>
-
-          {selectedHeadwearIdx > 0 && (
-            <Section title="Helmet Color">
-              <ColorSwatches options={window.Palette.helmet} selectedIdx={cfg.helmetColorIdx} onPick={set('helmetColorIdx')} field="base" />
-            </Section>
-          )}
 
           <Section title="Eyes">
             <ColorSwatches options={window.Palette.eye} selectedIdx={cfg.eyeIdx} onPick={set('eyeIdx')} field="base" />
           </Section>
 
-          <Section title="Uniform (shirt)">
+          <Section title="Uniform Color">
             <ColorSwatches options={window.Palette.uniforms} selectedIdx={cfg.uniformIdx} onPick={set('uniformIdx')} field="base" />
-          </Section>
-
-          <Section title="Pants">
-            <ColorSwatches options={window.Palette.pants} selectedIdx={cfg.pantsIdx} onPick={set('pantsIdx')} field="base" />
           </Section>
 
           <Section title={<>Vest <Toggle on={cfg.vestOn} onChange={set('vestOn')} label="" /></>}>
@@ -416,13 +401,13 @@ function App() {
           </Section>
 
           <Section title={<>Backpack <Toggle on={cfg.backpackOn} onChange={set('backpackOn')} label="" /></>}>
-            {cfg.backpackOn && <ColorSwatches options={window.Palette.backpack} selectedIdx={cfg.backpackIdx} onPick={set('backpackIdx')} field="base" />}
           </Section>
         </aside>
       </div>
     </div>
   );
 }
+
 
 // Strip of individual frames for current animation
 function FrameStrip({ cfg, animKey, facing }) {

@@ -651,19 +651,17 @@
     const skin = P.skin[cfg.skinIdx];
     const hair = P.hair[cfg.hairIdx];
     const eye  = P.eye[cfg.eyeIdx];
-    const uniform = P.uniforms[cfg.uniformIdx];
-    const pants = P.pants[cfg.pantsIdx];
+    const uniform = P.uniforms[cfg.uniformIdx] || P.uniforms[0];
+    const pants = uniform;
     const vest  = cfg.vestOn ? P.vest[cfg.vestIdx] : null;
-    const pack  = cfg.backpackOn ? P.backpack[cfg.backpackIdx] : null;
+    const pack  = cfg.backpackOn ? uniform : null;
     const hatOptions = P.hat || [{ name: 'None' }];
     const savedHatIdx = Number.isInteger(cfg.hatIdx) ? cfg.hatIdx : 0;
     const hatIdx = savedHatIdx > 0 ? Math.min(savedHatIdx, hatOptions.length - 1) : 0;
     const hatEntry = hatOptions[Math.max(0, hatIdx)] || hatOptions[0];
     const hatKind = hatEntry.name;
-    const helmetColors = P.helmet || [];
-    const helmetColorIdx = Number.isInteger(cfg.helmetColorIdx) ? cfg.helmetColorIdx : 0;
     const hatCol = hatKind !== 'None'
-      ? (helmetColors[helmetColorIdx] || helmetColors[0] || hatEntry)
+      ? uniform
       : hatEntry;
     const hairStyle = P.hairstyles[cfg.hairStyleIdx].name;
     const weapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];

@@ -32,14 +32,14 @@ html, body {
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background:
     radial-gradient(1200px 600px at 20% -10%, rgba(217, 150, 80, 0.06), transparent 60%),
     radial-gradient(900px 500px at 95% 10%, rgba(80, 150, 217, 0.04), transparent 60%),
     var(--bg);
 }
 
-/* ---------------- Top bar ---------------- */
+/* Topbar */
 .topbar {
   display: flex;
   align-items: center;
@@ -51,6 +51,7 @@ html, body {
   position: sticky;
   top: 0;
   z-index: 10;
+  flex-shrink: 0;
 }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-dot {
@@ -67,40 +68,47 @@ html, body {
   border-radius: 2px;
 }
 .brand-title {
-  font-size: 14px; letter-spacing: 0.14em; font-weight: 700;
+  font-size: 16px; 
+  letter-spacing: 0.12em; 
+  font-weight: 700;
   color: var(--text);
 }
-.brand-sub { font-size: 10px; color: var(--text-dim); letter-spacing: 0.06em; }
+.brand-sub { display: none; }
 
-.topbar-right { display: flex; gap: 8px; }
-.pill {
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
-  background: var(--panel);
-  text-transform: uppercase;
-}
+.topbar-right { display: none; }
 
-/* ---------------- Main grid ---------------- */
+/* Main grid layout */
 .main {
   display: grid;
-  grid-template-columns: 260px 1fr 300px;
+  grid-template-columns: 260px 1fr 280px;
+  grid-template-rows: 1fr;
   gap: 14px;
   padding: 14px;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+  height: 100%;
 }
 
+/* Panels */
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+.panel-left {
   overflow-y: auto;
-  max-height: calc(100vh - 76px);
+  align-content: flex-start;
+}
+.panel-right {
+  overflow-y: auto;
+  align-content: flex-start;
 }
 
 .panel-title {
@@ -110,27 +118,29 @@ html, body {
   margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 1px dashed var(--border);
+  flex-shrink: 0;
 }
 
-/* ---------------- Animations grid ---------------- */
+/* Animations grid (in center, larger cards) */
 .anim-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 .anim-card {
   all: unset;
   cursor: pointer;
   min-width: 0;
   background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 6px;
   transition: border-color 0.12s, background 0.12s;
+  position: relative;
 }
 .anim-card:hover { border-color: var(--border-2); }
 .anim-card.selected {
@@ -140,7 +150,7 @@ html, body {
 }
 .anim-preview-wrap {
   width: 100%;
-  height: 52px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,7 +158,7 @@ html, body {
     linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px) 0 0 / 8px 8px,
     linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px) 0 0 / 8px 8px,
     #0a0b10;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
 }
 .anim-label {
@@ -156,14 +166,43 @@ html, body {
   font-size: 9px;
   letter-spacing: 0.04em;
   color: var(--text);
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.anim-meta { font-size: 9px; color: var(--text-dimmer); }
+.anim-meta { font-size: 8px; color: var(--text-dimmer); }
 
-/* ---------------- Weapons ---------------- */
+/* Frames tooltip on animation hover */
+.anim-frames-tooltip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  z-index: 100;
+  pointer-events: none;
+  white-space: nowrap;
+  display: none;
+  gap: 2px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+.anim-card:hover .anim-frames-tooltip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.anim-frames-item {
+  font-size: 8px;
+  color: var(--text-dim);
+  padding: 2px 4px;
+}
+
+/* Weapons */
 .weapon-picker {
   display: flex;
   flex-direction: column;
@@ -222,7 +261,7 @@ html, body {
   text-overflow: ellipsis;
 }
 
-/* ---------------- Weapon skin picker ---------------- */
+/* Weapon skin picker */
 .skin-picker { display: flex; flex-direction: column; gap: 6px; }
 .skin-grid {
   display: grid;
@@ -250,16 +289,47 @@ html, body {
   box-shadow: inset 0 0 0 1px rgba(217,150,80,0.3);
 }
 
-/* ---------------- Stage ---------------- */
+/* Center column: stage and animations */
 .stage-wrap {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
+
+.center-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.center-controls button {
+  all: unset;
+  cursor: pointer;
+  padding: 4px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  transition: all 0.12s;
+}
+.center-controls button:hover { color: var(--text); border-color: var(--border-2); }
+.center-controls button.on { border-color: var(--accent); color: var(--accent); }
+
+/* Stage */
 .stage {
-  flex: 0 0 auto;
-  min-height: 540px;
+  flex: 1;
+  max-height: 60vh;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
@@ -291,115 +361,31 @@ html, body {
   background: rgba(255,255,255,0.08);
 }
 
-.stage-chrome {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  right: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  pointer-events: none;
-}
-.stage-coords {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  padding: 4px 8px;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  pointer-events: auto;
-}
-.stage-controls { display: flex; gap: 4px; pointer-events: auto; }
-.stage-controls button {
-  all: unset;
-  cursor: pointer;
-  padding: 4px 10px;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 10px;
-  color: var(--text-dim);
-  letter-spacing: 0.04em;
-  transition: all 0.12s;
-}
-.stage-controls button:hover { color: var(--text); border-color: var(--border-2); }
-.stage-controls button.on { border-color: var(--accent); color: var(--accent); }
-
-/* ---------------- Frame strip ---------------- */
-.frame-strip {
+/* Animations section below stage */
+.anims-section {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+  max-height: 280px;
+  overflow-y: auto;
 }
-.frame-strip-label, .all-anims-label {
-  font-size: 10px;
-  letter-spacing: 0.18em;
+.anims-section-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
   color: var(--text-dimmer);
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed var(--border);
-}
-.frame-strip-inner {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-.frame-cell {
-  flex: 0 0 auto;
-  background: #0a0b10;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.frame-idx { font-size: 9px; color: var(--text-dimmer); letter-spacing: 0.08em; }
-
-/* ---------------- All anims row ---------------- */
-.all-anims {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-}
-.all-anims-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-}
-.all-anim-cell {
-  background: #0a0b10;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.all-anim-preview {
-  width: 100%;
-  height: 96px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.all-anim-name {
-  font-size: 9px;
-  color: var(--text-dim);
-  letter-spacing: 0.06em;
   text-transform: uppercase;
+  font-weight: 600;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+  flex-shrink: 0;
 }
 
-/* ---------------- Right panel / customization ---------------- */
+/* Right panel / customization */
 .section {
   margin-bottom: 16px;
   padding-bottom: 14px;
@@ -507,25 +493,22 @@ html, body {
 }
 
 /* Scrollbars */
-.panel::-webkit-scrollbar, .frame-strip-inner::-webkit-scrollbar {
+.panel::-webkit-scrollbar, .anims-section::-webkit-scrollbar {
   width: 6px; height: 6px;
 }
-.panel::-webkit-scrollbar-track, .frame-strip-inner::-webkit-scrollbar-track { background: transparent; }
-.panel::-webkit-scrollbar-thumb, .frame-strip-inner::-webkit-scrollbar-thumb {
+.panel::-webkit-scrollbar-track, .anims-section::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb, .anims-section::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 3px;
 }
-.panel::-webkit-scrollbar-thumb:hover, .frame-strip-inner::-webkit-scrollbar-thumb:hover {
+.panel::-webkit-scrollbar-thumb:hover, .anims-section::-webkit-scrollbar-thumb:hover {
   background: var(--border-2);
 }
 
 /* Responsive */
-@media (max-width: 1200px) {
-  .main { grid-template-columns: 220px 1fr 280px; }
-  .all-anims-grid { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 500px) {
+  .main { grid-template-columns: 200px 1fr 240px; }
 }
-@media (max-width: 960px) {
-  .main { grid-template-columns: 1fr; }
-  .panel { max-height: none; }
-  .all-anims-grid { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 400px) {
+  /* Mobile layout (if needed later) */
 }
