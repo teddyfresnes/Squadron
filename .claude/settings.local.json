@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m http.server 8765)",
+      "Bash(curl -sf -o /dev/null -w \"html=%{http_code}\\\\n\" \"http://localhost:8765/Sprite%20Forge.html\")",
+      "Bash(curl -sf -o /dev/null -w \"app.jsx=%{http_code}\\\\n\" \"http://localhost:8765/app.jsx\")",
+      "Bash(curl -sf -o /dev/null -w \"game.jsx=%{http_code}\\\\n\" \"http://localhost:8765/game.jsx\")",
+      "Bash(curl -sf -o /dev/null -w \"root.jsx=%{http_code}\\\\n\" \"http://localhost:8765/root.jsx\")"
+    ]
+  }
+}

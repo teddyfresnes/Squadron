@@ -241,7 +241,7 @@ function Toggle({ on, onChange, label }) {
 }
 
 // ---------------- App ----------------
-function App() {
+function App({ onSwitchMode }) {
   const [cfg, setCfg] = useState(() => {
     try {
       const saved = localStorage.getItem('char-cfg');
@@ -287,6 +287,16 @@ function App() {
           <div className="brand-text">
             <div className="brand-title">SQUADRON DEV PART</div>
           </div>
+        </div>
+        <div className="topbar-actions">
+          <button
+            type="button"
+            className="mode-toggle"
+            onClick={() => onSwitchMode && onSwitchMode('prod')}
+            title="Switch to game (prod) mode"
+          >
+            PROD MODE →
+          </button>
         </div>
       </header>
 
@@ -716,4 +726,18 @@ function WeaponSkinPicker({ value, onChange }) {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+// Expose UI helpers used by game.jsx (Babel-standalone scripts don't share top-level scope).
+window.SquadronUI = {
+  App,
+  SpriteCanvas,
+  AnimPreview,
+  WeaponGameIcon,
+  WeaponIcon,
+  DEFAULT_CFG,
+  STAGE_W,
+  STAGE_H,
+  normalizeCharacterConfig,
+  hairStyleOptionsForBody
+};
+
+// Mount is performed in root.jsx so it can switch between editor (Dev) and game (Prod).
