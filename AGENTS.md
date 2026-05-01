@@ -32,6 +32,8 @@ http://localhost:8000/Sprite%20Forge.html
 ## Conventions Actuelles
 
 - La couleur d'uniforme vient de `cfg.uniformIdx` et s'applique au haut, pantalon, backpack et casque.
+- La veste pare-balles reste noire (`P.vest[0]`) et n'a pas de choix de couleur dans l'UI.
+- Les couvre-chefs recents (`High Helmet`, `Pilot Goggles`, `Cap`, `Beret`, `Military Helmet`, `Tactical Helmet`) sont dessines directement dans `parts.js`.
 - Les couleurs soldat sont dans `SOLDIER_COLORS`; noir et blanc n'y sont plus disponibles.
 - Les cheveux utilisent `window.Palette.hair`; la couleur `Ginger` sert de roux melange marron/jaune.
 - Les stats d'armes doivent rester dans `weapon-config.json`; les infos de rendu restent dans `weapons.js`.

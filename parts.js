@@ -16,6 +16,275 @@
 
   const Parts = {};
 
+  function drawPilotGogglesPixel(ctx, cx, cy, hatCol) {
+    const b = hatCol.base, s = hatCol.shade, h = hatCol.hl;
+    const O = P.outline;
+    E.stamp(ctx, cx - 2, cy - 3, [
+      '...OOOOOO...',
+      '..OBBBBBOO..',
+      '.OBHBBBBBO.',
+      'OBBBBBBBBO.',
+      'OBBBSSSSO..',
+      'OBSOOOOOOOO',
+      'OOOOWWOOOWO',
+      '..OOWWOOOWO',
+      '..OSO..OO..',
+      '..OO.......'
+    ], { O, B: b, S: s, H: h, W: P.whiteShade });
+  }
+
+  function drawCapPixel(ctx, cx, cy, hatCol) {
+    const b = hatCol.base, s = hatCol.shade, h = hatCol.hl;
+    const O = P.outline;
+    E.stamp(ctx, cx, cy - 2, [
+      '..OOOO..',
+      '.OBBBBO.',
+      'OBHBBBBO',
+      'OBBBSSOO',
+      '.OOOBBO.',
+      '....OO..'
+    ], { O, B: b, S: s, H: h });
+  }
+
+  function drawBeretPixel(ctx, cx, cy, hatCol) {
+    const b = hatCol.base, s = hatCol.shade, h = hatCol.hl;
+    const O = P.outline;
+    E.stamp(ctx, cx - 2, cy - 2, [
+      '....OOOOOO.',
+      '..OOBBBBBO',
+      '.OBBBBBBBO',
+      'OBHBBBSSO.',
+      'OBBSSSO...',
+      '.OOOOO....'
+    ], { O, B: b, S: s, H: h });
+  }
+
+  function drawMilitaryHelmetPixel(ctx, cx, cy, hatCol) {
+    const b = hatCol.base, s = hatCol.shade, h = hatCol.hl;
+    const O = P.outline;
+    E.stamp(ctx, cx - 2, cy - 3, [
+      '...OOOOO...',
+      '..OBBBBBO..',
+      '.OBHBBBBBO.',
+      'OBBBBBBBBO.',
+      'OBBBBBBBSO',
+      'OBBBSSSSOO',
+      '.OSO...O..',
+      '..OO......'
+    ], { O, B: b, S: s, H: h });
+  }
+
+  function drawTacticalHelmetPixel(ctx, cx, cy, hatCol) {
+    const b = hatCol.base, s = hatCol.shade, h = hatCol.hl;
+    const O = P.outline;
+    E.stamp(ctx, cx - 2, cy - 3, [
+      '..OOOOOO...',
+      '.OBBBBBBO..',
+      'OBHBBBBBOO.',
+      'OBBBBSSOOO.',
+      'OBSOOOOOOO.',
+      'OBSO....OO.',
+      'OBBO..OSSO.',
+      '.OBBSSSSO..',
+      '..OOOOOO...'
+    ], { O, B: b, S: s, H: h });
+  }
+
+  function drawPilotGogglesHD(ctx, cx, cy, hatCol) {
+    const O = P.outline;
+    const b = hatCol.base;
+    const s = hatCol.shade;
+    const h = hatCol.hl;
+    fillPath(ctx, O, function () {
+      ctx.moveTo(cx - 1.55, cy + 5.95);
+      ctx.quadraticCurveTo(cx - 1.55, cy + 1.0, cx + 1.6, cy - 1.45);
+      ctx.quadraticCurveTo(cx + 5.2, cy - 3.1, cx + 8.15, cy - 0.85);
+      ctx.quadraticCurveTo(cx + 9.35, cy + 0.55, cx + 8.72, cy + 3.5);
+      ctx.quadraticCurveTo(cx + 7.05, cy + 4.1, cx + 5.1, cy + 3.75);
+      ctx.quadraticCurveTo(cx + 3.72, cy + 4.25, cx + 2.82, cy + 5.95);
+      ctx.quadraticCurveTo(cx + 1.25, cy + 8.5, cx - 1.55, cy + 5.95);
+      ctx.closePath();
+    });
+    fillPath(ctx, b, function () {
+      ctx.moveTo(cx - 0.9, cy + 5.35);
+      ctx.quadraticCurveTo(cx - 0.85, cy + 1.25, cx + 1.9, cy - 0.85);
+      ctx.quadraticCurveTo(cx + 5.1, cy - 2.2, cx + 7.45, cy - 0.55);
+      ctx.quadraticCurveTo(cx + 8.32, cy + 0.45, cx + 8.0, cy + 2.92);
+      ctx.quadraticCurveTo(cx + 6.72, cy + 3.38, cx + 5.0, cy + 3.08);
+      ctx.quadraticCurveTo(cx + 3.38, cy + 3.82, cx + 2.2, cy + 5.38);
+      ctx.quadraticCurveTo(cx + 0.95, cy + 7.28, cx - 0.9, cy + 5.35);
+      ctx.closePath();
+    });
+    fillEllipse(ctx, cx + 3.85, cy + 2.65, 1.75, 1.55, O);
+    fillEllipse(ctx, cx + 3.88, cy + 2.65, 1.02, 0.92, P.whiteShade);
+    fillEllipse(ctx, cx + 7.65, cy + 2.52, 1.42, 1.35, O);
+    fillEllipse(ctx, cx + 7.68, cy + 2.52, 0.8, 0.78, P.whiteShade);
+    strokeLine(ctx, cx - 1.0, cy + 3.2, cx + 2.2, cy + 3.08, O, 0.9);
+    strokeLine(ctx, cx + 5.28, cy + 2.55, cx + 6.28, cy + 2.52, O, 0.52);
+    fillRoundRect(ctx, cx + 0.75, cy + 2.7, 1.15, 1.0, 0.28, s);
+    strokeLine(ctx, cx + 2.42, cy - 0.65, cx + 5.65, cy - 0.78, h, 0.42);
+  }
+
+  function drawCapHD(ctx, cx, cy, hatCol) {
+    const O = P.outline;
+    const b = hatCol.base;
+    const s = hatCol.shade;
+    const h = hatCol.hl;
+    fillPath(ctx, O, function () {
+      ctx.moveTo(cx + 0.05, cy + 3.25);
+      ctx.quadraticCurveTo(cx + 0.2, cy + 0.92, cx + 2.22, cy - 0.35);
+      ctx.quadraticCurveTo(cx + 4.75, cy - 1.02, cx + 6.75, cy + 0.28);
+      ctx.quadraticCurveTo(cx + 7.32, cy + 0.95, cx + 7.42, cy + 2.45);
+      ctx.quadraticCurveTo(cx + 8.95, cy + 2.62, cx + 9.82, cy + 3.3);
+      ctx.quadraticCurveTo(cx + 9.48, cy + 3.72, cx + 8.65, cy + 3.58);
+      ctx.quadraticCurveTo(cx + 6.45, cy + 3.25, cx + 4.55, cy + 3.48);
+      ctx.quadraticCurveTo(cx + 2.0, cy + 3.72, cx + 0.05, cy + 3.25);
+      ctx.closePath();
+    });
+    fillPath(ctx, b, function () {
+      ctx.moveTo(cx + 0.62, cy + 2.95);
+      ctx.quadraticCurveTo(cx + 0.78, cy + 1.12, cx + 2.42, cy + 0.14);
+      ctx.quadraticCurveTo(cx + 4.6, cy - 0.35, cx + 6.15, cy + 0.65);
+      ctx.quadraticCurveTo(cx + 6.72, cy + 1.18, cx + 6.82, cy + 2.52);
+      ctx.quadraticCurveTo(cx + 8.08, cy + 2.65, cx + 8.85, cy + 3.18);
+      ctx.quadraticCurveTo(cx + 8.42, cy + 3.3, cx + 7.8, cy + 3.22);
+      ctx.quadraticCurveTo(cx + 6.12, cy + 3.0, cx + 4.35, cy + 3.18);
+      ctx.quadraticCurveTo(cx + 2.08, cy + 3.42, cx + 0.62, cy + 2.95);
+      ctx.closePath();
+    });
+    fillPath(ctx, s, function () {
+      ctx.moveTo(cx + 4.72, cy + 3.08);
+      ctx.quadraticCurveTo(cx + 6.55, cy + 2.68, cx + 8.62, cy + 3.18);
+      ctx.quadraticCurveTo(cx + 7.12, cy + 3.25, cx + 5.62, cy + 3.1);
+      ctx.closePath();
+    });
+    strokeLine(ctx, cx + 0.95, cy + 3.02, cx + 6.82, cy + 2.6, s, 0.32);
+    strokeLine(ctx, cx + 2.75, cy + 0.36, cx + 5.2, cy + 0.38, h, 0.28);
+  }
+
+  function drawBeretHD(ctx, cx, cy, hatCol) {
+    const O = P.outline;
+    const b = hatCol.base;
+    const s = hatCol.shade;
+    const h = hatCol.hl;
+    fillPath(ctx, O, function () {
+      ctx.moveTo(cx - 2.05, cy + 5.1);
+      ctx.quadraticCurveTo(cx - 0.85, cy + 0.4, cx + 3.5, cy - 1.55);
+      ctx.quadraticCurveTo(cx + 7.45, cy - 2.65, cx + 10.0, cy + 0.45);
+      ctx.quadraticCurveTo(cx + 9.55, cy + 2.82, cx + 6.92, cy + 3.35);
+      ctx.quadraticCurveTo(cx + 3.95, cy + 4.2, cx + 1.4, cy + 5.62);
+      ctx.quadraticCurveTo(cx - 0.35, cy + 6.3, cx - 2.05, cy + 5.1);
+      ctx.closePath();
+    });
+    fillPath(ctx, b, function () {
+      ctx.moveTo(cx - 1.22, cy + 4.68);
+      ctx.quadraticCurveTo(cx - 0.25, cy + 0.88, cx + 3.75, cy - 0.82);
+      ctx.quadraticCurveTo(cx + 7.02, cy - 1.65, cx + 9.12, cy + 0.55);
+      ctx.quadraticCurveTo(cx + 8.72, cy + 2.35, cx + 6.5, cy + 2.75);
+      ctx.quadraticCurveTo(cx + 3.7, cy + 3.5, cx + 1.18, cy + 4.8);
+      ctx.quadraticCurveTo(cx - 0.05, cy + 5.22, cx - 1.22, cy + 4.68);
+      ctx.closePath();
+    });
+    strokeLine(ctx, cx + 0.15, cy + 4.55, cx + 6.72, cy + 2.78, s, 0.58);
+    strokeLine(ctx, cx + 2.75, cy - 0.05, cx + 6.25, cy + 0.12, h, 0.42);
+  }
+
+  function drawMilitaryHelmetHD(ctx, cx, cy, hatCol) {
+    const O = P.outline;
+    const b = hatCol.base;
+    const s = hatCol.shade;
+    const h = hatCol.hl;
+    fillPath(ctx, O, function () {
+      ctx.moveTo(cx - 1.85, cy + 5.3);
+      ctx.quadraticCurveTo(cx - 1.25, cy + 0.55, cx + 2.0, cy - 1.45);
+      ctx.quadraticCurveTo(cx + 5.05, cy - 2.65, cx + 7.85, cy - 0.55);
+      ctx.quadraticCurveTo(cx + 9.0, cy + 0.65, cx + 9.32, cy + 3.45);
+      ctx.quadraticCurveTo(cx + 10.25, cy + 3.68, cx + 10.55, cy + 4.5);
+      ctx.quadraticCurveTo(cx + 9.35, cy + 5.0, cx + 7.8, cy + 4.82);
+      ctx.lineTo(cx + 4.55, cy + 5.25);
+      ctx.quadraticCurveTo(cx + 3.52, cy + 6.85, cx + 2.0, cy + 7.55);
+      ctx.quadraticCurveTo(cx + 0.2, cy + 7.28, cx - 1.85, cy + 5.3);
+      ctx.closePath();
+    });
+    fillPath(ctx, b, function () {
+      ctx.moveTo(cx - 1.05, cy + 4.82);
+      ctx.quadraticCurveTo(cx - 0.65, cy + 0.88, cx + 2.25, cy - 0.75);
+      ctx.quadraticCurveTo(cx + 5.05, cy - 1.82, cx + 7.25, cy - 0.25);
+      ctx.quadraticCurveTo(cx + 8.15, cy + 0.72, cx + 8.42, cy + 3.2);
+      ctx.quadraticCurveTo(cx + 9.25, cy + 3.52, cx + 9.62, cy + 4.18);
+      ctx.quadraticCurveTo(cx + 8.78, cy + 4.52, cx + 7.55, cy + 4.28);
+      ctx.lineTo(cx + 4.18, cy + 4.72);
+      ctx.quadraticCurveTo(cx + 3.28, cy + 6.05, cx + 2.0, cy + 6.7);
+      ctx.quadraticCurveTo(cx + 0.58, cy + 6.42, cx - 1.05, cy + 4.82);
+      ctx.closePath();
+    });
+    strokeLine(ctx, cx - 0.75, cy + 5.0, cx + 7.65, cy + 4.28, s, 0.62);
+    strokeLine(ctx, cx + 2.42, cy - 0.3, cx + 5.4, cy - 0.38, h, 0.42);
+  }
+
+  function drawTacticalHelmetHD(ctx, cx, cy, hatCol) {
+    const O = P.outline;
+    const b = hatCol.base;
+    const s = hatCol.shade;
+    const h = hatCol.hl;
+    fillPath(ctx, O, function () {
+      ctx.moveTo(cx - 1.65, cy + 5.3);
+      ctx.quadraticCurveTo(cx - 1.2, cy + 0.45, cx + 2.0, cy - 1.38);
+      ctx.quadraticCurveTo(cx + 5.12, cy - 2.58, cx + 7.75, cy - 0.45);
+      ctx.quadraticCurveTo(cx + 8.85, cy + 0.72, cx + 8.95, cy + 3.2);
+      ctx.lineTo(cx + 9.8, cy + 4.0);
+      ctx.lineTo(cx + 9.58, cy + 7.0);
+      ctx.quadraticCurveTo(cx + 8.8, cy + 8.8, cx + 6.6, cy + 8.55);
+      ctx.lineTo(cx + 3.0, cy + 7.2);
+      ctx.quadraticCurveTo(cx + 2.0, cy + 7.42, cx + 0.9, cy + 6.78);
+      ctx.quadraticCurveTo(cx - 0.65, cy + 6.42, cx - 1.65, cy + 5.3);
+      ctx.closePath();
+    });
+    fillPath(ctx, b, function () {
+      ctx.moveTo(cx - 0.9, cy + 4.82);
+      ctx.quadraticCurveTo(cx - 0.55, cy + 0.85, cx + 2.28, cy - 0.72);
+      ctx.quadraticCurveTo(cx + 5.08, cy - 1.72, cx + 7.12, cy - 0.18);
+      ctx.quadraticCurveTo(cx + 7.98, cy + 0.78, cx + 8.05, cy + 2.95);
+      ctx.lineTo(cx + 8.88, cy + 3.82);
+      ctx.lineTo(cx + 8.72, cy + 6.45);
+      ctx.quadraticCurveTo(cx + 8.15, cy + 7.82, cx + 6.72, cy + 7.75);
+      ctx.lineTo(cx + 3.28, cy + 6.52);
+      ctx.quadraticCurveTo(cx + 2.18, cy + 6.8, cx + 1.25, cy + 6.18);
+      ctx.quadraticCurveTo(cx - 0.1, cy + 5.92, cx - 0.9, cy + 4.82);
+      ctx.closePath();
+    });
+    fillPath(ctx, O, function () {
+      ctx.moveTo(cx + 2.72, cy + 2.75);
+      ctx.lineTo(cx + 8.15, cy + 2.62);
+      ctx.lineTo(cx + 8.15, cy + 4.35);
+      ctx.lineTo(cx + 6.82, cy + 5.18);
+      ctx.lineTo(cx + 5.55, cy + 4.85);
+      ctx.lineTo(cx + 2.78, cy + 4.28);
+      ctx.closePath();
+    });
+    fillPath(ctx, s, function () {
+      ctx.moveTo(cx + 3.25, cy + 3.2);
+      ctx.lineTo(cx + 7.62, cy + 3.1);
+      ctx.lineTo(cx + 7.58, cy + 4.02);
+      ctx.lineTo(cx + 6.58, cy + 4.58);
+      ctx.lineTo(cx + 5.6, cy + 4.28);
+      ctx.lineTo(cx + 3.25, cy + 3.9);
+      ctx.closePath();
+    });
+    fillPath(ctx, s, function () {
+      ctx.moveTo(cx + 4.05, cy + 5.05);
+      ctx.lineTo(cx + 6.4, cy + 5.85);
+      ctx.lineTo(cx + 8.4, cy + 5.05);
+      ctx.lineTo(cx + 8.1, cy + 7.0);
+      ctx.quadraticCurveTo(cx + 6.55, cy + 7.55, cx + 4.85, cy + 6.88);
+      ctx.closePath();
+    });
+    strokeLine(ctx, cx + 5.92, cy + 5.55, cx + 7.18, cy + 5.5, O, 0.25);
+    strokeLine(ctx, cx + 5.7, cy + 6.25, cx + 7.28, cy + 6.15, O, 0.25);
+    strokeLine(ctx, cx + 5.6, cy + 6.95, cx + 7.0, cy + 6.8, O, 0.25);
+    strokeLine(ctx, cx + 2.4, cy - 0.32, cx + 5.48, cy - 0.42, h, 0.42);
+  }
+
   // ---------- HEAD ----------
   // Head is a compact, right-facing MiniTroopers-style mass.
   // Takes skin palette entry.
@@ -539,7 +808,32 @@
     const b = hatCol.base, s = hatCol.shade, h = hatCol.hl;
     const O = P.outline;
 
-    if (hatKind === 'Pilot Helmet' || hatKind === 'Combat Helmet') {
+    if (hatKind === 'Pilot Goggles') {
+      drawPilotGogglesPixel(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'Cap') {
+      drawCapPixel(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'Beret') {
+      drawBeretPixel(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'Military Helmet') {
+      drawMilitaryHelmetPixel(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'Tactical Helmet') {
+      drawTacticalHelmetPixel(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'High Helmet') {
       const tpl = [
         '..OOOOO..',
         '.OBBBBBO.',
@@ -555,54 +849,6 @@
       E.px(ctx, cx + 4, cy - 1, h);
       E.px(ctx, cx + 2, cy + 4, s);
       E.px(ctx, cx + 7, cy + 2, O);
-      const bandOuter = [
-        [cx - 1, cy + 4],
-        [cx + 0, cy + 4],
-        [cx + 1, cy + 3],
-        [cx + 2, cy + 3],
-        [cx + 3, cy + 2],
-        [cx + 5, cy + 2],
-        [cx + 7, cy + 2],
-        [cx + 9, cy + 2],
-        [cx + 10, cy + 1]
-      ];
-      const bandInner = [
-        [cx + 0, cy + 4],
-        [cx + 1, cy + 4],
-        [cx + 2, cy + 3],
-        [cx + 4, cy + 2],
-        [cx + 6, cy + 2],
-        [cx + 8, cy + 2],
-        [cx + 10, cy + 2]
-      ];
-      for (const p of bandOuter) E.px(ctx, p[0], p[1], O);
-      for (const p of bandInner) E.px(ctx, p[0], p[1], s);
-
-      // Oversized goggles sit on the strap, separated enough for perspective.
-      E.px(ctx, cx + 4, cy + 1, O);
-      E.px(ctx, cx + 5, cy + 1, O);
-      E.px(ctx, cx + 3, cy + 2, O);
-      E.px(ctx, cx + 6, cy + 2, O);
-      E.px(ctx, cx + 3, cy + 3, O);
-      E.px(ctx, cx + 6, cy + 3, O);
-      E.px(ctx, cx + 5, cy + 4, O);
-      E.px(ctx, cx + 4, cy + 4, O);
-      E.px(ctx, cx + 4, cy + 2, P.whiteShade);
-      E.px(ctx, cx + 5, cy + 2, P.white);
-      E.px(ctx, cx + 4, cy + 3, P.whiteShade);
-      E.px(ctx, cx + 5, cy + 3, P.white);
-      E.px(ctx, cx + 9, cy + 1, O);
-      E.px(ctx, cx + 10, cy + 1, O);
-      E.px(ctx, cx + 8, cy + 2, O);
-      E.px(ctx, cx + 11, cy + 2, O);
-      E.px(ctx, cx + 8, cy + 3, O);
-      E.px(ctx, cx + 11, cy + 3, O);
-      E.px(ctx, cx + 9, cy + 4, O);
-      E.px(ctx, cx + 10, cy + 4, O);
-      E.px(ctx, cx + 9, cy + 2, P.whiteShade);
-      E.px(ctx, cx + 10, cy + 2, P.white);
-      E.px(ctx, cx + 9, cy + 3, P.whiteShade);
-      E.px(ctx, cx + 10, cy + 3, P.white);
       return;
     }
 
@@ -636,17 +882,6 @@
       E.stamp(ctx, cx, cy - 1, tpl, { O, B: b, H: h });
       // fold
       for (let x = 1; x <= 6; x++) E.px(ctx, cx + x, cy + 2, s);
-    } else if (hatKind === 'Cap') {
-      // Crown
-      const crown = [
-        '.OOOOOO.',
-        'OBBBBBBO',
-        'OBHBBBBO'
-      ];
-      E.stamp(ctx, cx, cy - 1, crown, { O, B: b, H: h });
-      // Brim extending forward
-      E.rect(ctx, cx + 5, cy + 2, 5, 1, O);
-      E.rect(ctx, cx + 5, cy + 1, 4, 1, b);
     } else if (hatKind === 'Helmet' || hatKind === 'Combat Helmet') {
       const tpl = [
         '.OOOOOOO',
@@ -1932,7 +2167,32 @@
     const s = hatCol.shade;
     const h = hatCol.hl;
 
-    if (hatKind === 'Pilot Helmet' || hatKind === 'Combat Helmet') {
+    if (hatKind === 'Pilot Goggles') {
+      drawPilotGogglesHD(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'Cap') {
+      drawCapHD(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'Beret') {
+      drawBeretHD(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'Military Helmet') {
+      drawMilitaryHelmetHD(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'Tactical Helmet') {
+      drawTacticalHelmetHD(ctx, cx, cy, hatCol);
+      return;
+    }
+
+    if (hatKind === 'High Helmet') {
       fillPath(ctx, O, function () {
         ctx.moveTo(cx - 0.85, cy + 6.6);
         ctx.quadraticCurveTo(cx - 0.9, cy + 1.2, cx + 1.65, cy - 1.55);
@@ -1957,23 +2217,6 @@
       strokeLine(ctx, cx + 4.8, cy + 3.18, cx + 7.65, cy + 2.82, s, 0.55);
       strokeLine(ctx, cx + 2.75, cy - 0.72, cx + 5.25, cy - 1.05, h, 0.45);
       fillEllipse(ctx, cx + 0.85, cy + 5.2, 0.65, 0.75, s);
-      strokePath(ctx, O, 0.74, function () {
-        ctx.moveTo(cx - 0.35, cy + 5.5);
-        ctx.quadraticCurveTo(cx + 0.75, cy + 2.15, cx + 4.35, cy + 2.48);
-        ctx.quadraticCurveTo(cx + 6.8, cy + 2.72, cx + 9.55, cy + 1.82);
-      });
-      strokePath(ctx, s, 0.42, function () {
-        ctx.moveTo(cx - 0.02, cy + 5.28);
-        ctx.quadraticCurveTo(cx + 0.98, cy + 2.45, cx + 4.32, cy + 2.62);
-        ctx.quadraticCurveTo(cx + 6.78, cy + 2.82, cx + 9.28, cy + 2.02);
-      });
-      fillEllipse(ctx, cx + 4.45, cy + 2.55, 1.58, 1.45, O);
-      fillEllipse(ctx, cx + 4.45, cy + 2.55, 1.04, 0.94, P.whiteShade);
-      fillEllipse(ctx, cx + 8.25, cy + 2.42, 1.34, 1.24, O);
-      fillEllipse(ctx, cx + 8.25, cy + 2.42, 0.84, 0.78, P.whiteShade);
-      fillEllipse(ctx, cx + 4.78, cy + 2.22, 0.28, 0.22, P.white);
-      fillEllipse(ctx, cx + 8.5, cy + 2.12, 0.22, 0.18, P.white);
-      strokeLine(ctx, cx + 5.92, cy + 2.5, cx + 6.95, cy + 2.46, O, 0.45);
       return;
     }
 
@@ -2014,23 +2257,7 @@
       return;
     }
 
-    if (hatKind === 'Cap') {
-      fillPath(ctx, O, function () {
-        ctx.moveTo(cx + 0.4, cy + 2.45);
-        ctx.quadraticCurveTo(cx + 1.5, cy - 1.2, cx + 4.8, cy - 1.0);
-        ctx.quadraticCurveTo(cx + 7.5, cy - 0.55, cx + 7.65, cy + 2.4);
-        ctx.lineTo(cx + 0.4, cy + 2.45);
-      });
-      fillPath(ctx, b, function () {
-        ctx.moveTo(cx + 0.95, cy + 2.0);
-        ctx.quadraticCurveTo(cx + 1.8, cy - 0.55, cx + 4.8, cy - 0.45);
-        ctx.quadraticCurveTo(cx + 6.85, cy - 0.15, cx + 7.0, cy + 2.0);
-        ctx.closePath();
-      });
-      fillRoundRect(ctx, cx + 6.0, cy + 1.35, 4.0, 0.95, 0.35, O);
-      fillRoundRect(ctx, cx + 6.0, cy + 1.05, 3.65, 0.72, 0.3, b);
-      strokeLine(ctx, cx + 3.3, cy + 0.1, cx + 4.85, cy + 0.35, h, 0.35);
-    } else if (hatKind === 'Beanie') {
+    if (hatKind === 'Beanie') {
       fillRoundRect(ctx, cx + 0.1, cy - 1.45, 7.85, 5.1, 2.2, O);
       fillRoundRect(ctx, cx + 0.65, cy - 0.95, 6.8, 4.05, 1.75, b);
       strokeLine(ctx, cx + 1.1, cy + 2.75, cx + 7.1, cy + 2.75, s, 0.55);

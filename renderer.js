@@ -372,6 +372,10 @@
       : { back: false, front: false };
   }
 
+  function eyesVisibleForHat(hatKind) {
+    return hatKind !== 'Tactical Helmet';
+  }
+
   function worldPoint(originX, originY, x, y, bodyProfile) {
     const profile = bodyProfile || BODY_PROFILES.male;
     return {
@@ -653,7 +657,7 @@
     const eye  = P.eye[cfg.eyeIdx];
     const uniform = P.uniforms[cfg.uniformIdx] || P.uniforms[0];
     const pants = uniform;
-    const vest  = cfg.vestOn ? P.vest[cfg.vestIdx] : null;
+    const vest  = cfg.vestOn ? P.vest[0] : null;
     const pack  = cfg.backpackOn ? uniform : null;
     const hatOptions = P.hat || [{ name: 'None' }];
     const savedHatIdx = Number.isInteger(cfg.hatIdx) ? cfg.hatIdx : 0;
@@ -799,7 +803,9 @@
         drawHat(ctx, headTL_x, headTL_y, hatKind, hatCol);
       }
 
-      drawEye(ctx, headTL_x, headTL_y, eye.base, { closed: frame.eyesClosed, lashes: bodyProfile.lashes === true });
+      if (eyesVisibleForHat(hatKind)) {
+        drawEye(ctx, headTL_x, headTL_y, eye.base, { closed: frame.eyesClosed, lashes: bodyProfile.lashes === true });
+      }
     });
 
     const showWeapon = frame.showWeapon !== false && !frame.weaponDropped;

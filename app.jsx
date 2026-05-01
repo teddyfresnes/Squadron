@@ -15,7 +15,6 @@ const DEFAULT_CFG = {
   eyeIdx: 1,
   uniformIdx: 0,
   vestOn: true,
-  vestIdx: 0,
   backpackOn: false,
   hatIdx: 1,
   weaponIdx: DEFAULT_WEAPON_IDX,
@@ -70,13 +69,13 @@ function clampPaletteIdx(value, list, fallback) {
 }
 
 function normalizePaletteIndices(cfg) {
+  const { pantsIdx, backpackIdx, helmetColorIdx, vestIdx, ...cleanCfg } = cfg;
   return {
-    ...cfg,
+    ...cleanCfg,
     skinIdx: clampPaletteIdx(cfg.skinIdx, window.Palette.skin, DEFAULT_CFG.skinIdx),
     hairIdx: clampPaletteIdx(cfg.hairIdx, window.Palette.hair, DEFAULT_CFG.hairIdx),
     eyeIdx: clampPaletteIdx(cfg.eyeIdx, window.Palette.eye, DEFAULT_CFG.eyeIdx),
-    uniformIdx: clampPaletteIdx(cfg.uniformIdx, window.Palette.uniforms, DEFAULT_CFG.uniformIdx),
-    vestIdx: clampPaletteIdx(cfg.vestIdx, window.Palette.vest, DEFAULT_CFG.vestIdx)
+    uniformIdx: clampPaletteIdx(cfg.uniformIdx, window.Palette.uniforms, DEFAULT_CFG.uniformIdx)
   };
 }
 
@@ -397,7 +396,6 @@ function App() {
           </Section>
 
           <Section title={<>Vest <Toggle on={cfg.vestOn} onChange={set('vestOn')} label="" /></>}>
-            {cfg.vestOn && <ColorSwatches options={window.Palette.vest} selectedIdx={cfg.vestIdx} onPick={set('vestIdx')} field="base" />}
           </Section>
 
           <Section title={<>Backpack <Toggle on={cfg.backpackOn} onChange={set('backpackOn')} label="" /></>}>

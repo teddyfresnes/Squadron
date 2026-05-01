@@ -63,14 +63,18 @@ window.Palette = {
 
   // Vest (armor/tactical)
   vest: [
-    { name: 'Black', base: '#1a1a22', shade: '#000000', hl: '#2e2e38', strap: '#0a0a10' },
-    { name: 'White', base: '#e6e0d2', shade: '#b4ada0', hl: '#ffffff', strap: '#9c9588' }
+    { name: 'Black', base: '#1a1a22', shade: '#000000', hl: '#2e2e38', strap: '#0a0a10' }
   ],
 
   // Headwear type. Helmet color follows the uniform color.
   hat: [
     { name: 'None' },
-    { name: 'Pilot Helmet' },
+    { name: 'High Helmet' },
+    { name: 'Pilot Goggles' },
+    { name: 'Cap' },
+    { name: 'Beret' },
+    { name: 'Military Helmet' },
+    { name: 'Tactical Helmet' },
     { name: 'Helmet' }
   ],
 
