@@ -556,36 +556,62 @@ function WeaponGameIcon({ weapon }) {
 
       const cropW = maxX - minX + 1;
       const cropH = maxY - minY + 1;
-      const maxW = weapon.type === 'sniper' ? 27 : 25;
-      const maxH = weapon.type === 'heavy' ? 18 : 16;
+      const angle = -Math.PI / 12;
+      const cos = Math.abs(Math.cos(angle));
+      const sin = Math.abs(Math.sin(angle));
+      const maxW = weapon.type === 'sniper' ? 23 : 22;
+      const maxH = weapon.type === 'heavy' ? 18 : 17;
+      const rotW = cropW * cos + cropH * sin;
+      const rotH = cropW * sin + cropH * cos;
       const scale = Math.min(maxW / cropW, maxH / cropH);
-      const drawW = Math.max(8, Math.round(cropW * scale));
-      const drawH = Math.max(5, Math.round(cropH * scale));
+      const rotatedScale = Math.min(maxW / rotW, maxH / rotH);
+      const finalScale = Math.min(scale, rotatedScale);
+      const drawW = Math.max(8, Math.round(cropW * finalScale));
+      const drawH = Math.max(5, Math.round(cropH * finalScale));
       const mask = document.createElement('canvas');
-      mask.width = drawW;
-      mask.height = drawH;
+      const maskPad = 5;
+      mask.width = drawW + maskPad * 2;
+      mask.height = drawH + maskPad * 2;
       const mctx = mask.getContext('2d');
       mctx.imageSmoothingEnabled = true;
       mctx.imageSmoothingQuality = 'high';
-      mctx.drawImage(src, minX, minY, cropW, cropH, 0, 0, drawW, drawH);
+      mctx.translate(mask.width / 2, mask.height / 2);
+      mctx.rotate(angle);
+      mctx.drawImage(src, minX, minY, cropW, cropH, -drawW / 2, -drawH / 2, drawW, drawH);
 
-      const maskData = mctx.getImageData(0, 0, drawW, drawH).data;
-      const solid = new Uint8Array(drawW * drawH);
+      const maskData = mctx.getImageData(0, 0, mask.width, mask.height).data;
+      const solid = new Uint8Array(mask.width * mask.height);
+      let solidMinX = mask.width, solidMinY = mask.height, solidMaxX = -1, solidMaxY = -1;
       for (let i = 0; i < solid.length; i++) {
-        solid[i] = maskData[i * 4 + 3] > 28 ? 1 : 0;
+        if (maskData[i * 4 + 3] > 28) {
+          solid[i] = 1;
+          const x = i % mask.width;
+          const y = (i / mask.width) | 0;
+          if (x < solidMinX) solidMinX = x;
+          if (y < solidMinY) solidMinY = y;
+          if (x > solidMaxX) solidMaxX = x;
+          if (y > solidMaxY) solidMaxY = y;
+        }
       }
 
-      const ox = Math.floor((size - drawW) / 2);
-      const oy = Math.floor((size - drawH) / 2) + 1;
+      if (solidMaxX < solidMinX || solidMaxY < solidMinY) {
+        drawFallback();
+        return;
+      }
+
+      const solidW = solidMaxX - solidMinX + 1;
+      const solidH = solidMaxY - solidMinY + 1;
+      const ox = Math.floor((size - solidW) / 2) - solidMinX;
+      const oy = Math.floor((size - solidH) / 2) - solidMinY + 1;
       ctx.fillStyle = '#ffffff';
-      for (let y = 0; y < drawH; y++) {
-        for (let x = 0; x < drawW; x++) {
-          if (!solid[y * drawW + x]) continue;
+      for (let y = 0; y < mask.height; y++) {
+        for (let x = 0; x < mask.width; x++) {
+          if (!solid[y * mask.width + x]) continue;
           for (let dy = -2; dy <= 2; dy++) {
             for (let dx = -2; dx <= 2; dx++) {
               if (Math.abs(dx) + Math.abs(dy) > 2) continue;
               const nx = x + dx, ny = y + dy;
-              if (nx < 0 || ny < 0 || nx >= drawW || ny >= drawH || !solid[ny * drawW + nx]) {
+              if (nx < 0 || ny < 0 || nx >= mask.width || ny >= mask.height || !solid[ny * mask.width + nx]) {
                 ctx.fillRect(ox + nx, oy + ny, 1, 1);
               }
             }
@@ -594,9 +620,9 @@ function WeaponGameIcon({ weapon }) {
       }
 
       ctx.fillStyle = '#101014';
-      for (let y = 0; y < drawH; y++) {
-        for (let x = 0; x < drawW; x++) {
-          if (solid[y * drawW + x]) ctx.fillRect(ox + x, oy + y, 1, 1);
+      for (let y = 0; y < mask.height; y++) {
+        for (let x = 0; x < mask.width; x++) {
+          if (solid[y * mask.width + x]) ctx.fillRect(ox + x, oy + y, 1, 1);
         }
       }
     } catch (e) {
