@@ -367,9 +367,9 @@
 
   function hairVisibilityForHat(hatKind) {
     const hat = hatKind || 'None';
-    return hat === 'None'
-      ? { back: true, front: true }
-      : { back: false, front: false };
+    if (hat === 'None') return { back: true, front: true };
+    if (hat === 'Cap') return { back: true, front: false };
+    return { back: false, front: false };
   }
 
   function eyesVisibleForHat(hatKind) {
@@ -788,8 +788,9 @@
     withScale(ctx, originX, originY, bodyProfile.headScale || BODY_SCALE, function () {
       const hairOpts = { bodyType };
       const hairVisibility = hairVisibilityForHat(hatKind);
+      const backHairStyle = hatKind === 'Cap' && bodyType === 'female' ? 'Ponytail' : hairStyle;
       if (hairVisibility.back && drawHairBack) {
-        drawHairBack(ctx, headTL_x, headTL_y, hairStyle, hair, hairOpts);
+        drawHairBack(ctx, headTL_x, headTL_y, backHairStyle, hair, hairOpts);
       }
 
       drawNeck(ctx, originX + upperBodyDXLocal, headTL_y + 8, torsoTL_y, skin);
