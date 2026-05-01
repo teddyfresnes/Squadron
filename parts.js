@@ -460,22 +460,24 @@
 
     if (style === 'Textured Crop') {
       const tpl = [
-        '..OOOOOO...',
-        '.OBBBBBBO..',
-        'OBBHHBBBBO.',
-        'OBBBBBBBBO.',
-        '.OBBBBBSO..',
-        '..BSSBB....'
+        '...OO.OO...',
+        '..OBBBBBBO.',
+        '.OBHHBBBSO.',
+        'OBBHBBBBBO.',
+        'OBBBBBSBO..',
+        '.OBS..BS...',
+        '..B...S....'
       ];
       E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
     } else if (style === 'Low Fade') {
       const tpl = [
-        '...OOOOO...',
-        '..OBBBBBO..',
+        '....OOOO...',
+        '..OOBBBBO..',
         '.OBHHBBBO..',
         'OBBBBBBBBO.',
-        '.OBBBBBSO..',
-        '..SSSS.....'
+        'OBBSSSBBO..',
+        '.SS...SS...',
+        '..S........'
       ];
       E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, S: s, H: h });
     } else if (style === 'Side Part') {
@@ -484,57 +486,58 @@
         '.OBBBBBBO..',
         'OBHHSBBBBO.',
         'OBHHBBBBBO.',
-        'OBBBBBBBBO.',
-        '.OBBBBBSO..',
-        '..BBSO.....'
+        'OBBBBBSBO..',
+        '.OBB..SO...',
+        '..B...S....'
       ];
       E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
     } else if (style === 'Quiff') {
       const tpl = [
-        '....OOOO...',
-        '...OBBBBO..',
-        '..OBHHBBBO.',
-        '.OBHBBBBBO.',
+        '.....OO....',
+        '...OOBBO...',
+        '..OBHHBBO..',
+        '.OBHBBBBO..',
         'OBBBBBBBBO.',
-        '.OBBBBBSO..',
-        '..BBBBS....'
+        '.OBBBBSO...',
+        '..BB..S....'
       ];
       E.stamp(ctx, cx - 1, cy - 3, tpl, { O, B: b, S: s, H: h });
     } else if (style === 'Curly Top') {
       const tpl = [
-        '..OOOOOO...',
+        '..OO.OO....',
         '.OBBOBBBO..',
-        'OBBHHBBBBO.',
+        'OBBHHOBBBO.',
         'OBBBBBBBBO.',
-        '.OBBSBBBBO.',
-        '..BBSBBO...'
+        '.OBBSBBBO..',
+        '..B.S.BS...'
       ];
       E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
     } else if (style === 'Buzz Cut') {
       const tpl = [
-        '..OOOOOO...',
-        '.OBBBBBBO..',
-        'OBSBSBSBSO.',
-        '.OOOOOOOO..'
+        '..S.S.S....',
+        '.S.S.S.S...',
+        '..S.S.S.S..',
+        '.S.S.S.....'
       ];
-      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, S: s, H: h });
+      E.stamp(ctx, cx - 1, cy + 1, tpl, { O, B: b, S: s, H: h });
     } else if (style === 'Crew Cut') {
       const tpl = [
-        '..OOOOOO...',
-        '.OBBBBBBO..',
-        'OBBHBBBBBO.',
+        '...OOOOO...',
+        '..OBBBBBO..',
+        '.OBHBBBBBO.',
         'OBBBBBBBBO.',
-        '.OBSBBSBO..'
+        '.OBBSBBO...',
+        '..S..S.....'
       ];
       E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
     } else if (style === 'Slick Back') {
       const tpl = [
-        '..OOOOOO...',
-        '.OBBBBBBO..',
+        '...OOOOO...',
+        '.OOBBBBBO..',
         'OBHHBBBBBO.',
         'OBBBBBBBBO.',
-        '.OSSSSSSSO.',
-        '..OOOOOO...'
+        '.OBBSSSBO..',
+        '..S.S.S....'
       ];
       E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
     } else if (style === 'Stubble') {
@@ -552,6 +555,25 @@
     if (!hatCol || hatKind === 'None') return;
     const b = hatCol.base, s = hatCol.shade, h = hatCol.hl;
     const O = P.outline;
+
+    if (hatKind === 'Helmet' || hatKind === 'Combat Helmet') {
+      const tpl = [
+        '..OOOOO..',
+        '.OBBBBBO.',
+        'OBHBBBBBO',
+        'OBBBBBBBO',
+        'OBBBSSSO.',
+        'OBBS.....',
+        'OBS......',
+        'OO.......'
+      ];
+      E.stamp(ctx, cx - 1, cy - 3, tpl, { O, B: b, S: s, H: h });
+      E.px(ctx, cx + 3, cy - 1, h);
+      E.px(ctx, cx + 4, cy - 1, h);
+      E.px(ctx, cx + 2, cy + 4, s);
+      E.px(ctx, cx + 7, cy + 2, O);
+      return;
+    }
 
     if (hatKind === 'Beanie') {
       const tpl = [
@@ -1679,8 +1701,10 @@
         ctx.closePath();
       });
       strokeLine(ctx, cx + 1.8, cy + 0.2, cx + 5.75, cy + 0.62, h, 0.42);
-      strokeLine(ctx, cx + 1.05, cy + 3.55, cx + 7.55, cy + 3.5, s, 0.38);
+      strokeLine(ctx, cx + 0.9, cy + 3.5, cx + 2.25, cy + 3.85, s, 0.32);
+      strokeLine(ctx, cx + 3.4, cy + 3.65, cx + 4.75, cy + 3.48, s, 0.28);
       strokeLine(ctx, cx + 5.65, cy + 2.0, cx + 7.55, cy + 2.48, s, 0.32);
+      strokeLine(ctx, cx + 0.72, cy + 3.45, cx + 0.48, cy + 4.55, s, 0.28);
       return;
     }
 
@@ -1699,7 +1723,9 @@
         ctx.quadraticCurveTo(cx + 4.9, cy + 3.58, cx + 0.95, cy + 3.12);
         ctx.closePath();
       });
-      strokeLine(ctx, cx + 1.25, cy + 3.08, cx + 7.2, cy + 3.08, s, 0.38);
+      strokeLine(ctx, cx + 1.25, cy + 3.08, cx + 2.55, cy + 3.28, s, 0.32);
+      strokeLine(ctx, cx + 5.25, cy + 2.95, cx + 7.2, cy + 2.85, s, 0.32);
+      strokeLine(ctx, cx + 0.95, cy + 3.1, cx + 0.72, cy + 4.25, s, 0.26);
       strokeLine(ctx, cx + 2.4, cy + 1.05, cx + 5.65, cy + 0.92, h, 0.35);
       return;
     }
@@ -1725,7 +1751,9 @@
       });
       strokeLine(ctx, cx + 3.42, cy - 0.42, cx + 4.15, cy + 3.42, s, 0.42);
       strokeLine(ctx, cx + 4.42, cy + 0.18, cx + 7.0, cy + 1.08, h, 0.38);
-      strokeLine(ctx, cx + 0.95, cy + 3.75, cx + 7.75, cy + 3.78, s, 0.34);
+      strokeLine(ctx, cx + 0.95, cy + 3.75, cx + 2.55, cy + 4.05, s, 0.3);
+      strokeLine(ctx, cx + 5.65, cy + 3.72, cx + 7.75, cy + 3.45, s, 0.3);
+      strokeLine(ctx, cx + 0.72, cy + 3.75, cx + 0.5, cy + 4.8, s, 0.26);
       return;
     }
 
@@ -1752,7 +1780,9 @@
         ctx.moveTo(cx + 2.35, cy + 0.0);
         ctx.quadraticCurveTo(cx + 5.2, cy - 1.55, cx + 7.25, cy + 0.85);
       });
-      strokeLine(ctx, cx + 1.0, cy + 3.82, cx + 7.78, cy + 3.72, s, 0.38);
+      strokeLine(ctx, cx + 1.0, cy + 3.82, cx + 2.5, cy + 4.08, s, 0.3);
+      strokeLine(ctx, cx + 5.7, cy + 3.52, cx + 7.78, cy + 3.18, s, 0.32);
+      strokeLine(ctx, cx + 0.72, cy + 3.78, cx + 0.48, cy + 4.75, s, 0.26);
       return;
     }
 
@@ -1781,32 +1811,23 @@
       });
       fillEllipse(ctx, cx + 3.12, cy - 0.2, 0.38, 0.22, h);
       fillEllipse(ctx, cx + 5.35, cy - 0.12, 0.42, 0.24, h);
-      strokeLine(ctx, cx + 1.0, cy + 3.78, cx + 7.55, cy + 3.75, s, 0.36);
+      fillEllipse(ctx, cx + 1.12, cy + 3.78, 0.22, 0.16, s);
+      fillEllipse(ctx, cx + 4.9, cy + 3.55, 0.24, 0.16, s);
+      strokeLine(ctx, cx + 6.05, cy + 3.55, cx + 7.55, cy + 3.25, s, 0.3);
+      strokeLine(ctx, cx + 0.72, cy + 3.75, cx + 0.48, cy + 4.75, s, 0.26);
       return;
     }
 
     if (style === 'Buzz Cut') {
-      fillPath(ctx, O, function () {
-        ctx.moveTo(cx + 0.55, cy + 3.6);
-        ctx.quadraticCurveTo(cx + 0.85, cy + 1.2, cx + 4.25, cy + 0.85);
-        ctx.quadraticCurveTo(cx + 7.55, cy + 1.1, cx + 7.85, cy + 3.55);
-        ctx.lineTo(cx + 0.55, cy + 3.6);
-        ctx.closePath();
-      });
-      fillPath(ctx, b, function () {
-        ctx.moveTo(cx + 1.05, cy + 3.25);
-        ctx.quadraticCurveTo(cx + 1.35, cy + 1.6, cx + 4.25, cy + 1.42);
-        ctx.quadraticCurveTo(cx + 7.05, cy + 1.55, cx + 7.35, cy + 3.2);
-        ctx.lineTo(cx + 1.05, cy + 3.25);
-        ctx.closePath();
-      });
-      fillEllipse(ctx, cx + 1.8, cy + 2.2, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 3.0, cy + 1.85, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 4.4, cy + 2.5, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 5.6, cy + 1.9, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 6.6, cy + 2.4, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 2.4, cy + 2.9, 0.16, 0.1, s);
-      fillEllipse(ctx, cx + 5.0, cy + 1.45, 0.18, 0.1, h);
+      fillEllipse(ctx, cx + 1.25, cy + 2.45, 0.18, 0.1, s);
+      fillEllipse(ctx, cx + 2.35, cy + 1.8, 0.18, 0.1, s);
+      fillEllipse(ctx, cx + 3.6, cy + 1.45, 0.18, 0.1, s);
+      fillEllipse(ctx, cx + 4.85, cy + 1.65, 0.18, 0.1, h);
+      fillEllipse(ctx, cx + 6.05, cy + 2.0, 0.18, 0.1, s);
+      fillEllipse(ctx, cx + 7.0, cy + 2.65, 0.16, 0.1, s);
+      fillEllipse(ctx, cx + 2.0, cy + 3.05, 0.16, 0.1, s);
+      fillEllipse(ctx, cx + 3.2, cy + 2.65, 0.16, 0.1, s);
+      fillEllipse(ctx, cx + 5.1, cy + 2.85, 0.16, 0.1, s);
       return;
     }
 
@@ -1826,7 +1847,9 @@
         ctx.closePath();
       });
       strokeLine(ctx, cx + 2.5, cy + 0.95, cx + 5.8, cy + 0.95, h, 0.38);
-      strokeLine(ctx, cx + 1.4, cy + 3.2, cx + 7.1, cy + 3.2, s, 0.34);
+      strokeLine(ctx, cx + 1.4, cy + 3.2, cx + 2.85, cy + 3.38, s, 0.3);
+      strokeLine(ctx, cx + 5.4, cy + 3.05, cx + 7.1, cy + 2.95, s, 0.3);
+      strokeLine(ctx, cx + 0.9, cy + 3.35, cx + 0.72, cy + 4.18, s, 0.24);
       return;
     }
 
@@ -1848,7 +1871,9 @@
       strokeLine(ctx, cx + 6.0, cy - 0.4, cx + 1.5, cy + 0.5, h, 0.32);
       strokeLine(ctx, cx + 6.5, cy + 0.6, cx + 1.4, cy + 1.5, h, 0.3);
       strokeLine(ctx, cx + 6.8, cy + 1.7, cx + 1.4, cy + 2.4, s, 0.32);
-      strokeLine(ctx, cx + 1.0, cy + 3.5, cx + 7.55, cy + 3.45, s, 0.4);
+      strokeLine(ctx, cx + 1.0, cy + 3.5, cx + 2.55, cy + 3.82, s, 0.32);
+      strokeLine(ctx, cx + 5.5, cy + 3.38, cx + 7.55, cy + 3.05, s, 0.34);
+      strokeLine(ctx, cx + 0.72, cy + 3.52, cx + 0.48, cy + 4.5, s, 0.26);
       return;
     }
 
@@ -1874,6 +1899,34 @@
     const b = hatCol.base;
     const s = hatCol.shade;
     const h = hatCol.hl;
+
+    if (hatKind === 'Helmet' || hatKind === 'Combat Helmet') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.85, cy + 6.6);
+        ctx.quadraticCurveTo(cx - 0.9, cy + 1.2, cx + 1.65, cy - 1.55);
+        ctx.quadraticCurveTo(cx + 4.55, cy - 3.1, cx + 7.45, cy - 1.05);
+        ctx.quadraticCurveTo(cx + 8.95, cy + 0.15, cx + 8.72, cy + 3.6);
+        ctx.quadraticCurveTo(cx + 6.6, cy + 4.1, cx + 4.75, cy + 3.78);
+        ctx.quadraticCurveTo(cx + 3.45, cy + 4.35, cx + 2.78, cy + 5.82);
+        ctx.quadraticCurveTo(cx + 1.92, cy + 7.55, cx - 0.85, cy + 6.6);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.25, cy + 5.9);
+        ctx.quadraticCurveTo(cx - 0.2, cy + 1.45, cx + 2.05, cy - 0.95);
+        ctx.quadraticCurveTo(cx + 4.55, cy - 2.32, cx + 7.0, cy - 0.62);
+        ctx.quadraticCurveTo(cx + 8.08, cy + 0.35, cx + 8.05, cy + 2.9);
+        ctx.quadraticCurveTo(cx + 6.35, cy + 3.35, cx + 4.65, cy + 3.1);
+        ctx.quadraticCurveTo(cx + 3.0, cy + 3.92, cx + 2.22, cy + 5.28);
+        ctx.quadraticCurveTo(cx + 1.45, cy + 6.52, cx - 0.25, cy + 5.9);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 0.35, cy + 3.75, cx + 3.1, cy + 4.0, s, 0.5);
+      strokeLine(ctx, cx + 4.8, cy + 3.18, cx + 7.65, cy + 2.82, s, 0.55);
+      strokeLine(ctx, cx + 2.75, cy - 0.72, cx + 5.25, cy - 1.05, h, 0.45);
+      fillEllipse(ctx, cx + 0.85, cy + 5.2, 0.65, 0.75, s);
+      return;
+    }
 
     if (hatKind === 'Cap') {
       fillPath(ctx, O, function () {

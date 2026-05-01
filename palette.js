@@ -72,15 +72,20 @@ window.Palette = {
     { name: 'Red',    base: '#8a2a2a', shade: '#5a1010', hl: '#b04242' }
   ],
 
-  // Hat presets
+  // Headwear type. Helmet color is picked separately.
   hat: [
     { name: 'None' },
-    { name: 'Beanie',        base: '#2a2a30', shade: '#10101a', hl: '#42424a' },
-    { name: 'Cap',           base: '#2a3a5a', shade: '#12203a', hl: '#42527a' },
-    { name: 'Helmet',        base: '#5a6a3a', shade: '#3a4a22', hl: '#7a8a52' },
-    { name: 'Combat Helmet', base: '#2a2a30', shade: '#10101a', hl: '#42424a' },
-    { name: 'Boonie',        base: '#8a7a4a', shade: '#5a4a22', hl: '#a89a6a' },
-    { name: 'Bandana',       base: '#8a2a2a', shade: '#5a1010', hl: '#b04242' }
+    { name: 'Helmet' }
+  ],
+
+  // Helmet colors
+  helmet: [
+    { name: 'Olive',  base: '#5a6a3a', shade: '#2f3f20', hl: '#7a8a52' },
+    { name: 'Black',  base: '#2a2a30', shade: '#10101a', hl: '#42424a' },
+    { name: 'Navy',   base: '#2a3a5a', shade: '#12203a', hl: '#42527a' },
+    { name: 'Coyote', base: '#8a6a42', shade: '#5a4020', hl: '#a88a5a' },
+    { name: 'Red',    base: '#8a2a2a', shade: '#5a1010', hl: '#b04242' },
+    { name: 'White',  base: '#d8d2c2', shade: '#a8a494', hl: '#f0ecd8' }
   ],
 
   // Hairstyles

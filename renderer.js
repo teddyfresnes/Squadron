@@ -365,27 +365,11 @@
     return BODY_PROFILES[(cfg && cfg.bodyType) || 'male'] || BODY_PROFILES.male;
   }
 
-  function hairHasLowerLayer(style) {
-    return (
-      style === 'Messy' ||
-      style === 'Long' ||
-      style === 'Ponytail' ||
-      style === 'Bob' ||
-      style === 'Wavy' ||
-      style === 'Flowing' ||
-      style === 'High Ponytail'
-    );
-  }
-
-  function hairVisibilityForHat(hatKind, hairStyle, bodyType) {
+  function hairVisibilityForHat(hatKind) {
     const hat = hatKind || 'None';
-    if (hat === 'None' || hat === 'Bandana') return { back: true, front: true };
-    if (hat === 'Cap' || hat === 'Boonie') {
-      const lower = hairHasLowerLayer(hairStyle);
-      if (bodyType === 'female') return { back: lower, front: false };
-      return { back: false, front: lower };
-    }
-    return { back: false, front: false };
+    return hat === 'None'
+      ? { back: true, front: true }
+      : { back: false, front: false };
   }
 
   function worldPoint(originX, originY, x, y, bodyProfile) {
@@ -671,8 +655,16 @@
     const pants = P.pants[cfg.pantsIdx];
     const vest  = cfg.vestOn ? P.vest[cfg.vestIdx] : null;
     const pack  = cfg.backpackOn ? P.backpack[cfg.backpackIdx] : null;
-    const hatKind = P.hat[cfg.hatIdx].name;
-    const hatCol = P.hat[cfg.hatIdx];
+    const hatOptions = P.hat || [{ name: 'None' }];
+    const savedHatIdx = Number.isInteger(cfg.hatIdx) ? cfg.hatIdx : 0;
+    const hatIdx = savedHatIdx > 0 ? Math.min(savedHatIdx, hatOptions.length - 1) : 0;
+    const hatEntry = hatOptions[Math.max(0, hatIdx)] || hatOptions[0];
+    const hatKind = hatEntry.name;
+    const helmetColors = P.helmet || [];
+    const helmetColorIdx = Number.isInteger(cfg.helmetColorIdx) ? cfg.helmetColorIdx : 0;
+    const hatCol = hatKind === 'Helmet'
+      ? (helmetColors[helmetColorIdx] || helmetColors[0] || hatEntry)
+      : hatEntry;
     const hairStyle = P.hairstyles[cfg.hairStyleIdx].name;
     const weapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
     const hold = getHold(weapon);
@@ -797,7 +789,7 @@
 
     withScale(ctx, originX, originY, bodyProfile.headScale || BODY_SCALE, function () {
       const hairOpts = { bodyType };
-      const hairVisibility = hairVisibilityForHat(hatKind, hairStyle, bodyType);
+      const hairVisibility = hairVisibilityForHat(hatKind);
       if (hairVisibility.back && drawHairBack) {
         drawHairBack(ctx, headTL_x, headTL_y, hairStyle, hair, hairOpts);
       }

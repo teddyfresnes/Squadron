@@ -19,7 +19,8 @@ const DEFAULT_CFG = {
   vestIdx: 0,
   backpackOn: false,
   backpackIdx: 1,
-  hatIdx: 4,  // Combat Helmet
+  hatIdx: 1,
+  helmetColorIdx: 0,
   weaponIdx: DEFAULT_WEAPON_IDX,
   weaponSkinIdx: 33  // sheet 33.png — default texture style
 };
@@ -51,6 +52,24 @@ function normalizeHairStyleForBody(cfg) {
   const options = hairStyleOptionsForBody(bodyType);
   if (options.some((style) => style.idx === cfg.hairStyleIdx)) return cfg;
   return { ...cfg, hairStyleIdx: fallbackHairStyleIdx(bodyType) };
+}
+
+function normalizeHeadwear(cfg) {
+  const hats = window.Palette.hat || [];
+  const helmetColors = window.Palette.helmet || [];
+  let hatIdx = Number.isInteger(cfg.hatIdx) ? cfg.hatIdx : DEFAULT_CFG.hatIdx;
+  let helmetColorIdx = Number.isInteger(cfg.helmetColorIdx) ? cfg.helmetColorIdx : DEFAULT_CFG.helmetColorIdx;
+
+  if (hatIdx > 1) hatIdx = 1;
+  if (hatIdx < 0 || !hats[hatIdx]) hatIdx = 0;
+  if (helmetColorIdx < 0 || helmetColorIdx >= helmetColors.length) helmetColorIdx = DEFAULT_CFG.helmetColorIdx;
+
+  if (hatIdx === cfg.hatIdx && helmetColorIdx === cfg.helmetColorIdx) return cfg;
+  return { ...cfg, hatIdx, helmetColorIdx };
+}
+
+function normalizeCharacterConfig(cfg) {
+  return normalizeHeadwear(normalizeHairStyleForBody(cfg));
 }
 
 // Stage is sized to fit the largest weapons plus the 2x soldier body. Snipers
@@ -215,9 +234,9 @@ function App() {
   const [cfg, setCfg] = useState(() => {
     try {
       const saved = localStorage.getItem('char-cfg');
-      if (saved) return normalizeHairStyleForBody({ ...DEFAULT_CFG, ...JSON.parse(saved) });
+      if (saved) return normalizeCharacterConfig({ ...DEFAULT_CFG, ...JSON.parse(saved) });
     } catch (e) {}
-    return normalizeHairStyleForBody(DEFAULT_CFG);
+    return normalizeCharacterConfig(DEFAULT_CFG);
   });
   const [animKey, setAnimKey] = useState(() => localStorage.getItem('char-anim') || 'idle');
   const [facing, setFacing] = useState(1);
@@ -228,8 +247,8 @@ function App() {
   useEffect(() => { localStorage.setItem('char-cfg', JSON.stringify(cfg)); }, [cfg]);
   useEffect(() => { localStorage.setItem('char-anim', animKey); }, [animKey]);
   useEffect(() => {
-    setCfg((c) => normalizeHairStyleForBody(c));
-  }, [cfg.bodyType, cfg.hairStyleIdx]);
+    setCfg((c) => normalizeCharacterConfig(c));
+  }, [cfg.bodyType, cfg.hairStyleIdx, cfg.hatIdx, cfg.helmetColorIdx]);
 
   // Push the active weapon skin into the Weapons module whenever it changes.
   useEffect(() => {
@@ -239,11 +258,12 @@ function App() {
   }, [cfg.weaponSkinIdx]);
 
   const set = (key) => (v) => setCfg((c) => ({ ...c, [key]: v }));
-  const setBodyType = (bodyType) => setCfg((c) => normalizeHairStyleForBody({ ...c, bodyType }));
+  const setBodyType = (bodyType) => setCfg((c) => normalizeCharacterConfig({ ...c, bodyType }));
 
   const currentWeapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
   const hairStyleOptions = useMemo(() => hairStyleOptionsForBody(cfg.bodyType || 'male'), [cfg.bodyType]);
   const selectedHairStyleOptionIdx = Math.max(0, hairStyleOptions.findIndex((style) => style.idx === cfg.hairStyleIdx));
+  const selectedHeadwearIdx = Math.max(0, Math.min(cfg.hatIdx || 0, window.Palette.hat.length - 1));
 
   return (
     <div className="app">
@@ -350,8 +370,14 @@ function App() {
           </Section>
 
           <Section title="Headwear">
-            <Chips options={window.Palette.hat} selectedIdx={cfg.hatIdx} onPick={set('hatIdx')} />
+            <Chips options={window.Palette.hat} selectedIdx={selectedHeadwearIdx} onPick={set('hatIdx')} />
           </Section>
+
+          {selectedHeadwearIdx === 1 && (
+            <Section title="Helmet Color">
+              <ColorSwatches options={window.Palette.helmet} selectedIdx={cfg.helmetColorIdx} onPick={set('helmetColorIdx')} field="base" />
+            </Section>
+          )}
 
           <Section title="Eyes">
             <ColorSwatches options={window.Palette.eye} selectedIdx={cfg.eyeIdx} onPick={set('eyeIdx')} field="base" />
