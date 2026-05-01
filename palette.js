@@ -1,6 +1,21 @@
 // Color palette and helpers — neutral base palette, all customizable colors use OKLCH-ish hue picking
 // We stick to a limited palette per layer with shade + highlight + outline for pixel-art feel.
 
+const SOLDIER_COLORS = [
+  { name: 'Light Blue', base: '#78b8e8', shade: '#4f82b8', hl: '#a6d8ff' },
+  { name: 'Blue',       base: '#2f5f9f', shade: '#183764', hl: '#5f8ed0' },
+  { name: 'Light Green', base: '#78b85f', shade: '#4f813b', hl: '#a6da8a' },
+  { name: 'Green',      base: '#3d6f2e', shade: '#24451c', hl: '#61944d' },
+  { name: 'Pale Red',   base: '#b85b5b', shade: '#7b3434', hl: '#d98a8a' },
+  { name: 'Purple',     base: '#7656b4', shade: '#493077', hl: '#9b7add' },
+  { name: 'Pink',       base: '#d778a8', shade: '#9a3f70', hl: '#f0a6ca' },
+  { name: 'Yellow',     base: '#d8b64a', shade: '#9a7a24', hl: '#f2d978' },
+  { name: 'Orange',     base: '#d47a32', shade: '#914514', hl: '#f0a15a' },
+  { name: 'Black',      base: '#2a2a30', shade: '#10101a', hl: '#44444c' },
+  { name: 'Grey',       base: '#74747c', shade: '#44444c', hl: '#a0a0a8' },
+  { name: 'White',      base: '#d8d2c2', shade: '#a8a494', hl: '#f0ecd8' }
+];
+
 window.Palette = {
   // Neutral outlines & whites
   outline: '#0a0a10',
@@ -16,14 +31,14 @@ window.Palette = {
     { name: 'Dark',    base: '#4f2e1d', shade: '#2e1a11', hl: '#6a4126' }
   ],
 
-  // Hair colors (derived but more saturated)
+  // Hair colors
   hair: [
-    { name: 'Black',   base: '#1b1b20', shade: '#000000', hl: '#33333a' },
-    { name: 'Brown',   base: '#5a3a22', shade: '#35200f', hl: '#7a5132' },
-    { name: 'Blonde',  base: '#e4c37a', shade: '#b89448', hl: '#f7e0a4' },
-    { name: 'Red',     base: '#a84423', shade: '#6e2a12', hl: '#d26a3e' },
-    { name: 'White',   base: '#e0dccb', shade: '#a8a594', hl: '#ffffff' },
-    { name: 'Green',   base: '#4a7a3a', shade: '#2d4c21', hl: '#6da057' }
+    { name: 'Black',       base: '#141416', shade: '#000000', hl: '#2a2a2e' },
+    { name: 'Very Dark Brown', base: '#24160d', shade: '#100805', hl: '#3a2418' },
+    { name: 'Dark Brown',  base: '#3f2818', shade: '#211208', hl: '#5a3824' },
+    { name: 'Brown',       base: '#5a3a22', shade: '#35200f', hl: '#7a5132' },
+    { name: 'Blonde',      base: '#e4c37a', shade: '#b89448', hl: '#f7e0a4' },
+    { name: 'Grey',        base: '#9a9588', shade: '#66645c', hl: '#d8d4c8' }
   ],
 
   // Eye colors
@@ -36,16 +51,7 @@ window.Palette = {
   ],
 
   // Uniform / clothing presets (top = shirt)
-  uniforms: [
-    { name: 'Olive',    base: '#5a6a3a', shade: '#3a4a22', hl: '#7a8a52' },
-    { name: 'Khaki',    base: '#8a7a4a', shade: '#5a4a22', hl: '#a89a6a' },
-    { name: 'Navy',     base: '#2a3a5a', shade: '#12203a', hl: '#42527a' },
-    { name: 'Black',    base: '#2a2a30', shade: '#10101a', hl: '#42424a' },
-    { name: 'Red',      base: '#8a2a2a', shade: '#5a1010', hl: '#b04242' },
-    { name: 'Urban',    base: '#4a4a52', shade: '#2a2a30', hl: '#6a6a72' },
-    { name: 'Desert',   base: '#b89864', shade: '#8a6a3a', hl: '#d2b88a' },
-    { name: 'White',    base: '#d8d2c2', shade: '#a8a494', hl: '#f0ecd8' }
-  ],
+  uniforms: SOLDIER_COLORS,
 
   // Pants
   pants: [
@@ -58,19 +64,12 @@ window.Palette = {
 
   // Vest (armor/tactical)
   vest: [
-    { name: 'Tactical Black',  base: '#1a1a22', shade: '#000000', hl: '#2e2e38', strap: '#0a0a10' },
-    { name: 'Coyote',          base: '#8a6a42', shade: '#5a4020', hl: '#a88a5a', strap: '#3a2a12' },
-    { name: 'Olive',           base: '#3a4a22', shade: '#22321a', hl: '#5a6a3a', strap: '#12200a' },
-    { name: 'Urban Grey',      base: '#52525a', shade: '#32323a', hl: '#72727a', strap: '#20202a' }
+    { name: 'Black', base: '#1a1a22', shade: '#000000', hl: '#2e2e38', strap: '#0a0a10' },
+    { name: 'White', base: '#e6e0d2', shade: '#b4ada0', hl: '#ffffff', strap: '#9c9588' }
   ],
 
   // Backpack
-  backpack: [
-    { name: 'Black',  base: '#20202a', shade: '#10101a', hl: '#36363e' },
-    { name: 'Olive',  base: '#3a4a22', shade: '#22321a', hl: '#5a6a3a' },
-    { name: 'Coyote', base: '#8a6a42', shade: '#5a4020', hl: '#a88a5a' },
-    { name: 'Red',    base: '#8a2a2a', shade: '#5a1010', hl: '#b04242' }
-  ],
+  backpack: SOLDIER_COLORS,
 
   // Headwear type. Helmet color is picked separately.
   hat: [
@@ -80,14 +79,7 @@ window.Palette = {
   ],
 
   // Helmet colors
-  helmet: [
-    { name: 'Olive',  base: '#5a6a3a', shade: '#2f3f20', hl: '#7a8a52' },
-    { name: 'Black',  base: '#2a2a30', shade: '#10101a', hl: '#42424a' },
-    { name: 'Navy',   base: '#2a3a5a', shade: '#12203a', hl: '#42527a' },
-    { name: 'Coyote', base: '#8a6a42', shade: '#5a4020', hl: '#a88a5a' },
-    { name: 'Red',    base: '#8a2a2a', shade: '#5a1010', hl: '#b04242' },
-    { name: 'White',  base: '#d8d2c2', shade: '#a8a494', hl: '#f0ecd8' }
-  ],
+  helmet: SOLDIER_COLORS,
 
   // Hairstyles
   hairstyles: [

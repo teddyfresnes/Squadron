@@ -825,20 +825,39 @@
     const b = pack.base, s = pack.shade, h = pack.hl;
     const O = P.outline;
     // Behind torso, so sits on LEFT side (back). tx is torso TL.
-    // Pack occupies x tx-2..tx-0 (3 wide), y ty+1..ty+6
     const tpl = [
+      '.OO.',
       'OBBO',
       'OBHO',
       'OBBO',
+      'OBSO',
       'OBBO',
-      'OBBO',
-      'OBBO',
-      'OOOO'
+      '.OO.'
     ];
-    E.stamp(ctx, tx - 2, ty + 1, tpl, { O, B: b, H: h, S: s });
-    // Horizontal strap on pack
-    E.px(ctx, tx - 1, ty + 4, s);
-    E.px(ctx, tx - 2, ty + 4, O);
+    E.stamp(ctx, tx - 3, ty + 1, tpl, { O, B: b, H: h, S: s });
+    E.px(ctx, tx - 2, ty + 4, s);
+    E.px(ctx, tx - 1, ty + 5, O);
+  };
+
+  Parts.drawBackpackStrap = function (ctx, tx, ty, pack, opts) {
+    if (!pack) return;
+    opts = opts || {};
+    const strap = pack.shade || P.outlineSoft;
+    const O = P.outline;
+    const slim = opts.slender === true ? 1 : 0;
+    const pts = [
+      [tx + 1, ty + 1],
+      [tx + 2, ty + 2],
+      [tx + 3, ty + 3],
+      [tx + 4 - slim, ty + 4],
+      [tx + 5 - slim, ty + 5]
+    ];
+    for (const p of pts) {
+      E.px(ctx, p[0], p[1], O);
+    }
+    for (let i = 1; i < pts.length - 1; i++) {
+      E.px(ctx, pts[i][0], pts[i][1], strap);
+    }
   };
 
   // ---------- LEGS ----------
@@ -1751,11 +1770,11 @@
         ctx.quadraticCurveTo(cx + 2.62, cy + 3.92, cx + 0.28, cy + 3.35);
         ctx.closePath();
       });
-      strokeLine(ctx, cx + 1.8, cy + 0.2, cx + 5.75, cy + 0.62, h, 0.42);
-      strokeLine(ctx, cx + 0.9, cy + 3.5, cx + 2.25, cy + 3.85, s, 0.32);
-      strokeLine(ctx, cx + 3.4, cy + 3.65, cx + 4.75, cy + 3.48, s, 0.28);
-      strokeLine(ctx, cx + 5.65, cy + 2.0, cx + 7.55, cy + 2.48, s, 0.32);
-      strokeLine(ctx, cx + 0.72, cy + 3.45, cx + 0.48, cy + 4.55, s, 0.28);
+      strokeLine(ctx, cx + 2.05, cy + 0.28, cx + 5.65, cy + 0.64, h, 0.34);
+      strokeLine(ctx, cx + 1.05, cy + 3.28, cx + 2.25, cy + 3.62, s, 0.28);
+      strokeLine(ctx, cx + 3.45, cy + 3.44, cx + 4.6, cy + 3.34, s, 0.24);
+      strokeLine(ctx, cx + 5.75, cy + 2.05, cx + 7.25, cy + 2.48, s, 0.28);
+      strokeLine(ctx, cx + 1.02, cy + 3.38, cx + 1.15, cy + 4.02, s, 0.22);
       return;
     }
 
@@ -1774,10 +1793,10 @@
         ctx.quadraticCurveTo(cx + 4.9, cy + 3.58, cx + 0.95, cy + 3.12);
         ctx.closePath();
       });
-      strokeLine(ctx, cx + 1.25, cy + 3.08, cx + 2.55, cy + 3.28, s, 0.32);
-      strokeLine(ctx, cx + 5.25, cy + 2.95, cx + 7.2, cy + 2.85, s, 0.32);
-      strokeLine(ctx, cx + 0.95, cy + 3.1, cx + 0.72, cy + 4.25, s, 0.26);
-      strokeLine(ctx, cx + 2.4, cy + 1.05, cx + 5.65, cy + 0.92, h, 0.35);
+      strokeLine(ctx, cx + 1.3, cy + 3.0, cx + 2.45, cy + 3.18, s, 0.28);
+      strokeLine(ctx, cx + 5.15, cy + 2.88, cx + 6.9, cy + 2.8, s, 0.28);
+      strokeLine(ctx, cx + 1.18, cy + 3.0, cx + 1.28, cy + 3.58, s, 0.22);
+      strokeLine(ctx, cx + 2.6, cy + 1.05, cx + 5.45, cy + 0.96, h, 0.32);
       return;
     }
 
@@ -1800,11 +1819,11 @@
         ctx.quadraticCurveTo(cx + 0.88, cy + 4.0, cx + 0.12, cy + 3.55);
         ctx.closePath();
       });
-      strokeLine(ctx, cx + 3.42, cy - 0.42, cx + 4.15, cy + 3.42, s, 0.42);
-      strokeLine(ctx, cx + 4.42, cy + 0.18, cx + 7.0, cy + 1.08, h, 0.38);
-      strokeLine(ctx, cx + 0.95, cy + 3.75, cx + 2.55, cy + 4.05, s, 0.3);
-      strokeLine(ctx, cx + 5.65, cy + 3.72, cx + 7.75, cy + 3.45, s, 0.3);
-      strokeLine(ctx, cx + 0.72, cy + 3.75, cx + 0.5, cy + 4.8, s, 0.26);
+      strokeLine(ctx, cx + 3.52, cy - 0.05, cx + 4.05, cy + 3.05, s, 0.34);
+      strokeLine(ctx, cx + 4.55, cy + 0.35, cx + 6.75, cy + 1.12, h, 0.32);
+      strokeLine(ctx, cx + 1.05, cy + 3.55, cx + 2.45, cy + 3.82, s, 0.26);
+      strokeLine(ctx, cx + 5.72, cy + 3.5, cx + 7.4, cy + 3.28, s, 0.26);
+      strokeLine(ctx, cx + 1.0, cy + 3.55, cx + 1.18, cy + 4.08, s, 0.2);
       return;
     }
 
@@ -1827,13 +1846,13 @@
         ctx.quadraticCurveTo(cx + 0.9, cy + 4.0, cx + 0.18, cy + 3.58);
         ctx.closePath();
       });
-      strokePath(ctx, h, 0.4, function () {
-        ctx.moveTo(cx + 2.35, cy + 0.0);
-        ctx.quadraticCurveTo(cx + 5.2, cy - 1.55, cx + 7.25, cy + 0.85);
+      strokePath(ctx, h, 0.34, function () {
+        ctx.moveTo(cx + 2.65, cy - 0.02);
+        ctx.quadraticCurveTo(cx + 5.2, cy - 1.25, cx + 6.95, cy + 0.82);
       });
-      strokeLine(ctx, cx + 1.0, cy + 3.82, cx + 2.5, cy + 4.08, s, 0.3);
-      strokeLine(ctx, cx + 5.7, cy + 3.52, cx + 7.78, cy + 3.18, s, 0.32);
-      strokeLine(ctx, cx + 0.72, cy + 3.78, cx + 0.48, cy + 4.75, s, 0.26);
+      strokeLine(ctx, cx + 1.15, cy + 3.55, cx + 2.45, cy + 3.78, s, 0.26);
+      strokeLine(ctx, cx + 5.65, cy + 3.35, cx + 7.45, cy + 3.05, s, 0.28);
+      strokeLine(ctx, cx + 1.0, cy + 3.55, cx + 1.12, cy + 4.05, s, 0.2);
       return;
     }
 
@@ -1860,12 +1879,12 @@
         ctx.quadraticCurveTo(cx + 0.9, cy + 4.15, cx + 0.08, cy + 3.52);
         ctx.closePath();
       });
-      fillEllipse(ctx, cx + 3.12, cy - 0.2, 0.38, 0.22, h);
-      fillEllipse(ctx, cx + 5.35, cy - 0.12, 0.42, 0.24, h);
+      fillEllipse(ctx, cx + 3.12, cy + 0.05, 0.34, 0.2, h);
+      fillEllipse(ctx, cx + 5.35, cy + 0.05, 0.36, 0.22, h);
       fillEllipse(ctx, cx + 1.12, cy + 3.78, 0.22, 0.16, s);
       fillEllipse(ctx, cx + 4.9, cy + 3.55, 0.24, 0.16, s);
-      strokeLine(ctx, cx + 6.05, cy + 3.55, cx + 7.55, cy + 3.25, s, 0.3);
-      strokeLine(ctx, cx + 0.72, cy + 3.75, cx + 0.48, cy + 4.75, s, 0.26);
+      strokeLine(ctx, cx + 6.0, cy + 3.42, cx + 7.2, cy + 3.18, s, 0.26);
+      strokeLine(ctx, cx + 1.0, cy + 3.55, cx + 1.12, cy + 4.08, s, 0.2);
       return;
     }
 
@@ -1897,10 +1916,10 @@
         ctx.lineTo(cx + 0.85, cy + 3.35);
         ctx.closePath();
       });
-      strokeLine(ctx, cx + 2.5, cy + 0.95, cx + 5.8, cy + 0.95, h, 0.38);
-      strokeLine(ctx, cx + 1.4, cy + 3.2, cx + 2.85, cy + 3.38, s, 0.3);
-      strokeLine(ctx, cx + 5.4, cy + 3.05, cx + 7.1, cy + 2.95, s, 0.3);
-      strokeLine(ctx, cx + 0.9, cy + 3.35, cx + 0.72, cy + 4.18, s, 0.24);
+      strokeLine(ctx, cx + 2.7, cy + 1.0, cx + 5.6, cy + 1.0, h, 0.32);
+      strokeLine(ctx, cx + 1.55, cy + 3.0, cx + 2.7, cy + 3.15, s, 0.26);
+      strokeLine(ctx, cx + 5.25, cy + 2.85, cx + 6.8, cy + 2.8, s, 0.26);
+      strokeLine(ctx, cx + 1.12, cy + 3.1, cx + 1.15, cy + 3.55, s, 0.2);
       return;
     }
 
@@ -2121,10 +2140,25 @@
 
   Parts.drawBackpackHD = function (ctx, tx, ty, pack) {
     if (!pack) return;
-    fillRoundRect(ctx, tx - 2.65, ty + 1.1, 4.2, 7.0, 1.0, P.outline);
-    fillRoundRect(ctx, tx - 2.05, ty + 1.55, 3.05, 6.05, 0.75, pack.base);
-    fillRoundRect(ctx, tx - 1.6, ty + 2.1, 0.85, 2.5, 0.35, pack.hl);
-    strokeLine(ctx, tx - 2.0, ty + 4.9, tx + 0.75, ty + 4.9, pack.shade, 0.55);
+    fillRoundRect(ctx, tx - 3.08, ty + 1.18, 4.0, 6.95, 1.05, P.outline);
+    fillRoundRect(ctx, tx - 2.55, ty + 1.62, 2.95, 6.02, 0.78, pack.base);
+    fillRoundRect(ctx, tx - 2.28, ty + 2.08, 2.05, 1.28, 0.42, pack.hl || pack.base);
+    strokeLine(ctx, tx - 2.28, ty + 4.72, tx + 0.15, ty + 4.72, pack.shade, 0.42);
+    strokeLine(ctx, tx - 1.98, ty + 2.88, tx - 0.42, ty + 2.88, pack.shade, 0.3);
+  };
+
+  Parts.drawBackpackStrapHD = function (ctx, tx, ty, pack, opts) {
+    if (!pack) return;
+    opts = opts || {};
+    const slim = opts.slender === true ? 0.42 : 0;
+    strokePath(ctx, P.outline, 0.95, function () {
+      ctx.moveTo(tx + 0.95 + slim, ty + 1.05);
+      ctx.quadraticCurveTo(tx + 2.25 + slim * 0.35, ty + 2.95, tx + 4.95 - slim, ty + 5.9);
+    });
+    strokePath(ctx, pack.shade || P.outlineSoft, 0.48, function () {
+      ctx.moveTo(tx + 1.08 + slim, ty + 1.18);
+      ctx.quadraticCurveTo(tx + 2.32 + slim * 0.35, ty + 3.0, tx + 4.75 - slim, ty + 5.68);
+    });
   };
 
   Parts.drawWaistBridgeHD = function (ctx, tx, topY, legsY, pants, opts) {

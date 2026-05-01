@@ -68,8 +68,28 @@ function normalizeHeadwear(cfg) {
   return { ...cfg, hatIdx, helmetColorIdx };
 }
 
+function clampPaletteIdx(value, list, fallback) {
+  const idx = Number.isInteger(value) ? value : fallback;
+  if (!list || !list.length) return fallback;
+  if (idx < 0 || idx >= list.length) return fallback;
+  return idx;
+}
+
+function normalizePaletteIndices(cfg) {
+  return {
+    ...cfg,
+    skinIdx: clampPaletteIdx(cfg.skinIdx, window.Palette.skin, DEFAULT_CFG.skinIdx),
+    hairIdx: clampPaletteIdx(cfg.hairIdx, window.Palette.hair, DEFAULT_CFG.hairIdx),
+    eyeIdx: clampPaletteIdx(cfg.eyeIdx, window.Palette.eye, DEFAULT_CFG.eyeIdx),
+    uniformIdx: clampPaletteIdx(cfg.uniformIdx, window.Palette.uniforms, DEFAULT_CFG.uniformIdx),
+    pantsIdx: clampPaletteIdx(cfg.pantsIdx, window.Palette.pants, DEFAULT_CFG.pantsIdx),
+    vestIdx: clampPaletteIdx(cfg.vestIdx, window.Palette.vest, DEFAULT_CFG.vestIdx),
+    backpackIdx: clampPaletteIdx(cfg.backpackIdx, window.Palette.backpack, DEFAULT_CFG.backpackIdx)
+  };
+}
+
 function normalizeCharacterConfig(cfg) {
-  return normalizeHeadwear(normalizeHairStyleForBody(cfg));
+  return normalizePaletteIndices(normalizeHeadwear(normalizeHairStyleForBody(cfg)));
 }
 
 // Stage is sized to fit the largest weapons plus the 2x soldier body. Snipers

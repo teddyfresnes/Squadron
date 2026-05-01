@@ -671,6 +671,7 @@
     const bodyType = cfg.bodyType || 'male';
     const bodyProfile = getBodyProfile(cfg);
     const drawBackpack = smooth && Parts.drawBackpackHD ? Parts.drawBackpackHD : Parts.drawBackpack;
+    const drawBackpackStrap = smooth && Parts.drawBackpackStrapHD ? Parts.drawBackpackStrapHD : Parts.drawBackpackStrap;
     const drawWaistBridge = smooth && Parts.drawWaistBridgeHD ? Parts.drawWaistBridgeHD : Parts.drawWaistBridge;
     const drawNeck = smooth && Parts.drawNeckHD ? Parts.drawNeckHD : Parts.drawNeck;
     const drawHead = smooth && Parts.drawHeadHD ? Parts.drawHeadHD : Parts.drawHead;
@@ -779,12 +780,7 @@
       drawWaistBridge(ctx, torsoTL_x, torsoTL_y + 8 + (smooth ? torsoStretchY : Math.ceil(torsoStretchY)), legsTL_y, pants, { slender: bodyProfile.slender });
       drawTorso(ctx, torsoTL_x, torsoTL_y, uniform, { stretchY: torsoStretchY, slender: bodyProfile.slender });
       if (vest) drawVest(ctx, torsoTL_x, torsoTL_y, vest, { slender: bodyProfile.slender });
-      if (pack) {
-        const strap = pack.shade;
-        for (let i = 0; i < 5; i++) {
-          E.px(ctx, torsoTL_x + 1 + i, torsoTL_y + 1 + i, strap);
-        }
-      }
+      if (pack && drawBackpackStrap) drawBackpackStrap(ctx, torsoTL_x, torsoTL_y, pack, { slender: bodyProfile.slender });
     });
 
     withScale(ctx, originX, originY, bodyProfile.headScale || BODY_SCALE, function () {
