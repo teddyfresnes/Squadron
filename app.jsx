@@ -486,159 +486,127 @@ function WeaponIcon({ weapon, scale = 1 }) {
   );
 }
 
-function hashString(value) {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i++) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
 function WeaponGameIcon({ weapon }) {
-  const type = weapon.type || 'rifle';
-  const seed = hashString(`${weapon.id || ''}|${weapon.name || ''}|${type}`);
-  const serialMatch = String(weapon.id || '').match(/(\d+)$/);
-  const serial = serialMatch ? parseInt(serialMatch[1], 10) : (seed % 31) + 1;
-  const black = '#101014';
-  const outline = '#efe6d0';
-  const redDark = '#78111a';
-  const stripe = '#d9c8a8';
-  const variant = serial % 6;
-  const hasOptic = (seed & 1) !== 0;
-  const hasLongBarrel = (seed & 2) !== 0;
-  const hasStock = type !== 'pistol' && (seed & 4) !== 0;
-  const shape = {
-    fill: black,
-    stroke: outline,
-    strokeWidth: 1.25,
-    strokeLinecap: 'round',
-    strokeLinejoin: 'round'
-  };
+  const ref = useRef();
+  const sheetVersion = useSheetReady();
 
-  const bgAccent = (() => {
-    if (variant === 0) {
-      return (
-        <>
-          <path d="M5 28h4l6-6h-4z" fill={stripe} opacity="0.9" />
-          <path d="M13 28h4l6-6h-4z" fill={stripe} opacity="0.9" />
-          <path d="M21 28h4l4-4v4z" fill={stripe} opacity="0.9" />
-        </>
-      );
-    }
-    if (variant === 1) {
-      return (
-        <>
-          <path d="M27 5v5l-5 5v-5z" fill={stripe} opacity="0.88" />
-          <path d="M27 15v5l-5 5v-5z" fill={stripe} opacity="0.88" />
-        </>
-      );
-    }
-    if (variant === 2) {
-      return (
-        <>
-          <path d="M3 6l3-3 23 23-3 3z" fill={redDark} opacity="0.95" />
-          <path d="M26 3l3 3L6 29H3z" fill={redDark} opacity="0.95" />
-        </>
-      );
-    }
-    if (variant === 3) {
-      return (
-        <>
-          <path d="M3 24h26v5H3z" fill={stripe} opacity="0.82" />
-          <path d="M7 24l-4 5M15 24l-4 5M23 24l-4 5" stroke={redDark} strokeWidth="1.4" />
-        </>
-      );
-    }
-    if (variant === 4) {
-      return (
-        <>
-          <path d="M3 3h10L3 13z" fill={stripe} opacity="0.8" />
-          <path d="M29 29H19l10-10z" fill={stripe} opacity="0.8" />
-        </>
-      );
-    }
-    return (
-      <>
-        <path d="M4 5h24v4H4z" fill={redDark} opacity="0.9" />
-        <path d="M8 5l-4 4M16 5l-4 4M24 5l-4 4" stroke={stripe} strokeWidth="1.2" opacity="0.9" />
-      </>
-    );
-  })();
+  useEffect(() => {
+    const c = ref.current;
+    if (!c || !weapon) return;
+    const ctx = c.getContext('2d');
+    const size = c.width;
 
-  const glyph = (() => {
-    if (type === 'pistol') {
-      return (
-        <>
-          <rect {...shape} x="7" y="13" width={hasLongBarrel ? 15 : 12} height="4" rx="1" />
-          <rect {...shape} x={hasLongBarrel ? 21 : 18} y="14" width="3" height="1.8" rx="0.5" />
-          <path {...shape} d="M11 17h5l2 7h-4z" />
-          {variant > 2 ? <rect {...shape} x="8" y="10" width="5" height="2" rx="0.6" /> : null}
-        </>
-      );
+    function drawBackground() {
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = '#101014';
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#c91f2b';
+      ctx.fillRect(2, 2, size - 4, size - 4);
+      ctx.fillStyle = '#e3363b';
+      ctx.fillRect(4, 4, size - 8, 5);
+      ctx.fillStyle = '#7a1019';
+      ctx.beginPath();
+      ctx.moveTo(size - 12, size);
+      ctx.lineTo(size, size - 12);
+      ctx.lineTo(size, size);
+      ctx.closePath();
+      ctx.fill();
     }
-    if (type === 'smg') {
-      return (
-        <>
-          {hasStock ? <path {...shape} d="M4 15l5-4v6l-5 3z" /> : null}
-          <rect {...shape} x="8" y="13" width={variant % 2 ? 14 : 12} height="5" rx="1" />
-          <rect {...shape} x={variant % 2 ? 21 : 19} y="14.2" width={hasLongBarrel ? 5 : 3} height="1.8" rx="0.5" />
-          <path {...shape} d={variant > 2 ? 'M12 18h4l1 7h-4z' : 'M13 18h3v6h-3z'} />
-          {hasOptic ? <rect {...shape} x="10" y="9" width="6" height="2" rx="0.7" /> : null}
-        </>
-      );
+
+    function drawFallback() {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(6, 14, 20, 5);
+      ctx.fillRect(10, 19, 5, 7);
+      ctx.fillStyle = '#101014';
+      ctx.fillRect(7, 15, 18, 3);
+      ctx.fillRect(11, 18, 3, 6);
     }
-    if (type === 'shotgun') {
-      return (
-        <>
-          <path {...shape} d="M3 16l6-5v6l-6 4z" />
-          <rect {...shape} x="8" y="13" width={hasLongBarrel ? 18 : 15} height="3" rx="1" />
-          <rect {...shape} x="9" y="17" width={variant === 3 ? 10 : 7} height="2" rx="0.7" />
-          {hasOptic ? <rect {...shape} x="14" y="10" width="5" height="2" rx="0.7" /> : null}
-        </>
-      );
+
+    drawBackground();
+
+    const pad = 6;
+    const src = document.createElement('canvas');
+    src.width = Math.max(1, Math.ceil(weapon.width + pad * 2));
+    src.height = Math.max(1, Math.ceil(weapon.height + pad * 2));
+    const sctx = src.getContext('2d');
+    sctx.imageSmoothingEnabled = false;
+    sctx.clearRect(0, 0, src.width, src.height);
+
+    try {
+      weapon.draw(sctx, pad + weapon.gripX, pad + weapon.gripY, false);
+
+      const srcData = sctx.getImageData(0, 0, src.width, src.height).data;
+      let minX = src.width, minY = src.height, maxX = -1, maxY = -1;
+      for (let y = 0; y < src.height; y++) {
+        for (let x = 0; x < src.width; x++) {
+          if (srcData[(y * src.width + x) * 4 + 3] > 16) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (maxX < minX || maxY < minY) {
+        drawFallback();
+        return;
+      }
+
+      const cropW = maxX - minX + 1;
+      const cropH = maxY - minY + 1;
+      const maxW = weapon.type === 'sniper' ? 27 : 25;
+      const maxH = weapon.type === 'heavy' ? 18 : 16;
+      const scale = Math.min(maxW / cropW, maxH / cropH);
+      const drawW = Math.max(8, Math.round(cropW * scale));
+      const drawH = Math.max(5, Math.round(cropH * scale));
+      const mask = document.createElement('canvas');
+      mask.width = drawW;
+      mask.height = drawH;
+      const mctx = mask.getContext('2d');
+      mctx.imageSmoothingEnabled = true;
+      mctx.imageSmoothingQuality = 'high';
+      mctx.drawImage(src, minX, minY, cropW, cropH, 0, 0, drawW, drawH);
+
+      const maskData = mctx.getImageData(0, 0, drawW, drawH).data;
+      const solid = new Uint8Array(drawW * drawH);
+      for (let i = 0; i < solid.length; i++) {
+        solid[i] = maskData[i * 4 + 3] > 28 ? 1 : 0;
+      }
+
+      const ox = Math.floor((size - drawW) / 2);
+      const oy = Math.floor((size - drawH) / 2) + 1;
+      ctx.fillStyle = '#ffffff';
+      for (let y = 0; y < drawH; y++) {
+        for (let x = 0; x < drawW; x++) {
+          if (!solid[y * drawW + x]) continue;
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              if (Math.abs(dx) + Math.abs(dy) > 2) continue;
+              const nx = x + dx, ny = y + dy;
+              if (nx < 0 || ny < 0 || nx >= drawW || ny >= drawH || !solid[ny * drawW + nx]) {
+                ctx.fillRect(ox + nx, oy + ny, 1, 1);
+              }
+            }
+          }
+        }
+      }
+
+      ctx.fillStyle = '#101014';
+      for (let y = 0; y < drawH; y++) {
+        for (let x = 0; x < drawW; x++) {
+          if (solid[y * drawW + x]) ctx.fillRect(ox + x, oy + y, 1, 1);
+        }
+      }
+    } catch (e) {
+      drawFallback();
     }
-    if (type === 'sniper') {
-      return (
-        <>
-          <path {...shape} d="M3 16l6-5v5l-6 4z" />
-          <rect {...shape} x="8" y="14" width="18" height="2.4" rx="1" />
-          <rect {...shape} x="10" y="10.5" width={variant > 2 ? 10 : 8} height="2.3" rx="0.9" />
-          <rect {...shape} x="23" y="13.4" width="5" height="1.2" rx="0.5" />
-          {hasStock ? <rect {...shape} x="14" y="17" width="2" height="5" rx="0.5" /> : null}
-        </>
-      );
-    }
-    if (type === 'heavy') {
-      return (
-        <>
-          <path {...shape} d="M4 12h16l6 4-6 4H4z" />
-          <rect {...shape} x="7" y="20" width={variant > 2 ? 10 : 7} height="3" rx="1" />
-          {hasOptic ? <rect {...shape} x="8" y="8" width="8" height="2" rx="0.7" /> : null}
-          {hasLongBarrel ? <circle cx="20" cy="16" r="2" fill={redDark} stroke={outline} strokeWidth="1.2" /> : null}
-        </>
-      );
-    }
-    return (
-      <>
-        {hasStock ? <path {...shape} d="M3 15l6-4v6l-6 4z" /> : null}
-        <rect {...shape} x="8" y="13" width={variant % 2 ? 15 : 13} height="4.5" rx="1" />
-        <rect {...shape} x={variant % 2 ? 22 : 20} y="14.3" width={hasLongBarrel ? 5 : 3} height="1.8" rx="0.5" />
-        <path {...shape} d={variant > 2 ? 'M11 18h5l2 6h-5z' : 'M12 18h4v5h-4z'} />
-        {hasOptic ? <rect {...shape} x="10" y="9.5" width="7" height="2.2" rx="0.8" /> : null}
-      </>
-    );
-  })();
+  }, [weapon, sheetVersion]);
 
   return (
     <span className="game-icon weapon-game-icon" title={`${weapon.name} icon`} aria-hidden="true">
-      <svg viewBox="0 0 32 32" focusable="false">
-        <rect x="1" y="1" width="30" height="30" rx="2" fill="#111116" />
-        <rect x="3" y="3" width="26" height="26" rx="1" fill="#c91f2b" />
-        <path d="M3 3h26v6c-6-1.8-13.2-1-26 2.5z" fill="#ef3b3f" opacity="0.45" />
-        {bgAccent}
-        <g transform="rotate(-6 16 16)">{glyph}</g>
-      </svg>
+      <canvas ref={ref} width="32" height="32" />
     </span>
   );
 }
