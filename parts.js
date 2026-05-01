@@ -530,23 +530,6 @@
         '..S..S.....'
       ];
       E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
-    } else if (style === 'Slick Back') {
-      const tpl = [
-        '...OOOOO...',
-        '.OOBBBBBO..',
-        'OBHHBBBBBO.',
-        'OBBBBBBBBO.',
-        '.OBBSSSBO..',
-        '..S.S.S....'
-      ];
-      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
-    } else if (style === 'Stubble') {
-      const tpl = [
-        '..S.S.S.S..',
-        '.S.S.S.S.S.',
-        '..S.S.S.S..'
-      ];
-      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, S: s, H: h });
     }
   };
 
@@ -556,7 +539,7 @@
     const b = hatCol.base, s = hatCol.shade, h = hatCol.hl;
     const O = P.outline;
 
-    if (hatKind === 'Helmet' || hatKind === 'Combat Helmet') {
+    if (hatKind === 'Pilot Helmet' || hatKind === 'Combat Helmet') {
       const tpl = [
         '..OOOOO..',
         '.OBBBBBO.',
@@ -572,6 +555,74 @@
       E.px(ctx, cx + 4, cy - 1, h);
       E.px(ctx, cx + 2, cy + 4, s);
       E.px(ctx, cx + 7, cy + 2, O);
+      const bandOuter = [
+        [cx - 1, cy + 4],
+        [cx + 0, cy + 4],
+        [cx + 1, cy + 3],
+        [cx + 2, cy + 3],
+        [cx + 3, cy + 2],
+        [cx + 5, cy + 2],
+        [cx + 7, cy + 2],
+        [cx + 9, cy + 2],
+        [cx + 10, cy + 1]
+      ];
+      const bandInner = [
+        [cx + 0, cy + 4],
+        [cx + 1, cy + 4],
+        [cx + 2, cy + 3],
+        [cx + 4, cy + 2],
+        [cx + 6, cy + 2],
+        [cx + 8, cy + 2],
+        [cx + 10, cy + 2]
+      ];
+      for (const p of bandOuter) E.px(ctx, p[0], p[1], O);
+      for (const p of bandInner) E.px(ctx, p[0], p[1], s);
+
+      // Oversized goggles sit on the strap, separated enough for perspective.
+      E.px(ctx, cx + 4, cy + 1, O);
+      E.px(ctx, cx + 5, cy + 1, O);
+      E.px(ctx, cx + 3, cy + 2, O);
+      E.px(ctx, cx + 6, cy + 2, O);
+      E.px(ctx, cx + 3, cy + 3, O);
+      E.px(ctx, cx + 6, cy + 3, O);
+      E.px(ctx, cx + 5, cy + 4, O);
+      E.px(ctx, cx + 4, cy + 4, O);
+      E.px(ctx, cx + 4, cy + 2, P.whiteShade);
+      E.px(ctx, cx + 5, cy + 2, P.white);
+      E.px(ctx, cx + 4, cy + 3, P.whiteShade);
+      E.px(ctx, cx + 5, cy + 3, P.white);
+      E.px(ctx, cx + 9, cy + 1, O);
+      E.px(ctx, cx + 10, cy + 1, O);
+      E.px(ctx, cx + 8, cy + 2, O);
+      E.px(ctx, cx + 11, cy + 2, O);
+      E.px(ctx, cx + 8, cy + 3, O);
+      E.px(ctx, cx + 11, cy + 3, O);
+      E.px(ctx, cx + 9, cy + 4, O);
+      E.px(ctx, cx + 10, cy + 4, O);
+      E.px(ctx, cx + 9, cy + 2, P.whiteShade);
+      E.px(ctx, cx + 10, cy + 2, P.white);
+      E.px(ctx, cx + 9, cy + 3, P.whiteShade);
+      E.px(ctx, cx + 10, cy + 3, P.white);
+      return;
+    }
+
+    if (hatKind === 'Helmet') {
+      const tpl = [
+        '..OOOOO..',
+        '.OBBBBBO.',
+        'OBHBBBBBO',
+        'OBBBBBBBO',
+        'OBBBBBBOO',
+        'OBBSSO...',
+        'OO.......'
+      ];
+      E.stamp(ctx, cx - 1, cy, tpl, { O, B: b, S: s, H: h });
+      E.px(ctx, cx + 2, cy + 2, h);
+      E.px(ctx, cx + 4, cy + 2, h);
+      E.px(ctx, cx + 1, cy + 5, s);
+      E.px(ctx, cx + 2, cy + 5, s);
+      E.px(ctx, cx + 4, cy + 5, O);
+      E.px(ctx, cx + 4, cy + 6, O);
       return;
     }
 
@@ -1853,44 +1904,6 @@
       return;
     }
 
-    if (style === 'Slick Back') {
-      fillPath(ctx, O, function () {
-        ctx.moveTo(cx - 0.3, cy + 3.85);
-        ctx.quadraticCurveTo(cx + 0.5, cy - 1.0, cx + 4.05, cy - 1.4);
-        ctx.quadraticCurveTo(cx + 7.85, cy - 1.05, cx + 8.7, cy + 3.2);
-        ctx.quadraticCurveTo(cx + 4.5, cy + 4.4, cx - 0.3, cy + 3.85);
-        ctx.closePath();
-      });
-      fillPath(ctx, b, function () {
-        ctx.moveTo(cx + 0.35, cy + 3.5);
-        ctx.quadraticCurveTo(cx + 1.0, cy - 0.4, cx + 4.05, cy - 0.78);
-        ctx.quadraticCurveTo(cx + 7.25, cy - 0.45, cx + 7.95, cy + 2.95);
-        ctx.quadraticCurveTo(cx + 4.5, cy + 3.85, cx + 0.35, cy + 3.5);
-        ctx.closePath();
-      });
-      strokeLine(ctx, cx + 6.0, cy - 0.4, cx + 1.5, cy + 0.5, h, 0.32);
-      strokeLine(ctx, cx + 6.5, cy + 0.6, cx + 1.4, cy + 1.5, h, 0.3);
-      strokeLine(ctx, cx + 6.8, cy + 1.7, cx + 1.4, cy + 2.4, s, 0.32);
-      strokeLine(ctx, cx + 1.0, cy + 3.5, cx + 2.55, cy + 3.82, s, 0.32);
-      strokeLine(ctx, cx + 5.5, cy + 3.38, cx + 7.55, cy + 3.05, s, 0.34);
-      strokeLine(ctx, cx + 0.72, cy + 3.52, cx + 0.48, cy + 4.5, s, 0.26);
-      return;
-    }
-
-    if (style === 'Stubble') {
-      fillEllipse(ctx, cx + 1.0, cy + 2.0, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 2.2, cy + 1.4, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 3.4, cy + 2.0, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 4.6, cy + 1.4, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 5.8, cy + 2.0, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 7.0, cy + 1.4, 0.18, 0.12, s);
-      fillEllipse(ctx, cx + 1.6, cy + 2.8, 0.16, 0.1, s);
-      fillEllipse(ctx, cx + 3.0, cy + 2.8, 0.16, 0.1, s);
-      fillEllipse(ctx, cx + 4.4, cy + 2.8, 0.16, 0.1, s);
-      fillEllipse(ctx, cx + 5.8, cy + 2.8, 0.16, 0.1, s);
-      fillEllipse(ctx, cx + 6.4, cy + 2.4, 0.16, 0.1, s);
-      return;
-    }
   };
 
   Parts.drawHatHD = function (ctx, cx, cy, hatKind, hatCol) {
@@ -1900,7 +1913,7 @@
     const s = hatCol.shade;
     const h = hatCol.hl;
 
-    if (hatKind === 'Helmet' || hatKind === 'Combat Helmet') {
+    if (hatKind === 'Pilot Helmet' || hatKind === 'Combat Helmet') {
       fillPath(ctx, O, function () {
         ctx.moveTo(cx - 0.85, cy + 6.6);
         ctx.quadraticCurveTo(cx - 0.9, cy + 1.2, cx + 1.65, cy - 1.55);
@@ -1925,6 +1938,60 @@
       strokeLine(ctx, cx + 4.8, cy + 3.18, cx + 7.65, cy + 2.82, s, 0.55);
       strokeLine(ctx, cx + 2.75, cy - 0.72, cx + 5.25, cy - 1.05, h, 0.45);
       fillEllipse(ctx, cx + 0.85, cy + 5.2, 0.65, 0.75, s);
+      strokePath(ctx, O, 0.74, function () {
+        ctx.moveTo(cx - 0.35, cy + 5.5);
+        ctx.quadraticCurveTo(cx + 0.75, cy + 2.15, cx + 4.35, cy + 2.48);
+        ctx.quadraticCurveTo(cx + 6.8, cy + 2.72, cx + 9.55, cy + 1.82);
+      });
+      strokePath(ctx, s, 0.42, function () {
+        ctx.moveTo(cx - 0.02, cy + 5.28);
+        ctx.quadraticCurveTo(cx + 0.98, cy + 2.45, cx + 4.32, cy + 2.62);
+        ctx.quadraticCurveTo(cx + 6.78, cy + 2.82, cx + 9.28, cy + 2.02);
+      });
+      fillEllipse(ctx, cx + 4.45, cy + 2.55, 1.58, 1.45, O);
+      fillEllipse(ctx, cx + 4.45, cy + 2.55, 1.04, 0.94, P.whiteShade);
+      fillEllipse(ctx, cx + 8.25, cy + 2.42, 1.34, 1.24, O);
+      fillEllipse(ctx, cx + 8.25, cy + 2.42, 0.84, 0.78, P.whiteShade);
+      fillEllipse(ctx, cx + 4.78, cy + 2.22, 0.28, 0.22, P.white);
+      fillEllipse(ctx, cx + 8.5, cy + 2.12, 0.22, 0.18, P.white);
+      strokeLine(ctx, cx + 5.92, cy + 2.5, cx + 6.95, cy + 2.46, O, 0.45);
+      return;
+    }
+
+    if (hatKind === 'Helmet') {
+      ctx.save();
+      ctx.translate(0, 0.85);
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.62, cy + 5.85);
+        ctx.quadraticCurveTo(cx - 0.48, cy + 1.8, cx + 1.65, cy - 0.45);
+        ctx.quadraticCurveTo(cx + 4.18, cy - 1.85, cx + 6.95, cy - 0.45);
+        ctx.quadraticCurveTo(cx + 8.15, cy + 0.22, cx + 8.48, cy + 1.55);
+        ctx.lineTo(cx + 9.02, cy + 2.78);
+        ctx.quadraticCurveTo(cx + 8.18, cy + 3.38, cx + 6.15, cy + 3.38);
+        ctx.lineTo(cx + 5.15, cy + 3.38);
+        ctx.quadraticCurveTo(cx + 3.65, cy + 4.02, cx + 2.35, cy + 5.2);
+        ctx.quadraticCurveTo(cx + 1.15, cy + 6.62, cx - 0.62, cy + 5.85);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx - 0.05, cy + 5.25);
+        ctx.quadraticCurveTo(cx + 0.08, cy + 2.0, cx + 1.95, cy + 0.02);
+        ctx.quadraticCurveTo(cx + 4.18, cy - 1.18, cx + 6.45, cy - 0.05);
+        ctx.quadraticCurveTo(cx + 7.45, cy + 0.48, cx + 7.82, cy + 1.65);
+        ctx.lineTo(cx + 8.25, cy + 2.85);
+        ctx.quadraticCurveTo(cx + 7.45, cy + 3.02, cx + 6.12, cy + 3.02);
+        ctx.lineTo(cx + 5.08, cy + 3.02);
+        ctx.quadraticCurveTo(cx + 3.55, cy + 3.62, cx + 1.98, cy + 4.7);
+        ctx.quadraticCurveTo(cx + 1.08, cy + 5.75, cx - 0.05, cy + 5.25);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 0.45, cy + 4.35, cx + 2.1, cy + 4.6, s, 0.34);
+      strokeLine(ctx, cx + 4.85, cy + 2.88, cx + 6.75, cy + 2.88, s, 0.3);
+      strokeLine(ctx, cx + 2.6, cy - 0.05, cx + 5.05, cy - 0.28, h, 0.42);
+      fillEllipse(ctx, cx + 0.55, cy + 5.0, 0.48, 0.52, s);
+      strokeLine(ctx, cx + 3.92, cy + 3.95, cx + 3.92, cy + 6.45, O, 0.4);
+      strokeLine(ctx, cx + 3.92, cy + 4.08, cx + 3.92, cy + 6.25, P.outlineSoft || O, 0.16);
+      ctx.restore();
       return;
     }
 

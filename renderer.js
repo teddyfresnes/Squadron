@@ -662,7 +662,7 @@
     const hatKind = hatEntry.name;
     const helmetColors = P.helmet || [];
     const helmetColorIdx = Number.isInteger(cfg.helmetColorIdx) ? cfg.helmetColorIdx : 0;
-    const hatCol = hatKind === 'Helmet'
+    const hatCol = hatKind !== 'None'
       ? (helmetColors[helmetColorIdx] || helmetColors[0] || hatEntry)
       : hatEntry;
     const hairStyle = P.hairstyles[cfg.hairStyleIdx].name;

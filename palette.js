@@ -75,6 +75,7 @@ window.Palette = {
   // Headwear type. Helmet color is picked separately.
   hat: [
     { name: 'None' },
+    { name: 'Pilot Helmet' },
     { name: 'Helmet' }
   ],
 
@@ -105,8 +106,6 @@ window.Palette = {
     { name: 'High Ponytail' },
     { name: 'Buzz Cut' },
     { name: 'Crew Cut' },
-    { name: 'Slick Back' },
-    { name: 'Stubble' },
     { name: 'Bald' }
   ],
 

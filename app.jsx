@@ -31,7 +31,7 @@ const BODY_TYPES = [
 ];
 
 const HAIRSTYLES_BY_BODY = {
-  male: ['Textured Crop', 'Low Fade', 'Side Part', 'Quiff', 'Curly Top', 'Buzz Cut', 'Crew Cut', 'Slick Back', 'Stubble', 'Bald'],
+  male: ['Textured Crop', 'Low Fade', 'Side Part', 'Quiff', 'Curly Top', 'Buzz Cut', 'Crew Cut', 'Bald'],
   female: ['Short', 'Messy', 'Long', 'Ponytail', 'Bob', 'Wavy', 'Flowing', 'High Ponytail']
 };
 
@@ -60,8 +60,8 @@ function normalizeHeadwear(cfg) {
   let hatIdx = Number.isInteger(cfg.hatIdx) ? cfg.hatIdx : DEFAULT_CFG.hatIdx;
   let helmetColorIdx = Number.isInteger(cfg.helmetColorIdx) ? cfg.helmetColorIdx : DEFAULT_CFG.helmetColorIdx;
 
-  if (hatIdx > 1) hatIdx = 1;
-  if (hatIdx < 0 || !hats[hatIdx]) hatIdx = 0;
+  if (hatIdx < 0 || !hats[hatIdx]) hatIdx = DEFAULT_CFG.hatIdx;
+  if (!hats[hatIdx]) hatIdx = 0;
   if (helmetColorIdx < 0 || helmetColorIdx >= helmetColors.length) helmetColorIdx = DEFAULT_CFG.helmetColorIdx;
 
   if (hatIdx === cfg.hatIdx && helmetColorIdx === cfg.helmetColorIdx) return cfg;
@@ -373,7 +373,7 @@ function App() {
             <Chips options={window.Palette.hat} selectedIdx={selectedHeadwearIdx} onPick={set('hatIdx')} />
           </Section>
 
-          {selectedHeadwearIdx === 1 && (
+          {selectedHeadwearIdx > 0 && (
             <Section title="Helmet Color">
               <ColorSwatches options={window.Palette.helmet} selectedIdx={cfg.helmetColorIdx} onPick={set('helmetColorIdx')} field="base" />
             </Section>
