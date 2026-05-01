@@ -486,6 +486,163 @@ function WeaponIcon({ weapon, scale = 1 }) {
   );
 }
 
+function hashString(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function WeaponGameIcon({ weapon }) {
+  const type = weapon.type || 'rifle';
+  const seed = hashString(`${weapon.id || ''}|${weapon.name || ''}|${type}`);
+  const serialMatch = String(weapon.id || '').match(/(\d+)$/);
+  const serial = serialMatch ? parseInt(serialMatch[1], 10) : (seed % 31) + 1;
+  const black = '#101014';
+  const outline = '#efe6d0';
+  const redDark = '#78111a';
+  const stripe = '#d9c8a8';
+  const variant = serial % 6;
+  const hasOptic = (seed & 1) !== 0;
+  const hasLongBarrel = (seed & 2) !== 0;
+  const hasStock = type !== 'pistol' && (seed & 4) !== 0;
+  const shape = {
+    fill: black,
+    stroke: outline,
+    strokeWidth: 1.25,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round'
+  };
+
+  const bgAccent = (() => {
+    if (variant === 0) {
+      return (
+        <>
+          <path d="M5 28h4l6-6h-4z" fill={stripe} opacity="0.9" />
+          <path d="M13 28h4l6-6h-4z" fill={stripe} opacity="0.9" />
+          <path d="M21 28h4l4-4v4z" fill={stripe} opacity="0.9" />
+        </>
+      );
+    }
+    if (variant === 1) {
+      return (
+        <>
+          <path d="M27 5v5l-5 5v-5z" fill={stripe} opacity="0.88" />
+          <path d="M27 15v5l-5 5v-5z" fill={stripe} opacity="0.88" />
+        </>
+      );
+    }
+    if (variant === 2) {
+      return (
+        <>
+          <path d="M3 6l3-3 23 23-3 3z" fill={redDark} opacity="0.95" />
+          <path d="M26 3l3 3L6 29H3z" fill={redDark} opacity="0.95" />
+        </>
+      );
+    }
+    if (variant === 3) {
+      return (
+        <>
+          <path d="M3 24h26v5H3z" fill={stripe} opacity="0.82" />
+          <path d="M7 24l-4 5M15 24l-4 5M23 24l-4 5" stroke={redDark} strokeWidth="1.4" />
+        </>
+      );
+    }
+    if (variant === 4) {
+      return (
+        <>
+          <path d="M3 3h10L3 13z" fill={stripe} opacity="0.8" />
+          <path d="M29 29H19l10-10z" fill={stripe} opacity="0.8" />
+        </>
+      );
+    }
+    return (
+      <>
+        <path d="M4 5h24v4H4z" fill={redDark} opacity="0.9" />
+        <path d="M8 5l-4 4M16 5l-4 4M24 5l-4 4" stroke={stripe} strokeWidth="1.2" opacity="0.9" />
+      </>
+    );
+  })();
+
+  const glyph = (() => {
+    if (type === 'pistol') {
+      return (
+        <>
+          <rect {...shape} x="7" y="13" width={hasLongBarrel ? 15 : 12} height="4" rx="1" />
+          <rect {...shape} x={hasLongBarrel ? 21 : 18} y="14" width="3" height="1.8" rx="0.5" />
+          <path {...shape} d="M11 17h5l2 7h-4z" />
+          {variant > 2 ? <rect {...shape} x="8" y="10" width="5" height="2" rx="0.6" /> : null}
+        </>
+      );
+    }
+    if (type === 'smg') {
+      return (
+        <>
+          {hasStock ? <path {...shape} d="M4 15l5-4v6l-5 3z" /> : null}
+          <rect {...shape} x="8" y="13" width={variant % 2 ? 14 : 12} height="5" rx="1" />
+          <rect {...shape} x={variant % 2 ? 21 : 19} y="14.2" width={hasLongBarrel ? 5 : 3} height="1.8" rx="0.5" />
+          <path {...shape} d={variant > 2 ? 'M12 18h4l1 7h-4z' : 'M13 18h3v6h-3z'} />
+          {hasOptic ? <rect {...shape} x="10" y="9" width="6" height="2" rx="0.7" /> : null}
+        </>
+      );
+    }
+    if (type === 'shotgun') {
+      return (
+        <>
+          <path {...shape} d="M3 16l6-5v6l-6 4z" />
+          <rect {...shape} x="8" y="13" width={hasLongBarrel ? 18 : 15} height="3" rx="1" />
+          <rect {...shape} x="9" y="17" width={variant === 3 ? 10 : 7} height="2" rx="0.7" />
+          {hasOptic ? <rect {...shape} x="14" y="10" width="5" height="2" rx="0.7" /> : null}
+        </>
+      );
+    }
+    if (type === 'sniper') {
+      return (
+        <>
+          <path {...shape} d="M3 16l6-5v5l-6 4z" />
+          <rect {...shape} x="8" y="14" width="18" height="2.4" rx="1" />
+          <rect {...shape} x="10" y="10.5" width={variant > 2 ? 10 : 8} height="2.3" rx="0.9" />
+          <rect {...shape} x="23" y="13.4" width="5" height="1.2" rx="0.5" />
+          {hasStock ? <rect {...shape} x="14" y="17" width="2" height="5" rx="0.5" /> : null}
+        </>
+      );
+    }
+    if (type === 'heavy') {
+      return (
+        <>
+          <path {...shape} d="M4 12h16l6 4-6 4H4z" />
+          <rect {...shape} x="7" y="20" width={variant > 2 ? 10 : 7} height="3" rx="1" />
+          {hasOptic ? <rect {...shape} x="8" y="8" width="8" height="2" rx="0.7" /> : null}
+          {hasLongBarrel ? <circle cx="20" cy="16" r="2" fill={redDark} stroke={outline} strokeWidth="1.2" /> : null}
+        </>
+      );
+    }
+    return (
+      <>
+        {hasStock ? <path {...shape} d="M3 15l6-4v6l-6 4z" /> : null}
+        <rect {...shape} x="8" y="13" width={variant % 2 ? 15 : 13} height="4.5" rx="1" />
+        <rect {...shape} x={variant % 2 ? 22 : 20} y="14.3" width={hasLongBarrel ? 5 : 3} height="1.8" rx="0.5" />
+        <path {...shape} d={variant > 2 ? 'M11 18h5l2 6h-5z' : 'M12 18h4v5h-4z'} />
+        {hasOptic ? <rect {...shape} x="10" y="9.5" width="7" height="2.2" rx="0.8" /> : null}
+      </>
+    );
+  })();
+
+  return (
+    <span className="game-icon weapon-game-icon" title={`${weapon.name} icon`} aria-hidden="true">
+      <svg viewBox="0 0 32 32" focusable="false">
+        <rect x="1" y="1" width="30" height="30" rx="2" fill="#111116" />
+        <rect x="3" y="3" width="26" height="26" rx="1" fill="#c91f2b" />
+        <path d="M3 3h26v6c-6-1.8-13.2-1-26 2.5z" fill="#ef3b3f" opacity="0.45" />
+        {bgAccent}
+        <g transform="rotate(-6 16 16)">{glyph}</g>
+      </svg>
+    </span>
+  );
+}
+
 // ---------------- WeaponPicker ----------------
 // Categorised list — Pistol / SMG / Rifle / Shotgun / Sniper / Heavy. Each
 // weapon shows its sprite-sheet thumbnail plus its name. Rendering is cheap
@@ -526,8 +683,11 @@ function WeaponPicker({ list, byType, selectedIdx, onPick }) {
                     onClick={() => onPick(i)}
                     title={w.name}
                   >
-                    <WeaponIcon weapon={w} />
-                    <div className="weapon-name">{w.name}</div>
+                    <div className="weapon-card-main">
+                      <WeaponIcon weapon={w} />
+                      <div className="weapon-name">{w.name}</div>
+                    </div>
+                    <WeaponGameIcon weapon={w} />
                   </button>
                 );
               })}

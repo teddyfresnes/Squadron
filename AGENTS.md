@@ -38,6 +38,7 @@ http://localhost:8000/Sprite%20Forge.html
 - Les cheveux utilisent `window.Palette.hair`; la couleur `Ginger` sert de roux melange marron/jaune.
 - Les stats d'armes doivent rester dans `weapon-config.json`; les infos de rendu restent dans `weapons.js`.
 - Les IDs de `weapon-config.json` doivent correspondre aux IDs generes dans `weapons.js` (`SMG-01`, `RIFLE-01`, etc.).
+- Les icones de jeu utilisent la classe generique `.game-icon`; les armes ont des icones rouges/noires via `WeaponGameIcon` dans `app.jsx`. Garder le rouge pour les armes, reserver d'autres couleurs aux competences.
 
 ## Economie De Tokens
 
