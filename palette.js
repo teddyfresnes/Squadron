@@ -85,16 +85,23 @@ window.Palette = {
 
   // Hairstyles
   hairstyles: [
+    { name: 'Textured Crop' },
+    { name: 'Low Fade' },
+    { name: 'Side Part' },
+    { name: 'Quiff' },
+    { name: 'Curly Top' },
     { name: 'Short' },
-    { name: 'Buzz' },
     { name: 'Messy' },
     { name: 'Long' },
-    { name: 'Mohawk' },
     { name: 'Ponytail' },
     { name: 'Bob' },
     { name: 'Wavy' },
     { name: 'Flowing' },
     { name: 'High Ponytail' },
+    { name: 'Buzz Cut' },
+    { name: 'Crew Cut' },
+    { name: 'Slick Back' },
+    { name: 'Stubble' },
     { name: 'Bald' }
   ],
 

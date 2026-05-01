@@ -458,92 +458,92 @@
       return;
     }
 
-    if (style === 'Short') {
-      // Heavy cap across the upper half of the head.
+    if (style === 'Textured Crop') {
       const tpl = [
         '..OOOOOO...',
         '.OBBBBBBO..',
         'OBBHHBBBBO.',
         'OBBBBBBBBO.',
-        '.BBBBBBBBO.',
-        '..BBBBBB...'
+        '.OBBBBBSO..',
+        '..BSSBB....'
       ];
-      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, H: h });
-      // Sideburn hint back
-      E.px(ctx, cx + 1, cy + 4, b);
-      E.px(ctx, cx + 0, cy + 4, O);
-    } else if (style === 'Buzz') {
+      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
+    } else if (style === 'Low Fade') {
+      const tpl = [
+        '...OOOOO...',
+        '..OBBBBBO..',
+        '.OBHHBBBO..',
+        'OBBBBBBBBO.',
+        '.OBBBBBSO..',
+        '..SSSS.....'
+      ];
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, S: s, H: h });
+    } else if (style === 'Side Part') {
       const tpl = [
         '..OOOOOO...',
         '.OBBBBBBO..',
+        'OBHHSBBBBO.',
+        'OBHHBBBBBO.',
         'OBBBBBBBBO.',
-        '.BBBBBBBB..'
+        '.OBBBBBSO..',
+        '..BBSO.....'
       ];
-      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b });
-    } else if (style === 'Messy') {
+      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
+    } else if (style === 'Quiff') {
       const tpl = [
-        '..O.OOO.O..',
-        '.OBBBBBBBO.',
-        'OBBHHBBBBBO',
-        'OBBBBBBBBBO',
+        '....OOOO...',
+        '...OBBBBO..',
+        '..OBHHBBBO.',
+        '.OBHBBBBBO.',
         'OBBBBBBBBO.',
-        '.BBBBBBBBO.',
-        '..BBBBBB...'
+        '.OBBBBBSO..',
+        '..BBBBS....'
       ];
-      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, H: h });
-    } else if (style === 'Long') {
-      // flows down the back (left side since facing right)
+      E.stamp(ctx, cx - 1, cy - 3, tpl, { O, B: b, S: s, H: h });
+    } else if (style === 'Curly Top') {
       const tpl = [
         '..OOOOOO...',
-        '.OBBBBBBO..',
+        '.OBBOBBBO..',
         'OBBHHBBBBO.',
         'OBBBBBBBBO.',
-        'OBBBBBBBBO.',
-        '.BBBBBBBBO.'
+        '.OBBSBBBBO.',
+        '..BBSBBO...'
       ];
-      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, H: h });
-      // Trail down back
-      for (let i = 0; i < 6; i++) {
-        E.px(ctx, cx + 0, cy + 3 + i, b);
-        E.px(ctx, cx - 1, cy + 4 + i, b);
-        E.px(ctx, cx - 1, cy + 3 + i, O);
-      }
-      E.px(ctx, cx - 1, cy + 9, O);
-    } else if (style === 'Mohawk') {
-      // Center strip taller
-      for (let y = -3; y <= 3; y++) {
-        for (let x = 3; x <= 6; x++) {
-          E.px(ctx, cx + x, cy + y, b);
-        }
-      }
-      // outline
-      for (let y = -4; y <= 3; y++) {
-        E.px(ctx, cx + 2, cy + y, O);
-        E.px(ctx, cx + 7, cy + y, O);
-      }
-      E.px(ctx, cx + 3, cy - 3, O);
-      E.px(ctx, cx + 4, cy - 3, O);
-      E.px(ctx, cx + 5, cy - 3, O);
-      E.px(ctx, cx + 6, cy - 3, O);
-      // highlight
-      E.px(ctx, cx + 4, cy - 2, h);
-      E.px(ctx, cx + 5, cy - 2, h);
-    } else if (style === 'Ponytail') {
+      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
+    } else if (style === 'Buzz Cut') {
       const tpl = [
         '..OOOOOO...',
         '.OBBBBBBO..',
-        'OBBHHBBBBO.',
-        'OBBBBBBBBO.',
-        '.BBBBBBBBO.'
+        'OBSBSBSBSO.',
+        '.OOOOOOOO..'
       ];
-      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, H: h });
-      // Ponytail behind (left side)
-      E.px(ctx, cx + 0, cy + 3, O);
-      E.px(ctx, cx - 1, cy + 4, O);
-      E.px(ctx, cx - 1, cy + 5, b);
-      E.px(ctx, cx - 2, cy + 6, O);
-      E.px(ctx, cx - 2, cy + 7, b);
-      E.px(ctx, cx - 2, cy + 8, O);
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, S: s, H: h });
+    } else if (style === 'Crew Cut') {
+      const tpl = [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBBHBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OBSBBSBO..'
+      ];
+      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
+    } else if (style === 'Slick Back') {
+      const tpl = [
+        '..OOOOOO...',
+        '.OBBBBBBO..',
+        'OBHHBBBBBO.',
+        'OBBBBBBBBO.',
+        '.OSSSSSSSO.',
+        '..OOOOOO...'
+      ];
+      E.stamp(ctx, cx - 1, cy - 2, tpl, { O, B: b, S: s, H: h });
+    } else if (style === 'Stubble') {
+      const tpl = [
+        '..S.S.S.S..',
+        '.S.S.S.S.S.',
+        '..S.S.S.S..'
+      ];
+      E.stamp(ctx, cx - 1, cy - 1, tpl, { O, B: b, S: s, H: h });
     }
   };
 
@@ -1661,81 +1661,210 @@
       return;
     }
 
-    if (style === 'Mohawk') {
-      fillRoundRect(ctx, cx + 2.05, cy - 4.0, 5.15, 7.7, 1.05, O);
-      fillRoundRect(ctx, cx + 2.65, cy - 3.45, 3.95, 6.65, 0.9, b);
-      strokeLine(ctx, cx + 4.25, cy - 3.0, cx + 4.25, cy + 1.7, h, 0.55);
-      return;
-    }
-
-    if (style === 'Buzz') {
+    if (style === 'Textured Crop') {
       fillPath(ctx, O, function () {
-        ctx.moveTo(cx + 0.25, cy + 3.55);
-        ctx.quadraticCurveTo(cx + 1.1, cy + 0.1, cx + 4.35, cy + 0.0);
-        ctx.quadraticCurveTo(cx + 7.55, cy + 0.05, cx + 8.45, cy + 3.45);
-        ctx.quadraticCurveTo(cx + 5.0, cy + 4.2, cx + 0.25, cy + 3.55);
+        ctx.moveTo(cx - 0.35, cy + 3.75);
+        ctx.quadraticCurveTo(cx + 0.75, cy - 1.0, cx + 4.05, cy - 1.18);
+        ctx.quadraticCurveTo(cx + 7.95, cy - 0.92, cx + 8.8, cy + 3.0);
+        ctx.quadraticCurveTo(cx + 7.15, cy + 4.48, cx + 4.9, cy + 4.2);
+        ctx.quadraticCurveTo(cx + 2.45, cy + 4.55, cx - 0.35, cy + 3.75);
         ctx.closePath();
       });
       fillPath(ctx, b, function () {
-        ctx.moveTo(cx + 0.95, cy + 3.15);
-        ctx.quadraticCurveTo(cx + 1.55, cy + 0.65, cx + 4.35, cy + 0.55);
-        ctx.quadraticCurveTo(cx + 6.95, cy + 0.65, cx + 7.7, cy + 3.05);
-        ctx.quadraticCurveTo(cx + 4.85, cy + 3.65, cx + 0.95, cy + 3.15);
+        ctx.moveTo(cx + 0.28, cy + 3.35);
+        ctx.quadraticCurveTo(cx + 1.12, cy - 0.42, cx + 4.1, cy - 0.55);
+        ctx.quadraticCurveTo(cx + 7.25, cy - 0.32, cx + 8.05, cy + 2.82);
+        ctx.quadraticCurveTo(cx + 6.9, cy + 3.88, cx + 4.75, cy + 3.65);
+        ctx.quadraticCurveTo(cx + 2.62, cy + 3.92, cx + 0.28, cy + 3.35);
         ctx.closePath();
       });
-      strokeLine(ctx, cx + 2.25, cy + 2.9, cx + 7.0, cy + 2.95, s, 0.35);
+      strokeLine(ctx, cx + 1.8, cy + 0.2, cx + 5.75, cy + 0.62, h, 0.42);
+      strokeLine(ctx, cx + 1.05, cy + 3.55, cx + 7.55, cy + 3.5, s, 0.38);
+      strokeLine(ctx, cx + 5.65, cy + 2.0, cx + 7.55, cy + 2.48, s, 0.32);
       return;
     }
 
-    fillPath(ctx, O, function () {
-      ctx.moveTo(cx - 0.7, cy + 4.05);
-      ctx.quadraticCurveTo(cx + 0.25, cy - 1.65, cx + 4.25, cy - 1.8);
-      ctx.quadraticCurveTo(cx + 8.65, cy - 1.45, cx + 9.2, cy + 3.45);
-      ctx.quadraticCurveTo(cx + 8.05, cy + 4.95, cx + 6.25, cy + 5.25);
-      ctx.quadraticCurveTo(cx + 4.3, cy + 4.05, cx + 2.35, cy + 4.55);
-      ctx.quadraticCurveTo(cx + 0.45, cy + 5.05, cx - 0.7, cy + 4.05);
-      ctx.closePath();
-    });
-    fillPath(ctx, b, function () {
-      ctx.moveTo(cx + 0.05, cy + 3.65);
-      ctx.quadraticCurveTo(cx + 0.8, cy - 0.95, cx + 4.25, cy - 1.05);
-      ctx.quadraticCurveTo(cx + 7.9, cy - 0.75, cx + 8.45, cy + 3.15);
-      ctx.quadraticCurveTo(cx + 7.35, cy + 4.35, cx + 5.9, cy + 4.55);
-      ctx.quadraticCurveTo(cx + 4.1, cy + 3.55, cx + 2.3, cy + 4.05);
-      ctx.quadraticCurveTo(cx + 0.75, cy + 4.45, cx + 0.05, cy + 3.65);
-      ctx.closePath();
-    });
-    strokeLine(ctx, cx + 2.2, cy + 0.4, cx + 6.1, cy + 1.0, h, 0.45);
-    strokeLine(ctx, cx + 1.0, cy + 3.85, cx + 7.85, cy + 3.95, s, 0.4);
+    if (style === 'Low Fade') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx + 0.28, cy + 3.45);
+        ctx.quadraticCurveTo(cx + 1.2, cy + 0.18, cx + 4.25, cy + 0.02);
+        ctx.quadraticCurveTo(cx + 7.38, cy + 0.08, cx + 8.42, cy + 3.35);
+        ctx.quadraticCurveTo(cx + 5.0, cy + 4.18, cx + 0.28, cy + 3.45);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.95, cy + 3.12);
+        ctx.quadraticCurveTo(cx + 1.62, cy + 0.75, cx + 4.28, cy + 0.6);
+        ctx.quadraticCurveTo(cx + 6.78, cy + 0.7, cx + 7.62, cy + 3.0);
+        ctx.quadraticCurveTo(cx + 4.9, cy + 3.58, cx + 0.95, cy + 3.12);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 1.25, cy + 3.08, cx + 7.2, cy + 3.08, s, 0.38);
+      strokeLine(ctx, cx + 2.4, cy + 1.05, cx + 5.65, cy + 0.92, h, 0.35);
+      return;
+    }
 
-    if (style === 'Messy') {
-      strokePath(ctx, O, 0.75, function () {
-        ctx.moveTo(cx + 0.9, cy + 0.75);
-        ctx.lineTo(cx + 0.0, cy - 1.8);
-        ctx.moveTo(cx + 2.85, cy - 0.25);
-        ctx.lineTo(cx + 2.25, cy - 2.45);
-        ctx.moveTo(cx + 5.15, cy - 0.45);
-        ctx.lineTo(cx + 6.05, cy - 2.1);
-        ctx.moveTo(cx + 7.25, cy + 0.75);
-        ctx.lineTo(cx + 8.75, cy - 0.95);
+    if (style === 'Side Part') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.5, cy + 3.92);
+        ctx.quadraticCurveTo(cx + 0.35, cy - 1.35, cx + 4.05, cy - 1.55);
+        ctx.quadraticCurveTo(cx + 8.15, cy - 1.15, cx + 9.0, cy + 3.15);
+        ctx.quadraticCurveTo(cx + 7.72, cy + 4.85, cx + 5.9, cy + 4.72);
+        ctx.quadraticCurveTo(cx + 4.0, cy + 3.58, cx + 2.05, cy + 4.18);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 4.72, cx - 0.5, cy + 3.92);
+        ctx.closePath();
       });
-      strokePath(ctx, b, 0.46, function () {
-        ctx.moveTo(cx + 0.9, cy + 0.75);
-        ctx.lineTo(cx + 0.08, cy - 1.55);
-        ctx.moveTo(cx + 2.85, cy - 0.25);
-        ctx.lineTo(cx + 2.32, cy - 2.2);
-        ctx.moveTo(cx + 5.15, cy - 0.45);
-        ctx.lineTo(cx + 5.9, cy - 1.85);
-        ctx.moveTo(cx + 7.25, cy + 0.75);
-        ctx.lineTo(cx + 8.55, cy - 0.75);
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.12, cy + 3.55);
+        ctx.quadraticCurveTo(cx + 0.82, cy - 0.78, cx + 4.05, cy - 0.92);
+        ctx.quadraticCurveTo(cx + 7.35, cy - 0.62, cx + 8.2, cy + 2.9);
+        ctx.quadraticCurveTo(cx + 7.05, cy + 4.12, cx + 5.78, cy + 4.02);
+        ctx.quadraticCurveTo(cx + 4.0, cy + 3.12, cx + 2.18, cy + 3.62);
+        ctx.quadraticCurveTo(cx + 0.88, cy + 4.0, cx + 0.12, cy + 3.55);
+        ctx.closePath();
       });
-    } else if (style === 'Long') {
-      strokeLine(ctx, cx - 0.25, cy + 3.65, cx - 1.15, cy + 9.35, O, 2.1);
-      strokeLine(ctx, cx - 0.2, cy + 3.55, cx - 0.95, cy + 9.05, b, 1.35);
-      strokeLine(ctx, cx - 0.5, cy + 5.15, cx - 0.95, cy + 8.2, s, 0.45);
-    } else if (style === 'Ponytail') {
-      strokeLine(ctx, cx + 0.05, cy + 4.35, cx - 2.1, cy + 7.85, O, 2.4);
-      strokeLine(ctx, cx + 0.05, cy + 4.35, cx - 1.85, cy + 7.65, b, 1.55);
+      strokeLine(ctx, cx + 3.42, cy - 0.42, cx + 4.15, cy + 3.42, s, 0.42);
+      strokeLine(ctx, cx + 4.42, cy + 0.18, cx + 7.0, cy + 1.08, h, 0.38);
+      strokeLine(ctx, cx + 0.95, cy + 3.75, cx + 7.75, cy + 3.78, s, 0.34);
+      return;
+    }
+
+    if (style === 'Quiff') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.45, cy + 4.0);
+        ctx.quadraticCurveTo(cx + 0.8, cy - 0.92, cx + 4.1, cy - 1.68);
+        ctx.quadraticCurveTo(cx + 7.0, cy - 2.55, cx + 8.95, cy + 1.88);
+        ctx.quadraticCurveTo(cx + 8.38, cy + 4.35, cx + 6.05, cy + 4.55);
+        ctx.quadraticCurveTo(cx + 4.08, cy + 3.42, cx + 2.22, cy + 4.05);
+        ctx.quadraticCurveTo(cx + 0.55, cy + 4.6, cx - 0.45, cy + 4.0);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.18, cy + 3.58);
+        ctx.quadraticCurveTo(cx + 1.08, cy - 0.42, cx + 4.2, cy - 0.92);
+        ctx.quadraticCurveTo(cx + 6.78, cy - 1.55, cx + 8.15, cy + 1.98);
+        ctx.quadraticCurveTo(cx + 7.62, cy + 3.82, cx + 5.95, cy + 3.95);
+        ctx.quadraticCurveTo(cx + 4.18, cy + 3.05, cx + 2.3, cy + 3.55);
+        ctx.quadraticCurveTo(cx + 0.9, cy + 4.0, cx + 0.18, cy + 3.58);
+        ctx.closePath();
+      });
+      strokePath(ctx, h, 0.4, function () {
+        ctx.moveTo(cx + 2.35, cy + 0.0);
+        ctx.quadraticCurveTo(cx + 5.2, cy - 1.55, cx + 7.25, cy + 0.85);
+      });
+      strokeLine(ctx, cx + 1.0, cy + 3.82, cx + 7.78, cy + 3.72, s, 0.38);
+      return;
+    }
+
+    if (style === 'Curly Top') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.55, cy + 3.88);
+        ctx.quadraticCurveTo(cx + 0.1, cy - 0.7, cx + 2.0, cy - 0.92);
+        ctx.quadraticCurveTo(cx + 2.8, cy - 2.0, cx + 3.75, cy - 0.98);
+        ctx.quadraticCurveTo(cx + 4.92, cy - 2.05, cx + 6.02, cy - 0.88);
+        ctx.quadraticCurveTo(cx + 8.28, cy - 0.55, cx + 8.95, cy + 3.32);
+        ctx.quadraticCurveTo(cx + 7.75, cy + 4.95, cx + 5.8, cy + 4.75);
+        ctx.quadraticCurveTo(cx + 4.08, cy + 3.7, cx + 2.22, cy + 4.28);
+        ctx.quadraticCurveTo(cx + 0.45, cy + 4.88, cx - 0.55, cy + 3.88);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.08, cy + 3.52);
+        ctx.quadraticCurveTo(cx + 0.68, cy - 0.18, cx + 2.18, cy - 0.22);
+        ctx.quadraticCurveTo(cx + 2.82, cy - 1.15, cx + 3.62, cy - 0.22);
+        ctx.quadraticCurveTo(cx + 4.82, cy - 1.2, cx + 5.72, cy - 0.12);
+        ctx.quadraticCurveTo(cx + 7.52, cy + 0.05, cx + 8.18, cy + 3.0);
+        ctx.quadraticCurveTo(cx + 7.12, cy + 4.25, cx + 5.72, cy + 4.08);
+        ctx.quadraticCurveTo(cx + 4.05, cy + 3.22, cx + 2.28, cy + 3.72);
+        ctx.quadraticCurveTo(cx + 0.9, cy + 4.15, cx + 0.08, cy + 3.52);
+        ctx.closePath();
+      });
+      fillEllipse(ctx, cx + 3.12, cy - 0.2, 0.38, 0.22, h);
+      fillEllipse(ctx, cx + 5.35, cy - 0.12, 0.42, 0.24, h);
+      strokeLine(ctx, cx + 1.0, cy + 3.78, cx + 7.55, cy + 3.75, s, 0.36);
+      return;
+    }
+
+    if (style === 'Buzz Cut') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx + 0.55, cy + 3.6);
+        ctx.quadraticCurveTo(cx + 0.85, cy + 1.2, cx + 4.25, cy + 0.85);
+        ctx.quadraticCurveTo(cx + 7.55, cy + 1.1, cx + 7.85, cy + 3.55);
+        ctx.lineTo(cx + 0.55, cy + 3.6);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 1.05, cy + 3.25);
+        ctx.quadraticCurveTo(cx + 1.35, cy + 1.6, cx + 4.25, cy + 1.42);
+        ctx.quadraticCurveTo(cx + 7.05, cy + 1.55, cx + 7.35, cy + 3.2);
+        ctx.lineTo(cx + 1.05, cy + 3.25);
+        ctx.closePath();
+      });
+      fillEllipse(ctx, cx + 1.8, cy + 2.2, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 3.0, cy + 1.85, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 4.4, cy + 2.5, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 5.6, cy + 1.9, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 6.6, cy + 2.4, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 2.4, cy + 2.9, 0.16, 0.1, s);
+      fillEllipse(ctx, cx + 5.0, cy + 1.45, 0.18, 0.1, h);
+      return;
+    }
+
+    if (style === 'Crew Cut') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx + 0.3, cy + 3.7);
+        ctx.quadraticCurveTo(cx + 0.7, cy + 0.3, cx + 4.25, cy + 0.05);
+        ctx.quadraticCurveTo(cx + 7.85, cy + 0.3, cx + 8.2, cy + 3.55);
+        ctx.lineTo(cx + 0.3, cy + 3.7);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.85, cy + 3.35);
+        ctx.quadraticCurveTo(cx + 1.2, cy + 0.8, cx + 4.25, cy + 0.65);
+        ctx.quadraticCurveTo(cx + 7.3, cy + 0.85, cx + 7.65, cy + 3.25);
+        ctx.lineTo(cx + 0.85, cy + 3.35);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 2.5, cy + 0.95, cx + 5.8, cy + 0.95, h, 0.38);
+      strokeLine(ctx, cx + 1.4, cy + 3.2, cx + 7.1, cy + 3.2, s, 0.34);
+      return;
+    }
+
+    if (style === 'Slick Back') {
+      fillPath(ctx, O, function () {
+        ctx.moveTo(cx - 0.3, cy + 3.85);
+        ctx.quadraticCurveTo(cx + 0.5, cy - 1.0, cx + 4.05, cy - 1.4);
+        ctx.quadraticCurveTo(cx + 7.85, cy - 1.05, cx + 8.7, cy + 3.2);
+        ctx.quadraticCurveTo(cx + 4.5, cy + 4.4, cx - 0.3, cy + 3.85);
+        ctx.closePath();
+      });
+      fillPath(ctx, b, function () {
+        ctx.moveTo(cx + 0.35, cy + 3.5);
+        ctx.quadraticCurveTo(cx + 1.0, cy - 0.4, cx + 4.05, cy - 0.78);
+        ctx.quadraticCurveTo(cx + 7.25, cy - 0.45, cx + 7.95, cy + 2.95);
+        ctx.quadraticCurveTo(cx + 4.5, cy + 3.85, cx + 0.35, cy + 3.5);
+        ctx.closePath();
+      });
+      strokeLine(ctx, cx + 6.0, cy - 0.4, cx + 1.5, cy + 0.5, h, 0.32);
+      strokeLine(ctx, cx + 6.5, cy + 0.6, cx + 1.4, cy + 1.5, h, 0.3);
+      strokeLine(ctx, cx + 6.8, cy + 1.7, cx + 1.4, cy + 2.4, s, 0.32);
+      strokeLine(ctx, cx + 1.0, cy + 3.5, cx + 7.55, cy + 3.45, s, 0.4);
+      return;
+    }
+
+    if (style === 'Stubble') {
+      fillEllipse(ctx, cx + 1.0, cy + 2.0, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 2.2, cy + 1.4, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 3.4, cy + 2.0, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 4.6, cy + 1.4, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 5.8, cy + 2.0, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 7.0, cy + 1.4, 0.18, 0.12, s);
+      fillEllipse(ctx, cx + 1.6, cy + 2.8, 0.16, 0.1, s);
+      fillEllipse(ctx, cx + 3.0, cy + 2.8, 0.16, 0.1, s);
+      fillEllipse(ctx, cx + 4.4, cy + 2.8, 0.16, 0.1, s);
+      fillEllipse(ctx, cx + 5.8, cy + 2.8, 0.16, 0.1, s);
+      fillEllipse(ctx, cx + 6.4, cy + 2.4, 0.16, 0.1, s);
+      return;
     }
   };
 

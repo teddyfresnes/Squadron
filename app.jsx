@@ -11,7 +11,7 @@ const DEFAULT_CFG = {
   bodyType: 'male',
   skinIdx: 0,
   hairIdx: 1,
-  hairStyleIdx: 2,  // Messy
+  hairStyleIdx: 0,  // Textured Crop
   eyeIdx: 1,
   uniformIdx: 0,
   pantsIdx: 0,
@@ -30,7 +30,7 @@ const BODY_TYPES = [
 ];
 
 const HAIRSTYLES_BY_BODY = {
-  male: ['Short', 'Buzz', 'Messy', 'Mohawk', 'Bald'],
+  male: ['Textured Crop', 'Low Fade', 'Side Part', 'Quiff', 'Curly Top', 'Buzz Cut', 'Crew Cut', 'Slick Back', 'Stubble', 'Bald'],
   female: ['Short', 'Messy', 'Long', 'Ponytail', 'Bob', 'Wavy', 'Flowing', 'High Ponytail']
 };
 
@@ -215,9 +215,9 @@ function App() {
   const [cfg, setCfg] = useState(() => {
     try {
       const saved = localStorage.getItem('char-cfg');
-      if (saved) return { ...DEFAULT_CFG, ...JSON.parse(saved) };
+      if (saved) return normalizeHairStyleForBody({ ...DEFAULT_CFG, ...JSON.parse(saved) });
     } catch (e) {}
-    return DEFAULT_CFG;
+    return normalizeHairStyleForBody(DEFAULT_CFG);
   });
   const [animKey, setAnimKey] = useState(() => localStorage.getItem('char-anim') || 'idle');
   const [facing, setFacing] = useState(1);
