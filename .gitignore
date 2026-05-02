@@ -1,0 +1,19 @@
+# ── Server ────────────────────────────────────────────────────────────────────
+server/node_modules/
+server/.jwt_secret
+server/squadron.json
+server/squadron.json.tmp
+
+# ── Env / secrets ─────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── OS / editors ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/

@@ -5,12 +5,12 @@
 
 const { useState, useEffect, useRef, useCallback } = React;
 
-const SQUADS_KEY   = 'squadron-squads';
+const SQUADS_KEY    = 'squadron-squads';
 const SOLDIER_COUNT = 8;
 const SKILL1_NAMES  = ['Glock 17', 'Uzi', 'Mossberg 500', 'AKS-74U', 'Steyr Scout'];
+const SERVER_URL    = 'http://127.0.0.1:3001';
 
 // ── Weapon stats (from weapon-config.json) ──────────────────────────────────
-// Loaded once at boot; fast (local file). Tooltips read from this map by id.
 const weaponStats = {};
 fetch('./weapon-config.json')
   .then(r => r.json())
@@ -74,7 +74,7 @@ const WEAPON_TYPE_LABELS = {
   rifle:"Fusil d'assaut", sniper:"Fusil de précision", heavy:"Arme lourde"
 };
 
-// ── Squad storage ────────────────────────────────────────────────────────────
+// ── Squad storage (offline mode — localStorage) ──────────────────────────────
 function loadSquads() {
   try {
     const raw = localStorage.getItem(SQUADS_KEY);
@@ -105,7 +105,27 @@ function verifySquadPassword(name, password) {
   return !!(s && s.password === password);
 }
 
-// ── Random helpers ───────────────────────────────────────────────────────────
+// ── Server API helper ─────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res  = await fetch(SERVER_URL + path, {
+      ...opts,
+      signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    });
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    const msg = e.name === 'AbortError' ? 'Délai dépassé.' : 'Serveur inaccessible.';
+    return { ok: false, status: 0, data: { error: msg } };
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+// ── Random helpers (offline mode) ────────────────────────────────────────────
 function randInt(n) { return Math.floor(Math.random() * n); }
 function pick(arr)  { return arr[randInt(arr.length)]; }
 function getWeaponByName(name) {
@@ -148,6 +168,85 @@ function buildSoldiers(count = SOLDIER_COUNT) {
   });
 }
 
+// ── ServerCheckPage ───────────────────────────────────────────────────────────
+function ServerCheckPage({ onOnline, onOffline }) {
+  const [progress,  setProgress]  = useState(0);
+  const [timedOut,  setTimedOut]  = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const start = Date.now();
+
+    // Animate bar to 85 % over ~9.5 s
+    const ticker = setInterval(() => {
+      if (cancelled) return;
+      setProgress(Math.min(85, ((Date.now() - start) / 9500) * 85));
+    }, 80);
+
+    const ctrl      = new AbortController();
+    const hardLimit = setTimeout(() => {
+      if (cancelled) return;
+      ctrl.abort();
+      clearInterval(ticker);
+      setProgress(100);
+      setTimedOut(true);
+    }, 10000);
+
+    fetch(SERVER_URL + '/api/health', { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return;
+        if (d && d.status === 'ok') {
+          clearInterval(ticker);
+          clearTimeout(hardLimit);
+          setProgress(100);
+          setTimeout(() => { if (!cancelled) onOnline(); }, 280);
+        }
+      })
+      .catch(err => {
+        if (cancelled || err.name === 'AbortError') return;
+        clearInterval(ticker);
+        clearTimeout(hardLimit);
+        setProgress(100);
+        setTimedOut(true);
+      });
+
+    return () => {
+      cancelled = true;
+      clearInterval(ticker);
+      clearTimeout(hardLimit);
+      ctrl.abort();
+    };
+  }, [onOnline]);
+
+  return (
+    <div className="gp-page srv-check-page">
+      <div className="gp-bg" /><div className="gp-overlay" />
+      <div className="srv-check-card">
+        <div className="srv-check-badge">◈ SQUADRON ◈</div>
+        <div className="srv-check-title">CONNEXION AU SERVEUR</div>
+        <div className="srv-check-bar-wrap">
+          <div
+            className="srv-check-bar"
+            style={{
+              width: progress + '%',
+              transition: timedOut ? 'none' : 'width 80ms linear',
+            }}
+          />
+        </div>
+        {timedOut ? (
+          <div className="srv-check-error-block">
+            <div className="srv-check-error-msg">Serveur introuvable</div>
+            <button className="sq-btn" onClick={onOffline}>Mode hors ligne</button>
+          </div>
+        ) : (
+          <div className="srv-check-sub">Recherche du serveur…</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── ModeToggleFab ────────────────────────────────────────────────────────────
 function ModeToggleFab({ onSwitchMode, variant }) {
   return (
@@ -161,7 +260,6 @@ function ModeToggleFab({ onSwitchMode, variant }) {
 }
 
 // ── SkillTooltip ─────────────────────────────────────────────────────────────
-// Portal-rendered so it escapes the soldier-strip overflow clipping.
 function SkillTooltip({ weapon, text, children }) {
   const WeaponIcon = window.SquadronUI && window.SquadronUI.WeaponIcon;
   const wrapRef = useRef(null);
@@ -269,33 +367,36 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
 }
 
 // ── HomePage ─────────────────────────────────────────────────────────────────
-function HomePage({ soldiers, onCreate, onJoin }) {
-  const [selectedId, setSelectedId] = useState(null);
-  const [squadName, setSquadName] = useState('');
-  const [password, setPassword]   = useState('');
-  const [joinName, setJoinName]   = useState('');
-  const [createError, setCreateError] = useState(null);
-  const [joinError,   setJoinError]   = useState(null);
+function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
+  const [selectedId,   setSelectedId]   = useState(null);
+  const [squadName,    setSquadName]    = useState('');
+  const [password,     setPassword]     = useState('');
+  const [joinName,     setJoinName]     = useState('');
+  const [createError,  setCreateError]  = useState(null);
+  const [joinError,    setJoinError]    = useState(null);
+  const [creating,     setCreating]     = useState(false);
 
   const selectedSoldier = soldiers.find(s => s.id === selectedId) || null;
   const trimmedName     = squadName.trim();
-  const canCreate       = !!selectedSoldier && trimmedName.length >= 2;
+  const canCreate       = !!selectedSoldier && trimmedName.length >= 2 && !creating;
 
   let disabledReason = '';
   if (!selectedSoldier && trimmedName.length < 2) disabledReason = 'Choisis un soldat et donne un nom à ta squad.';
   else if (!selectedSoldier)                       disabledReason = 'Choisis un soldat fondateur.';
   else if (trimmedName.length < 2)                 disabledReason = 'Le nom doit faire au moins 2 caractères.';
 
-  const handleCreate = e => {
+  const handleCreate = async e => {
     e.preventDefault();
     setCreateError(null);
     if (!canCreate) return;
-    const res = createSquad(trimmedName, password, {
-      config: selectedSoldier.config,
-      name:   selectedSoldier.name,
+    setCreating(true);
+    const res = await onCreateSquad(trimmedName, password, {
+      name:       selectedSoldier.name,
+      config:     selectedSoldier.config,
       skill1Name: selectedSoldier.skill1Name,
-      skill2Name: selectedSoldier.skill2Name
+      skill2Name: selectedSoldier.skill2Name,
     });
+    setCreating(false);
     if (!res.ok) { setCreateError(res.error); return; }
     onCreate(trimmedName);
   };
@@ -311,6 +412,11 @@ function HomePage({ soldiers, onCreate, onJoin }) {
   return (
     <div className="gp-page gp-home">
       <div className="gp-bg" /><div className="gp-overlay" />
+      {!serverOnline && (
+        <div className="srv-offline-badge" title="Mode hors ligne — données locales">
+          HORS LIGNE
+        </div>
+      )}
       <div className="sq-card">
         <div className="sq-card-header">
           <div className="sq-card-title">SQUADRON</div>
@@ -329,12 +435,14 @@ function HomePage({ soldiers, onCreate, onJoin }) {
           <form className="sq-create sq-col" onSubmit={handleCreate}>
             <div className="sq-section-title">CRÉER MA SQUAD</div>
             <div className="sq-fields">
-              <input type="text"     className="sq-input" placeholder="Nom de la squad"        value={squadName} maxLength={24} onChange={e => { setSquadName(e.target.value); setCreateError(null); }} />
-              <input type="password" className="sq-input" placeholder="Mot de passe (optionnel)" value={password}  maxLength={48} onChange={e => { setPassword(e.target.value);  setCreateError(null); }} />
+              <input type="text"     className="sq-input" placeholder="Nom de la squad"          value={squadName} maxLength={24} onChange={e => { setSquadName(e.target.value); setCreateError(null); }} />
+              <input type="password" className="sq-input" placeholder="Mot de passe (optionnel)" value={password}  maxLength={128} onChange={e => { setPassword(e.target.value);  setCreateError(null); }} />
             </div>
             <div className="sq-col-spacer" />
             <div className="sq-btn-wrap" data-tooltip={canCreate ? '' : disabledReason}>
-              <button type="submit" className={'sq-btn sq-btn-primary' + (canCreate ? '' : ' is-disabled')} disabled={!canCreate}>CRÉER</button>
+              <button type="submit" className={'sq-btn sq-btn-primary' + (canCreate ? '' : ' is-disabled')} disabled={!canCreate}>
+                {creating ? '…' : 'CRÉER'}
+              </button>
             </div>
             {createError ? <div className="sq-error">{createError}</div> : null}
           </form>
@@ -363,8 +471,6 @@ function HomePage({ soldiers, onCreate, onJoin }) {
 }
 
 // ── FallingLinesEffect ────────────────────────────────────────────────────────
-// Matrix-style falling characters with a centred message. Used for creation
-// and for password-less squad access.
 const FX_CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%■□▪▫▸▾';
 
 function FallingLinesEffect({ headline, detail, onDone, duration = 2400 }) {
@@ -425,7 +531,6 @@ function FallingLinesEffect({ headline, detail, onDone, duration = 2400 }) {
 }
 
 // ── BootIntroEffect ──────────────────────────────────────────────────────────
-// Brief hacker-style boot sequence shown just before the hacker terminal.
 const BOOT_LINES = [
   '> SQUADRON-NET v3.7.1',
   '> Initialisation du module crypto...',
@@ -453,21 +558,15 @@ function BootIntroEffect({ onDone }) {
       <div className="fx-boot-frame">
         <div className="fx-boot-tag">[SQUADRON-SYS]</div>
         {BOOT_LINES.slice(0, count).map((line, i) => (
-          <div key={i} className="fx-boot-line"
-            style={{ animationDelay: '0ms' }}
-          >{line}</div>
+          <div key={i} className="fx-boot-line" style={{ animationDelay: '0ms' }}>{line}</div>
         ))}
-        {count < BOOT_LINES.length && (
-          <div className="fx-boot-cursor">▍</div>
-        )}
+        {count < BOOT_LINES.length && <div className="fx-boot-cursor">▍</div>}
       </div>
     </div>
   );
 }
 
 // ── TVOnEffect ───────────────────────────────────────────────────────────────
-// Classic CRT turn-on: a thin horizontal line expands to fill the screen,
-// then the overlay fades away revealing the HQ page.
 function TVOnEffect({ onDone }) {
   useEffect(() => {
     const t = setTimeout(onDone, 1100);
@@ -511,10 +610,11 @@ function HackerTyper({ text, speed = 38, jitter = 16, onDone }) {
 }
 
 // ── LoginPage ────────────────────────────────────────────────────────────────
-function LoginPage({ squadName, onSuccess, onBack }) {
+function LoginPage({ squadName, onSuccess, onBack, onLogin }) {
   const [typingDone, setTypingDone] = useState(false);
-  const [password, setPassword]     = useState('');
-  const [error, setError]           = useState(null);
+  const [password,   setPassword]   = useState('');
+  const [error,      setError]      = useState(null);
+  const [loading,    setLoading]    = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -524,11 +624,14 @@ function LoginPage({ squadName, onSuccess, onBack }) {
     }
   }, [typingDone]);
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    if (!squadExists(squadName)) { setError('ACCESS DENIED — squad introuvable.'); return; }
-    if (verifySquadPassword(squadName, password)) onSuccess();
-    else setError('ACCESS DENIED — mot de passe invalide.');
+    setError(null);
+    setLoading(true);
+    const result = await onLogin(password);
+    setLoading(false);
+    if (result.ok) onSuccess();
+    else setError(result.error);
   };
 
   return (
@@ -550,11 +653,14 @@ function LoginPage({ squadName, onSuccess, onBack }) {
                 onChange={e => { setPassword(e.target.value); setError(null); }}
                 placeholder="••••••••"
                 autoComplete="off" spellCheck={false}
+                disabled={loading}
               />
-              <button type="submit" className="hk-submit">ENTER</button>
+              <button type="submit" className="hk-submit" disabled={loading}>
+                {loading ? '…' : 'ENTER'}
+              </button>
             </div>
             {error ? <div className="hk-error">{error}</div> : null}
-            <button type="button" className="hk-back" onClick={onBack}>← annuler</button>
+            <button type="button" className="hk-back" onClick={onBack} disabled={loading}>← annuler</button>
           </form>
         )}
       </div>
@@ -569,19 +675,67 @@ function HQPage() {
 
 // ── GameApp ──────────────────────────────────────────────────────────────────
 // States:
-//   home → create → 'creating' (FallingLines) → hq
-//   home → join (no pass) → 'direct-access' (FallingLines) → hq
-//   home → join (has pass / unknown) → 'boot-intro' → 'login' → 'tv-on' → hq
+//   server-check → (online) → home   server-check → (offline) → home
+//   home → creating (FallingLines) → hq
+//   home → direct-access (FallingLines) → hq
+//   home → boot-intro → login → tv-on → hq
 function GameApp({ onSwitchMode }) {
-  const [page,  setPage]  = useState('home');
-  const [squad, setSquad] = useState(null);
-  const [soldiers] = useState(() => buildSoldiers(SOLDIER_COUNT));
+  const [page,         setPage]         = useState('server-check');
+  const [squad,        setSquad]        = useState(null);
+  const [soldiers,     setSoldiers]     = useState(null);
+  const [serverOnline, setServerOnline] = useState(false);
 
   useEffect(() => {
     if (window.Weapons && typeof window.Weapons.setSkinIdx === 'function')
       window.Weapons.setSkinIdx(33);
   }, []);
 
+  // ── Server connection result ─────────────────────────────────────────────
+  const handleServerOnline = useCallback(async () => {
+    setServerOnline(true);
+    try {
+      const { ok, data } = await apiFetch('/api/troopers');
+      setSoldiers(ok && Array.isArray(data.troopers) ? data.troopers : buildSoldiers(SOLDIER_COUNT));
+    } catch (_) {
+      setSoldiers(buildSoldiers(SOLDIER_COUNT));
+    }
+    setPage('home');
+  }, []);
+
+  const handleServerOffline = useCallback(() => {
+    setServerOnline(false);
+    setSoldiers(buildSoldiers(SOLDIER_COUNT));
+    setPage('home');
+  }, []);
+
+  // ── Server-aware squad operations ────────────────────────────────────────
+  const createSquadApi = useCallback(async (squadName, password, founder) => {
+    if (!serverOnline) return createSquad(squadName, password, founder);
+    const { ok, data } = await apiFetch('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ squadName, password, founder }),
+    });
+    if (!ok) return { ok: false, error: data.error || 'Erreur serveur.' };
+    try { sessionStorage.setItem('sq-token', data.token); } catch (_) {}
+    return { ok: true };
+  }, [serverOnline]);
+
+  const loginSquadApi = useCallback(async (password) => {
+    if (!serverOnline) {
+      if (!squadExists(squad)) return { ok: false, error: 'ACCESS DENIED — squad introuvable.' };
+      if (verifySquadPassword(squad, password)) return { ok: true };
+      return { ok: false, error: 'ACCESS DENIED — mot de passe invalide.' };
+    }
+    const { ok, data } = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ squadName: squad, password }),
+    });
+    if (!ok) return { ok: false, error: data.error || 'ACCESS DENIED — erreur serveur.' };
+    try { sessionStorage.setItem('sq-token', data.token); } catch (_) {}
+    return { ok: true };
+  }, [serverOnline, squad]);
+
+  // ── Navigation ───────────────────────────────────────────────────────────
   const goHome         = useCallback(() => { setSquad(null); setPage('home'); }, []);
   const goHQ           = useCallback(() => setPage('hq'), []);
   const goTVOn         = useCallback(() => setPage('tv-on'), []);
@@ -589,15 +743,37 @@ function GameApp({ onSwitchMode }) {
   const goDirectAccess = useCallback((name) => { setSquad(name); setPage('direct-access'); }, []);
   const goCreating     = useCallback((name) => { setSquad(name); setPage('creating'); }, []);
 
-  const handleJoin = useCallback((name) => {
-    if (squadExists(name) && !squadHasPassword(name)) goDirectAccess(name);
-    else goBootIntro(name);
-  }, [goDirectAccess, goBootIntro]);
+  const handleJoin = useCallback(async (name) => {
+    if (!serverOnline) {
+      if (squadExists(name) && !squadHasPassword(name)) goDirectAccess(name);
+      else goBootIntro(name);
+      return;
+    }
+    try {
+      const { ok, data } = await apiFetch(`/api/squad/${encodeURIComponent(name)}`);
+      if (ok && data.exists && !data.hasPassword) goDirectAccess(name);
+      else goBootIntro(name);
+    } catch (_) {
+      goBootIntro(name);
+    }
+  }, [serverOnline, goDirectAccess, goBootIntro]);
 
+  // ── Render ───────────────────────────────────────────────────────────────
   let content = null;
 
-  if (page === 'home') {
-    content = <HomePage soldiers={soldiers} onCreate={goCreating} onJoin={handleJoin} />;
+  if (page === 'server-check') {
+    content = <ServerCheckPage onOnline={handleServerOnline} onOffline={handleServerOffline} />;
+
+  } else if (page === 'home') {
+    content = (
+      <HomePage
+        soldiers={soldiers || []}
+        onCreate={goCreating}
+        onJoin={handleJoin}
+        onCreateSquad={createSquadApi}
+        serverOnline={serverOnline}
+      />
+    );
 
   } else if (page === 'creating') {
     content = (
@@ -628,6 +804,7 @@ function GameApp({ onSwitchMode }) {
         squadName={squad}
         onSuccess={goTVOn}
         onBack={goHome}
+        onLogin={loginSquadApi}
       />
     );
 

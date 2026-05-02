@@ -1351,3 +1351,89 @@ html, body {
   .hk-line { font-size: 12px; }
   .hk-input { font-size: 13px; }
 }
+
+/* ── Server check page ───────────────────────────────────────────────────── */
+.srv-check-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.srv-check-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 40px 48px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 340px;
+  max-width: 440px;
+  width: 90%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+}
+.srv-check-badge {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--accent-3);
+  opacity: 0.7;
+}
+.srv-check-title {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--text);
+  font-weight: 700;
+}
+.srv-check-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  animation: srv-blink 1.1s step-end infinite;
+}
+@keyframes srv-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+.srv-check-bar-wrap {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.srv-check-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-3) 0%, oklch(0.75 0.16 210) 100%);
+  border-radius: 3px;
+  will-change: width;
+}
+.srv-check-error-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.srv-check-error-msg {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--danger);
+}
+
+/* ── Offline badge (top-right corner of home page) ───────────────────────── */
+.srv-offline-badge {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  z-index: 20;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-dimmer);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 7px;
+  background: var(--panel);
+  pointer-events: none;
+  opacity: 0.75;
+}
