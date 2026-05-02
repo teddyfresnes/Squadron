@@ -724,9 +724,11 @@ function LoginPage({ squadName, onSuccess, onBack, onLogin }) {
   );
 }
 
-// ── HQPage ───────────────────────────────────────────────────────────────────
-function HQPage() {
-  return <div className="gp-page hq-blank" />;
+// ── HQPage (delegates to window.SquadronHQ.HQPage if available) ──────────────
+function HQPage(props) {
+  const Comp = window.SquadronHQ && window.SquadronHQ.HQPage;
+  if (!Comp) return <div className="gp-page hq-blank" />;
+  return <Comp {...props} />;
 }
 
 // ── GameApp ──────────────────────────────────────────────────────────────────
@@ -738,6 +740,7 @@ function HQPage() {
 function GameApp({ onSwitchMode }) {
   const [page,         setPage]         = useState('server-check');
   const [squad,        setSquad]        = useState(null);
+  const [founder,      setFounder]      = useState(null);
   const [soldiers,     setSoldiers]     = useState(null);
   const [serverOnline, setServerOnline] = useState(false);
 
@@ -765,14 +768,19 @@ function GameApp({ onSwitchMode }) {
   }, []);
 
   // ── Server-aware squad operations ────────────────────────────────────────
-  const createSquadApi = useCallback(async (squadName, password, founder) => {
-    if (!serverOnline) return createSquad(squadName, password, founder);
+  const createSquadApi = useCallback(async (squadName, password, founderData) => {
+    if (!serverOnline) {
+      const r = createSquad(squadName, password, founderData);
+      if (r.ok) setFounder(founderData);
+      return r;
+    }
     const { ok, data } = await apiFetch('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ squadName, password, founder }),
+      body: JSON.stringify({ squadName, password, founder: founderData }),
     });
     if (!ok) return { ok: false, error: data.error || 'Erreur serveur.' };
     try { sessionStorage.setItem('sq-token', data.token); } catch (_) {}
+    setFounder(founderData);
     return { ok: true };
   }, [serverOnline]);
 
@@ -868,14 +876,28 @@ function GameApp({ onSwitchMode }) {
     content = <TVOnEffect onDone={goHQ} />;
 
   } else if (page === 'hq') {
-    content = <HQPage />;
+    content = (
+      <HQPage
+        squadName={squad}
+        founder={founder}
+        serverOnline={serverOnline}
+        onSwitchMode={onSwitchMode}
+        onLeave={() => {
+          try { sessionStorage.removeItem('sq-token'); } catch (_) {}
+          setFounder(null);
+          goHome();
+        }}
+      />
+    );
   }
 
-  const fabVariant = page === 'hq' ? 'on-light' : '';
+  const fabVariant = page === 'hq' ? 'hidden' : '';
 
   return (
     <div className="game-app">
-      <ModeToggleFab onSwitchMode={onSwitchMode} variant={fabVariant} />
+      {fabVariant !== 'hidden' && (
+        <ModeToggleFab onSwitchMode={onSwitchMode} variant={fabVariant} />
+      )}
       <div className="gp-viewport" key={page}>
         {content}
       </div>
@@ -883,6 +905,23 @@ function GameApp({ onSwitchMode }) {
   );
 }
 
-window.SquadronGame = { GameApp };
+window.SquadronGame = {
+  GameApp,
+  helpers: {
+    buildSoldiers,
+    getWeaponByName,
+    randomHomeConfig,
+    pickSkills,
+    pick,
+    randInt,
+    apiFetch,
+    weaponStats,
+    SKILL1_NAMES,
+    MALE_NAMES,
+    FEMALE_NAMES,
+    WEAPON_TYPE_LABELS,
+    SkillTooltip
+  }
+};
 
 })();
