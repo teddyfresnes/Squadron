@@ -1,5 +1,5 @@
 // HQ — persistent shell after login.
-// Header (tabs + tokens/power) + Left sidebar (soldiers) + main content area.
+// Floating tabs + left sidebar (stats/soldiers) + main content area.
 // Wrapped in an IIFE so top-level consts don't collide with app.jsx / game.jsx.
 
 (function () {
@@ -136,17 +136,9 @@ const TABS = [
   { id: 'settings', label: 'Paramètres' },
 ];
 
-function HQHeader({ tab, onTab, tokens, power, level, squadName, serverOnline }) {
+function HQHeader({ tab, onTab }) {
   return (
     <header className="hq-header">
-      <div className="hq-brand">
-        <div className="hq-brand-logo" aria-hidden="true">◈</div>
-        <div className="hq-brand-text">
-          <div className="hq-brand-name">{squadName || 'SQUADRON'}</div>
-          <div className="hq-brand-level">NIV. {level}</div>
-        </div>
-      </div>
-
       <nav className="hq-tabs" role="tablist">
         {TABS.map(t => (
           <button
@@ -161,29 +153,28 @@ function HQHeader({ tab, onTab, tokens, power, level, squadName, serverOnline })
           </button>
         ))}
       </nav>
+    </header>
+  );
+}
 
-      <div className="hq-stats">
+// ── HQSidebar ────────────────────────────────────────────────────────────────
+function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting, tokens, power, serverOnline }) {
+  const { AnimPreview } = UI;
+  return (
+    <aside className="hq-sidebar">
+      <div className="hq-sidebar-stats">
         <div className="hq-stat hq-stat-tokens" title="Tokens">
           <span className="hq-stat-icon" aria-hidden="true">●</span>
           <span className="hq-stat-key">TOKENS</span>
           <span className="hq-stat-val">{tokens}</span>
         </div>
-        <div className="hq-stat hq-stat-power" title="Puissance">
+        <div className="hq-stat hq-stat-power" title="Power">
           <span className="hq-stat-icon" aria-hidden="true">⚡</span>
           <span className="hq-stat-key">POWER</span>
           <span className="hq-stat-val">{power}</span>
         </div>
         {!serverOnline && <div className="hq-offline-pill" title="Mode hors ligne">HORS LIGNE</div>}
       </div>
-    </header>
-  );
-}
-
-// ── HQSidebar ────────────────────────────────────────────────────────────────
-function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting }) {
-  const { AnimPreview } = UI;
-  return (
-    <aside className="hq-sidebar">
       <div className="hq-sidebar-title">MES SOLDATS <span className="hq-sidebar-count">{soldiers.length}</span></div>
       <div className="hq-sidebar-list">
         {soldiers.map(s => (
@@ -196,9 +187,8 @@ function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting }) {
             <div className="hq-sb-stage">
               <div className="hq-sb-level">{s.level}</div>
               <div className="hq-sb-char">
-                <AnimPreview cfg={s.config} animKey="idle" scale={0.55} facing={1} running={true} />
+                <AnimPreview cfg={s.config} animKey="idle" scale={0.72} facing={1} running={true} />
               </div>
-              <div className="hq-sb-foot-shadow" />
             </div>
             <div className="hq-sb-name" title={s.name}>{s.name}</div>
           </button>
@@ -223,71 +213,69 @@ const PLAY_MODES = [
   {
     id: 'army-vs-army',
     label: 'Armée vs Armée',
-    desc: 'Affrontez les meilleures squads du monde',
     cover: 'assets/images/covers_mode/armyvsarmy.png',
     available: true,
   },
   {
     id: 'survival',
     label: 'Survie',
-    desc: 'Tenez le plus longtemps possible',
     accent: 'mode-accent-green',
     available: false,
   },
   {
     id: 'tournament',
     label: 'Tournoi',
-    desc: 'Affrontements en bracket — chaque semaine',
     accent: 'mode-accent-amber',
     available: false,
   },
   {
     id: 'boss',
     label: 'Boss du jour',
-    desc: 'Coopérez pour vaincre le boss',
     accent: 'mode-accent-red',
     available: false,
   },
 ];
 
-function HQPlay({ onPickMode }) {
+function HQPlay({ squadName, onPickMode }) {
   return (
     <div className="hq-play">
       <div className="hq-play-header">
-        <div className="hq-section-eyebrow">CHAMP DE BATAILLE</div>
-        <h2 className="hq-section-title">Choisis ton mode</h2>
+        <h1 className="hq-play-title">Bienvenue dans la Squad {squadName}</h1>
       </div>
 
       <div className="hq-modes">
         {PLAY_MODES.map(m => (
-          <button
+          <div
             key={m.id}
-            type="button"
-            disabled={!m.available}
-            className={'hq-mode ' + (m.accent || '') + (m.available ? '' : ' is-locked')}
-            onClick={() => m.available && onPickMode(m.id)}
-            style={m.cover ? { backgroundImage: `url(${m.cover})` } : undefined}
+            className={'hq-mode-shell ' + (m.accent || '') + (m.available ? '' : ' is-locked')}
           >
-            <div className="hq-mode-shade" />
-            <div className="hq-mode-content">
-              <div className="hq-mode-title">{m.label}</div>
-              <div className="hq-mode-desc">{m.desc}</div>
-              {m.available
-                ? <div className="hq-mode-cta">JOUER →</div>
-                : <div className="hq-mode-lock">BIENTÔT</div>}
-            </div>
-          </button>
+            <button
+              type="button"
+              disabled={!m.available}
+              className="hq-mode"
+              onClick={() => m.available && onPickMode(m.id)}
+              style={m.cover ? { backgroundImage: `url(${m.cover})` } : undefined}
+              aria-label={m.label}
+            >
+              {!m.available && <div className="hq-mode-empty">A VENIR</div>}
+            </button>
+            {m.available && (
+              <div className="hq-mode-go-row" aria-label={m.label}>
+                {[0, 1, 2].map(slot => (
+                  <button
+                    key={slot}
+                    type="button"
+                    className="sq-btn sq-btn-primary hq-mode-go"
+                    onClick={() => onPickMode(m.id)}
+                    aria-label={`${m.label} ${slot + 1}`}
+                  >
+                    GO!
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
-      </div>
-
-      <div className="hq-battles-bar">
-        <div className="hq-battles-info">
-          <div className="hq-battles-label">Batailles disponibles aujourd'hui</div>
-          <div className="hq-battles-count">∞ <span className="hq-battles-test">(mode test)</span></div>
-        </div>
-        <div className="hq-battles-meter">
-          <div className="hq-battles-meter-fill" style={{ width: '100%' }} />
-        </div>
       </div>
     </div>
   );
@@ -299,8 +287,11 @@ function generateEnemySquad(seed, lvlBase) {
   const count = 4 + Math.floor(rng() * 4); // 4–7
   const squad = G.buildSoldiers(count);
   const lvl = Math.max(1, Math.floor(lvlBase + (rng() - 0.5) * 4));
+  const uniformCount = (window.Palette && window.Palette.uniform && window.Palette.uniform.length) || 10;
+  const uniformIdx = Math.floor(rng() * uniformCount);
   for (const s of squad) {
     s.level = Math.max(1, lvl + (rng() < 0.3 ? -1 : rng() < 0.3 ? 1 : 0));
+    s.config = { ...s.config, uniformIdx };
   }
   const name = FAKE_SQUAD_NAMES[Math.floor(rng() * FAKE_SQUAD_NAMES.length)] +
                ' #' + Math.floor(100 + rng() * 900);
@@ -309,7 +300,7 @@ function generateEnemySquad(seed, lvlBase) {
 }
 
 // ── HQOpponentSelect (army-vs-army opponent picker) ─────────────────────────
-function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
+function HQOpponentSelect({ mySquad, onBack, onAttack }) {
   const { AnimPreview } = UI;
   const myLvl = calcSquadLevel(mySquad.soldiers);
   const [opponents, setOpponents] = useState(() => [
@@ -317,15 +308,6 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
     generateEnemySquad('opp-' + todayKey() + '-2-' + mySquad.name, myLvl),
     generateEnemySquad('opp-' + todayKey() + '-3-' + mySquad.name, myLvl + 1),
   ]);
-  const [customName, setCustomName] = useState('');
-  const [customOpp,  setCustomOpp]  = useState(null);
-
-  const handleCustom = (e) => {
-    e.preventDefault();
-    const n = customName.trim();
-    if (n.length < 2) return;
-    setCustomOpp(generateEnemySquad('custom-' + n, myLvl));
-  };
 
   const handleReroll = () => {
     const seed = Math.random().toString(36).slice(2);
@@ -340,8 +322,7 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
     <div className="hq-opponents">
       <button type="button" className="hq-back-btn" onClick={onBack}>← Retour</button>
 
-      <div className="hq-section-eyebrow">ARMÉE VS ARMÉE</div>
-      <h2 className="hq-section-title">Choisis ta cible</h2>
+      <h2 className="hq-section-title hq-opponents-title">Armée vs Armée</h2>
 
       <div className="hq-opp-grid">
         {opponents.map((opp, i) => (
@@ -350,33 +331,8 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
       </div>
 
       <div className="hq-opp-actions">
-        <button type="button" className="sq-btn" onClick={handleReroll}>↻ Trouver d'autres adversaires</button>
+        <button type="button" className="sq-btn" onClick={handleReroll}>↻</button>
       </div>
-
-      {!serverOnline && (
-        <div className="hq-opp-custom">
-          <div className="hq-section-eyebrow">MODE HORS LIGNE</div>
-          <h3 className="hq-section-subtitle">Défier une squad par son nom</h3>
-          <form onSubmit={handleCustom} className="hq-opp-custom-form">
-            <input
-              type="text"
-              className="sq-input"
-              placeholder="Nom de la squad à attaquer…"
-              value={customName}
-              onChange={e => setCustomName(e.target.value)}
-              maxLength={32}
-            />
-            <button type="submit" className="sq-btn sq-btn-primary" disabled={customName.trim().length < 2}>
-              GÉNÉRER
-            </button>
-          </form>
-          {customOpp && (
-            <div className="hq-opp-custom-result">
-              <OpponentCard opp={customOpp} myLvl={myLvl} onAttack={() => onAttack(customOpp)} />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -384,28 +340,23 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
 function OpponentCard({ opp, myLvl, onAttack }) {
   const { AnimPreview } = UI;
   const diff = opp.level - myLvl;
-  const diffLabel = diff <= -2 ? 'FACILE' : diff <= 0 ? 'ÉQUIVALENT' : diff === 1 ? 'DIFFICILE' : 'TRÈS DIFFICILE';
   const diffClass = diff <= -2 ? 'easy' : diff <= 0 ? 'even' : diff === 1 ? 'hard' : 'epic';
   return (
     <div className={'hq-opp-card hq-opp-' + diffClass}>
-      <div className="hq-opp-head">
-        <div className="hq-opp-name">{opp.name}</div>
-        <div className={'hq-opp-diff ' + diffClass}>{diffLabel}</div>
-      </div>
-      <div className="hq-opp-stats">
-        <div><span>NIVEAU</span><strong>{opp.level}</strong></div>
-        <div><span>SOLDATS</span><strong>{opp.soldiers.length}</strong></div>
-        <div><span>POWER</span><strong>{opp.power}</strong></div>
-      </div>
       <div className="hq-opp-roster">
         {opp.soldiers.slice(0, 7).map(s => (
           <div key={s.id} className="hq-opp-roster-cell">
-            <AnimPreview cfg={s.config} animKey="idle" scale={0.45} facing={1} running={true} />
+            <AnimPreview cfg={s.config} animKey="idle" scale={0.58} facing={1} running={true} />
           </div>
         ))}
       </div>
+      <div className="hq-opp-name">{opp.name}</div>
+      <div className="hq-opp-meta">
+        <span>NIV. {opp.level}</span>
+        <span>{opp.power} ⚡</span>
+      </div>
       <button type="button" className="sq-btn sq-btn-primary hq-opp-attack" onClick={onAttack}>
-        ATTAQUER →
+        GO!
       </button>
     </div>
   );
@@ -443,7 +394,6 @@ function RecruitCard({ soldier, tokens, cost, onPick }) {
         <div className="hq-recruit-char">
           <AnimPreview cfg={soldier.config} animKey="idle" scale={1.1} facing={1} running={true} />
         </div>
-        <div className="hq-recruit-shadow" />
       </div>
       <div className="hq-recruit-name">{soldier.name}</div>
       <div className="hq-recruit-skills">
@@ -474,6 +424,7 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
   const upgradeCost = calcUpgradeCost(soldier);
   const canUpgrade = tokens >= upgradeCost;
   const unlockedSet = new Set(soldier.unlockedWeapons || []);
+  const preferredWeapon = soldier.preferredWeapon ? G.getWeaponByName(soldier.preferredWeapon) : null;
 
   // Group weapons by type
   const grouped = useMemo(() => {
@@ -496,30 +447,11 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
   return (
     <div className="hq-soldier-detail">
       <div className="hq-sd-top">
-        <div className="hq-sd-portrait">
-          <div className="hq-sd-portrait-stage">
-            <div className="hq-sd-portrait-level">NIV. {soldier.level}</div>
-            <div className="hq-sd-portrait-char">
-              <AnimPreview cfg={soldier.config} animKey="idle" scale={2.4} facing={1} running={true} />
-            </div>
-            <div className="hq-sd-portrait-shadow" />
-          </div>
-          <div className="hq-sd-portrait-name">{soldier.name}</div>
-        </div>
-
         <div className="hq-sd-skills">
-          <div className="hq-sd-skills-head">
-            <div>
-              <div className="hq-section-eyebrow">COMPÉTENCES</div>
-              <h2 className="hq-section-title">Armes débloquées</h2>
-              <p className="hq-section-hint">{unlockedSet.size} / {allWeapons.length} compétences. D'autres seront ajoutées prochainement.</p>
-            </div>
-          </div>
-
           <div className="hq-sd-skills-groups">
             {types.map(({ key, label }) => grouped[key] && grouped[key].length > 0 && (
               <div key={key} className="hq-sd-skill-group">
-                <div className="hq-sd-skill-group-title">{label} <span>({grouped[key].filter(w => unlockedSet.has(w.name)).length}/{grouped[key].length})</span></div>
+                <div className="hq-sd-skill-group-title">{label}</div>
                 <div className="hq-sd-skill-grid">
                   {grouped[key].map(w => {
                     const unlocked = unlockedSet.has(w.name);
@@ -546,41 +478,39 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
           </div>
         </div>
 
+        <div className="hq-sd-params">
+          <div className="hq-sd-param">
+            <div className="hq-sd-param-key">Arme préférée</div>
+            <div className="hq-sd-param-val hq-sd-param-weapon">
+              {preferredWeapon
+                ? (
+                  <>
+                    <WeaponGameIcon weapon={preferredWeapon} />
+                    <span>{preferredWeapon.name}</span>
+                  </>
+                )
+                : <span className="hq-muted">Aucune</span>}
+            </div>
+          </div>
+        </div>
+
         <div className="hq-sd-actions">
-          <div className="hq-sd-upgrade">
-            <div className="hq-section-eyebrow">PROGRESSION</div>
+          <div className="hq-sd-portrait">
+            <div className="hq-sd-portrait-stage" title={soldier.name}>
+              <div className="hq-sd-portrait-level">NIV. {soldier.level}</div>
+              <div className="hq-sd-portrait-char">
+                <AnimPreview cfg={soldier.config} animKey="idle" scale={2.4} facing={1} running={true} />
+              </div>
+            </div>
             <button
               type="button"
               className={'sq-btn sq-btn-primary hq-sd-upgrade-btn' + (canUpgrade ? '' : ' is-disabled')}
               disabled={!canUpgrade}
               onClick={() => canUpgrade && onUpgrade()}
             >
-              <div className="hq-sd-upgrade-title">AMÉLIORER</div>
-              <div className="hq-sd-upgrade-cost">{upgradeCost} ●</div>
-              <div className="hq-sd-upgrade-sub">→ Niveau {soldier.level + 1}</div>
+              <span className="hq-sd-upgrade-title">AMÉLIORER</span>
+              <span className="hq-sd-upgrade-cost">{upgradeCost} ●</span>
             </button>
-            {!canUpgrade && (
-              <div className="hq-sd-upgrade-hint">Tokens insuffisants</div>
-            )}
-          </div>
-
-          <div className="hq-sd-params">
-            <div className="hq-section-eyebrow">PARAMÈTRES</div>
-            <div className="hq-sd-param">
-              <div className="hq-sd-param-key">Arme préférée</div>
-              <div className="hq-sd-param-val">
-                {soldier.preferredWeapon || <span className="hq-muted">— aucune —</span>}
-              </div>
-              <div className="hq-sd-param-hint">Clique sur une compétence débloquée pour la sélectionner.</div>
-            </div>
-            <div className="hq-sd-param locked">
-              <div className="hq-sd-param-key">Style de combat <span className="hq-lock-pill">NIV. 5</span></div>
-              <div className="hq-sd-param-val hq-muted">— se débloque plus tard —</div>
-            </div>
-            <div className="hq-sd-param locked">
-              <div className="hq-sd-param-key">Spécialité <span className="hq-lock-pill">NIV. 10</span></div>
-              <div className="hq-sd-param-val hq-muted">— se débloque plus tard —</div>
-            </div>
           </div>
         </div>
       </div>
@@ -589,31 +519,24 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
 }
 
 // ── Placeholder pages ───────────────────────────────────────────────────────
-function HQSquadPage({ mySquad }) {
+function HQSquadPage({ mySquad, onSelectSoldier }) {
   const { AnimPreview } = UI;
   return (
     <div className="hq-squad-page">
-      <div className="hq-section-eyebrow">VUE D'ENSEMBLE</div>
       <h2 className="hq-section-title">{mySquad.name}</h2>
-      <p className="hq-section-hint">Niveau {calcSquadLevel(mySquad.soldiers)} · {mySquad.soldiers.length} soldats · {calcSquadPower(mySquad.soldiers)} power</p>
 
       <div className="hq-squad-grid">
         {mySquad.soldiers.map(s => (
-          <div key={s.id} className="hq-squad-cell">
+          <button key={s.id} type="button" className="hq-squad-cell" onClick={() => onSelectSoldier(s.id)}>
             <div className="hq-sb-stage">
               <div className="hq-sb-level">{s.level}</div>
               <div className="hq-sb-char">
-                <AnimPreview cfg={s.config} animKey="idle" scale={0.85} facing={1} running={true} />
+                <AnimPreview cfg={s.config} animKey="idle" scale={1.0} facing={1} running={true} />
               </div>
-              <div className="hq-sb-foot-shadow" />
             </div>
             <div className="hq-sb-name">{s.name}</div>
-          </div>
+          </button>
         ))}
-      </div>
-
-      <div className="hq-coming-soon">
-        Bientôt : statistiques de squad, historique des batailles, classements.
       </div>
     </div>
   );
@@ -630,14 +553,11 @@ function HQMarketPage() {
   );
 }
 
-function HQSettingsPage({ onSwitchMode, onLeave }) {
+function HQSettingsPage({ onLeave }) {
   return (
     <div className="hq-placeholder hq-settings-page">
-      <div className="hq-placeholder-icon">⚙</div>
-      <h2 className="hq-section-title">Paramètres</h2>
       <div className="hq-settings-list">
-        <button className="sq-btn" onClick={onSwitchMode}>← Retour à l'éditeur (Dev mode)</button>
-        <button className="sq-btn" onClick={onLeave}>Se déconnecter</button>
+        <button className="sq-btn sq-btn-primary" onClick={onLeave}>Se déconnecter</button>
       </div>
     </div>
   );
@@ -707,6 +627,7 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
   }, []);
 
   const handleSelectSoldier = useCallback((id) => {
+    setTab('squad');
     setSelectedSldId(id);
     setSubpage('soldier');
   }, []);
@@ -805,7 +726,6 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
     main = (
       <HQOpponentSelect
         mySquad={hq}
-        serverOnline={serverOnline}
         onBack={() => setSubpage(null)}
         onAttack={handleAttack}
       />
@@ -818,13 +738,13 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       />
     );
   } else if (tab === 'play') {
-    main = <HQPlay onPickMode={handlePickMode} />;
+    main = <HQPlay squadName={hq.name} onPickMode={handlePickMode} />;
   } else if (tab === 'squad') {
-    main = <HQSquadPage mySquad={hq} />;
+    main = <HQSquadPage mySquad={hq} onSelectSoldier={handleSelectSoldier} />;
   } else if (tab === 'market') {
     main = <HQMarketPage />;
   } else if (tab === 'settings') {
-    main = <HQSettingsPage onSwitchMode={onSwitchMode} onLeave={onLeave} />;
+    main = <HQSettingsPage onLeave={onLeave} />;
   }
 
   return (
@@ -835,11 +755,6 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       <HQHeader
         tab={tab}
         onTab={handleTab}
-        tokens={hq.tokens}
-        power={power}
-        level={level}
-        squadName={hq.name}
-        serverOnline={serverOnline}
       />
 
       <div className="hq-body">
@@ -849,6 +764,9 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
           onSelect={handleSelectSoldier}
           onAdd={handleAddRecruit}
           isRecruiting={subpage === 'recruit'}
+          tokens={hq.tokens}
+          power={power}
+          serverOnline={serverOnline}
         />
 
         <main className="hq-main">

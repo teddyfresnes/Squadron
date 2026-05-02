@@ -23,7 +23,8 @@ Démarrage :
 |---|---|
 | `Sprite Forge.html` | Point d'entrée, ordre de chargement des scripts |
 | `app.jsx` | UI éditeur de personnage (mode dev) |
-| `game.jsx` | UI jeu / squads (mode prod) — contient aussi `SERVER_URL` et `buildSoldiers()` |
+| `game.jsx` | UI jeu / squads (mode prod) — contient aussi `SERVER_URL`, `buildSoldiers()` et délègue le HQ à `hq.jsx` |
+| `hq.jsx` | Shell HQ après connexion : navigation, sidebar soldats, pages Jouer / Ma squad / Recrutement / Paramètres |
 | `root.jsx` | Switcher dev / prod |
 | `palette.js` | Palettes couleurs (skin×8, hair×7, eye×9, uniform×10, hat×8, hairstyles×16) |
 | `parts.js` | Dessin pixel-art des membres du soldat |
@@ -41,7 +42,7 @@ Démarrage :
 - `buildSoldiers()` — génération locale (mode hors ligne uniquement)
 
 ### Ordre de chargement des scripts (Sprite Forge.html)
-`palette.js` → `sprite-engine.js` → `parts.js` → `weapons.js` → `animations.js` → `renderer.js` → `app.jsx` → `game.jsx` → `root.jsx`
+`palette.js` → `sprite-engine.js` → `parts.js` → `weapons.js` → `animations.js` → `renderer.js` → `app.jsx` → `game.jsx` → `hq.jsx` → `root.jsx`
 
 ### Hairstyles par bodyType (app.jsx HAIRSTYLES_BY_BODY, indices dans palette.js)
 - `male`   : indices `[0,1,2,3,4,13,14,15]` (Textured Crop, Low Fade, Side Part, Quiff, Curly Top, Buzz Cut, Crew Cut, Bald)
