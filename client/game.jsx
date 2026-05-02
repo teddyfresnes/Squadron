@@ -754,7 +754,15 @@ function GameApp({ onSwitchMode }) {
     setServerOnline(true);
     try {
       const { ok, data } = await apiFetch('/api/troopers');
-      setSoldiers(ok && Array.isArray(data.troopers) ? data.troopers : buildSoldiers(SOLDIER_COUNT));
+      if (ok && Array.isArray(data.troopers)) {
+        const list = data.troopers;
+        const padded = list.length < SOLDIER_COUNT
+          ? [...list, ...buildSoldiers(SOLDIER_COUNT - list.length)]
+          : list;
+        setSoldiers(padded);
+      } else {
+        setSoldiers(buildSoldiers(SOLDIER_COUNT));
+      }
     } catch (_) {
       setSoldiers(buildSoldiers(SOLDIER_COUNT));
     }

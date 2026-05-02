@@ -187,7 +187,7 @@ function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting, tokens
             <div className="hq-sb-stage">
               <div className="hq-sb-level">{s.level}</div>
               <div className="hq-sb-char">
-                <AnimPreview cfg={s.config} animKey="idle" scale={0.72} facing={1} running={true} />
+                <AnimPreview cfg={s.config} animKey="idle" scale={0.72} facing={1} running={false} />
               </div>
             </div>
             <div className="hq-sb-name" title={s.name}>{s.name}</div>
@@ -240,40 +240,48 @@ function HQPlay({ squadName, onPickMode }) {
   return (
     <div className="hq-play">
       <div className="hq-play-header">
-        <h1 className="hq-play-title">Bienvenue dans la Squad {squadName}</h1>
+        <div className="hq-play-eyebrow">QUARTIER GÉNÉRAL</div>
+        <h1 className="hq-play-title">{squadName}</h1>
       </div>
 
       <div className="hq-modes">
         {PLAY_MODES.map(m => (
           <div
             key={m.id}
-            className={'hq-mode-shell ' + (m.accent || '') + (m.available ? '' : ' is-locked')}
+            className={'hq-mode-shell' + (m.accent ? ' ' + m.accent : '') + (m.available ? '' : ' is-locked')}
           >
-            <button
-              type="button"
-              disabled={!m.available}
-              className="hq-mode"
-              onClick={() => m.available && onPickMode(m.id)}
-              style={m.cover ? { backgroundImage: `url(${m.cover})` } : undefined}
-              aria-label={m.label}
-            >
-              {!m.available && <div className="hq-mode-empty">A VENIR</div>}
-            </button>
-            {m.available && (
-              <div className="hq-mode-go-row" aria-label={m.label}>
-                {[0, 1, 2].map(slot => (
-                  <button
-                    key={slot}
-                    type="button"
-                    className="sq-btn sq-btn-primary hq-mode-go"
-                    onClick={() => onPickMode(m.id)}
-                    aria-label={`${m.label} ${slot + 1}`}
-                  >
-                    GO!
-                  </button>
-                ))}
+            <div className="hq-mode-card">
+              <div className="hq-mode-card-header">{m.label.toUpperCase()}</div>
+
+              {/* Cover — decorative only, not interactive */}
+              <div className="hq-mode-cover-area">
+                {m.cover
+                  ? <img src={m.cover} alt="" className="hq-mode-cover-img" />
+                  : <div className="hq-mode-cover-placeholder" />
+                }
+                {!m.available && <div className="hq-mode-empty">À VENIR</div>}
               </div>
-            )}
+
+              {/* Footer */}
+              {m.available ? (
+                <div className="hq-mode-card-footer">
+                  {[0, 1, 2].map(slot => (
+                    <button
+                      key={slot}
+                      type="button"
+                      className="hq-mode-go-btn"
+                      onClick={() => onPickMode(m.id)}
+                    >GO !</button>
+                  ))}
+                </div>
+              ) : (
+                <div className="hq-mode-card-footer hq-mode-card-footer-locked">
+                  <button type="button" className="hq-mode-unlock-btn" disabled>
+                    À DÉBLOQUER
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -531,7 +539,7 @@ function HQSquadPage({ mySquad, onSelectSoldier }) {
             <div className="hq-sb-stage">
               <div className="hq-sb-level">{s.level}</div>
               <div className="hq-sb-char">
-                <AnimPreview cfg={s.config} animKey="idle" scale={1.0} facing={1} running={true} />
+                <AnimPreview cfg={s.config} animKey="idle" scale={1.0} facing={1} running={false} />
               </div>
             </div>
             <div className="hq-sb-name">{s.name}</div>
