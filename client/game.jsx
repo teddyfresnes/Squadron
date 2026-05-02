@@ -6,7 +6,7 @@
 const { useState, useEffect, useRef, useCallback } = React;
 
 const SQUADS_KEY    = 'squadron-squads';
-const SOLDIER_COUNT = 8;
+const SOLDIER_COUNT = 10;
 const SKILL1_NAMES  = ['Glock 17', 'Uzi', 'Mossberg 500', 'AKS-74U', 'Steyr Scout'];
 const SERVER_URL    = 'http://127.0.0.1:3001';
 
@@ -271,7 +271,7 @@ function ServerCheckPage({ onOnline, onOffline }) {
 
         <div className="sq-soldier-strip">
           <div className="sq-soldier-grid">
-            {Array.from({ length: 8 }, (_, i) => <SoldierCardSkeleton key={i} />)}
+            {Array.from({ length: 10 }, (_, i) => <SoldierCardSkeleton key={i} />)}
           </div>
         </div>
 
@@ -403,10 +403,11 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       onClick={() => onSelect(soldier.id)}
     >
       <div className="sq-soldier-stage">
-        <div className="sq-soldier-level"><span className="sq-soldier-level-lv">LV</span>1</div>
+        <div className="sq-soldier-level">1</div>
         <div className="sq-stage-char">
           <AnimPreview cfg={soldier.config} animKey="idle" scale={0.85} facing={1} running={true} />
         </div>
+        <div className="sq-stage-foot-shadow" />
       </div>
       <div className="sq-soldier-name">{soldier.name}</div>
       <div className="sq-skills-row">

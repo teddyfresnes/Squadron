@@ -724,35 +724,16 @@ html, body {
 .sq-soldier-level {
   position: absolute;
   top: 5px;
-  right: 5px;
+  right: 6px;
   z-index: 2;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 1px;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text);
-  background: rgba(10, 10, 18, 0.80);
-  border: 1px solid var(--border-2);
-  border-radius: 4px;
-  padding: 2px 5px 1px 4px;
-  line-height: 1;
-  backdrop-filter: blur(3px);
-  letter-spacing: 0;
-}
-.sq-soldier-level-lv {
-  font-size: 6px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-dimmer);
-  line-height: 1.6;
-  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+  line-height: 1;
+  letter-spacing: 0;
+  pointer-events: none;
 }
 .sq-soldier.selected .sq-soldier-level {
-  color: var(--accent);
-  border-color: rgba(217, 150, 80, 0.5);
-}
-.sq-soldier.selected .sq-soldier-level-lv {
   color: rgba(217, 150, 80, 0.65);
 }
 .sq-soldier-stage {
@@ -773,9 +754,20 @@ html, body {
   transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 .sq-stage-char {
-  transform: translateX(-8px);
+  transform: translateX(-4px) translateY(4px);
   line-height: 0;
   font-size: 0;
+}
+.sq-stage-foot-shadow {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-56%);
+  width: 34px;
+  height: 18px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, transparent 72%);
+  pointer-events: none;
+  z-index: 1;
 }
 /* Hover lift is restricted to the inner stage frame, not the whole card. */
 .sq-soldier:hover .sq-soldier-stage {
