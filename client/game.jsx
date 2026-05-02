@@ -212,29 +212,20 @@ function OfflineWarningModal({ onConfirm, onCancel }) {
 
 // ── ServerCheckPage ───────────────────────────────────────────────────────────
 function ServerCheckPage({ onOnline, onOffline }) {
-  const [progress,       setProgress]       = useState(0);
   const [showOfflineBtn, setShowOfflineBtn] = useState(false);
   const [showModal,      setShowModal]      = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    const start = Date.now();
 
     const offlineTimer = setTimeout(() => {
       if (!cancelled) setShowOfflineBtn(true);
     }, 5000);
 
-    const ticker = setInterval(() => {
-      if (cancelled) return;
-      setProgress(Math.min(85, ((Date.now() - start) / 9500) * 85));
-    }, 80);
-
     const ctrl      = new AbortController();
     const hardLimit = setTimeout(() => {
       if (cancelled) return;
       ctrl.abort();
-      clearInterval(ticker);
-      setProgress(100);
       setShowOfflineBtn(true);
     }, 10000);
 
@@ -243,25 +234,20 @@ function ServerCheckPage({ onOnline, onOffline }) {
       .then(d => {
         if (cancelled) return;
         if (d && d.status === 'ok') {
-          clearInterval(ticker);
           clearTimeout(hardLimit);
           clearTimeout(offlineTimer);
-          setProgress(100);
           setTimeout(() => { if (!cancelled) onOnline(); }, 280);
         }
       })
       .catch(err => {
         if (cancelled || err.name === 'AbortError') return;
-        clearInterval(ticker);
         clearTimeout(hardLimit);
         clearTimeout(offlineTimer);
-        setProgress(100);
         setShowOfflineBtn(true);
       });
 
     return () => {
       cancelled = true;
-      clearInterval(ticker);
       clearTimeout(hardLimit);
       clearTimeout(offlineTimer);
       ctrl.abort();
@@ -280,7 +266,7 @@ function ServerCheckPage({ onOnline, onOffline }) {
         </div>
 
         <div className="srv-inline-bar-wrap">
-          <div className="srv-inline-bar" style={{ width: progress + '%' }} />
+          <div className="srv-inline-bar-pulse" />
         </div>
 
         <div className="sq-soldier-strip">
@@ -292,7 +278,7 @@ function ServerCheckPage({ onOnline, onOffline }) {
         {showOfflineBtn && (
           <div className="srv-offline-action">
             <button className="sq-btn sq-btn-offline" onClick={() => setShowModal(true)}>
-              ▶ JOUER HORS LIGNE
+              JOUER HORS LIGNE
             </button>
           </div>
         )}
@@ -321,7 +307,7 @@ function ModeToggleFab({ onSwitchMode, variant }) {
 }
 
 // ── SkillTooltip ─────────────────────────────────────────────────────────────
-function SkillTooltip({ weapon, text, children }) {
+function SkillTooltip({ weapon, text, tipDir = 'above', children }) {
   const WeaponIcon = window.SquadronUI && window.SquadronUI.WeaponIcon;
   const wrapRef = useRef(null);
   const [anchor, setAnchor] = useState(null);
@@ -330,7 +316,7 @@ function SkillTooltip({ weapon, text, children }) {
     const el = wrapRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setAnchor({ cx: r.left + r.width / 2, top: r.top });
+    setAnchor({ cx: r.left + r.width / 2, top: r.top, bottom: r.bottom });
   }, []);
 
   useEffect(() => {
@@ -370,7 +356,7 @@ function SkillTooltip({ weapon, text, children }) {
           </div>
           <div className="sq-skill-tip-spec">
             <span className="sq-skill-tip-spec-key">Portée</span>
-            <span className="sq-skill-tip-spec-val">{stats.rangeMin}–{stats.rangeMax} <span className="sq-skill-tip-unit">cases</span></span>
+            <span className="sq-skill-tip-spec-val">{stats.rangeMin}–{stats.rangeMax}</span>
           </div>
         </div>
       ) : null}
@@ -379,8 +365,13 @@ function SkillTooltip({ weapon, text, children }) {
     <div className="sq-skill-tip-text">{text || 'Skill inconnue.'}</div>
   );
 
+  const below = tipDir === 'below';
   const tipNode = anchor && ReactDOM.createPortal(
-    <div className="sq-skill-tip" role="tooltip" style={{ left: anchor.cx, top: anchor.top }}>
+    <div
+      className={'sq-skill-tip' + (below ? ' sq-skill-tip-below' : '')}
+      role="tooltip"
+      style={{ left: anchor.cx, top: below ? anchor.bottom : anchor.top }}
+    >
       {tipBody}
     </div>,
     document.body
@@ -411,8 +402,8 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       className={'sq-soldier' + (selected ? ' selected' : '')}
       onClick={() => onSelect(soldier.id)}
     >
-      <div className="sq-soldier-level">1</div>
       <div className="sq-soldier-stage">
+        <div className="sq-soldier-level"><span className="sq-soldier-level-lv">LV</span>1</div>
         <div className="sq-stage-char">
           <AnimPreview cfg={soldier.config} animKey="idle" scale={0.85} facing={1} running={true} />
         </div>
@@ -420,10 +411,10 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       <div className="sq-soldier-name">{soldier.name}</div>
       <div className="sq-skills-row">
         {skill1
-          ? <SkillTooltip weapon={skill1}><WeaponGameIcon weapon={skill1} /></SkillTooltip>
+          ? <SkillTooltip weapon={skill1} tipDir="below"><WeaponGameIcon weapon={skill1} /></SkillTooltip>
           : <span className="sq-skill-fallback" />}
         {skill2
-          ? <SkillTooltip weapon={skill2}><WeaponGameIcon weapon={skill2} /></SkillTooltip>
+          ? <SkillTooltip weapon={skill2} tipDir="below"><WeaponGameIcon weapon={skill2} /></SkillTooltip>
           : <span className="sq-skill-fallback" />}
       </div>
     </button>
@@ -499,8 +490,8 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
           <form className="sq-create sq-col" onSubmit={handleCreate}>
             <div className="sq-section-title">CRÉER MA SQUAD</div>
             <div className="sq-fields">
-              <input type="text"     className="sq-input" placeholder="Nom de la squad"          value={squadName} maxLength={24} onChange={e => { setSquadName(e.target.value); setCreateError(null); }} />
-              <input type="password" className="sq-input" placeholder="Mot de passe (optionnel)" value={password}  maxLength={128} onChange={e => { setPassword(e.target.value);  setCreateError(null); }} />
+              <input type="text"     className="sq-input" placeholder="Nom de la squad"          value={squadName} maxLength={24} autoComplete="off"          onChange={e => { setSquadName(e.target.value); setCreateError(null); }} />
+              <input type="password" className="sq-input" placeholder="Mot de passe (optionnel)" value={password}  maxLength={128} autoComplete="new-password"  onChange={e => { setPassword(e.target.value);  setCreateError(null); }} />
             </div>
             <div className="sq-col-spacer" />
             <div className="sq-btn-wrap" data-tooltip={canCreate ? '' : disabledReason}>
@@ -520,7 +511,7 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
           <form className="sq-join sq-col" onSubmit={handleJoin}>
             <div className="sq-section-title">REJOINDRE UNE SQUAD</div>
             <div className="sq-fields">
-              <input type="text" className="sq-input" placeholder="Nom de la squad" value={joinName} maxLength={24} onChange={e => { setJoinName(e.target.value); setJoinError(null); }} />
+              <input type="text" className="sq-input" placeholder="Nom de la squad" value={joinName} maxLength={24} autoComplete="off" onChange={e => { setJoinName(e.target.value); setJoinError(null); }} />
             </div>
             <div className="sq-col-spacer" />
             <div className="sq-btn-wrap">
