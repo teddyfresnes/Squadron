@@ -144,12 +144,18 @@ function randomHomeConfig(skill1Name) {
   const hairStyleIdx = hairOptions.length ? pick(hairOptions).idx : 0;
   const skill1 = getWeaponByName(skill1Name);
   const weaponIdx = skill1 ? window.Weapons.list.indexOf(skill1) : 0;
+  const uniformIdx = randInt(Pal.uniforms.length);
+  let hairIdx = randInt(Pal.hair.length);
+  // Orange uniform (8) + Ginger hair (4) or Yellow uniform (7) + Blonde hair (5) are forbidden
+  while ((uniformIdx === 8 && hairIdx === 4) || (uniformIdx === 7 && hairIdx === 5)) {
+    hairIdx = randInt(Pal.hair.length);
+  }
   return UI.normalizeCharacterConfig({
     bodyType, hairStyleIdx, weaponSkinIdx: 33,
     skinIdx: randInt(Pal.skin.length),
-    hairIdx: randInt(Pal.hair.length),
+    hairIdx,
     eyeIdx: randInt(Pal.eye.length),
-    uniformIdx: randInt(Pal.uniforms.length),
+    uniformIdx,
     vestOn: false, backpackOn: false, hatIdx: 0,
     weaponIdx: Math.max(0, weaponIdx)
   });
@@ -168,16 +174,56 @@ function buildSoldiers(count = SOLDIER_COUNT) {
   });
 }
 
+// ── SoldierCardSkeleton ───────────────────────────────────────────────────────
+function SoldierCardSkeleton() {
+  return (
+    <div className="sq-soldier sq-soldier-skeleton" aria-hidden="true">
+      <div className="sq-soldier-stage skel-box skel-stage" />
+      <div className="skel-name skel-box" />
+      <div className="skel-icons">
+        <div className="skel-icon skel-box" />
+        <div className="skel-icon skel-box" />
+      </div>
+    </div>
+  );
+}
+
+// ── OfflineWarningModal ───────────────────────────────────────────────────────
+function OfflineWarningModal({ onConfirm, onCancel }) {
+  return ReactDOM.createPortal(
+    <div className="offline-modal-overlay" onClick={onCancel}>
+      <div className="offline-modal" onClick={e => e.stopPropagation()}>
+        <div className="offline-modal-icon">⚠</div>
+        <div className="offline-modal-title">MODE HORS LIGNE</div>
+        <div className="offline-modal-body">
+          <p>En mode hors ligne, <strong>aucune donnée n'est sauvegardée</strong> sur le serveur.</p>
+          <p>Votre progression ne sera pas récupérée si vous changez d'appareil ou videz le cache.</p>
+          <p>Pour retrouver une progression existante, <em>contactez l'administrateur</em>.</p>
+        </div>
+        <div className="offline-modal-actions">
+          <button className="sq-btn" onClick={onCancel}>Annuler</button>
+          <button className="sq-btn sq-btn-primary" onClick={onConfirm}>Continuer</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ── ServerCheckPage ───────────────────────────────────────────────────────────
 function ServerCheckPage({ onOnline, onOffline }) {
-  const [progress,  setProgress]  = useState(0);
-  const [timedOut,  setTimedOut]  = useState(false);
+  const [progress,       setProgress]       = useState(0);
+  const [showOfflineBtn, setShowOfflineBtn] = useState(false);
+  const [showModal,      setShowModal]      = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const start = Date.now();
 
-    // Animate bar to 85 % over ~9.5 s
+    const offlineTimer = setTimeout(() => {
+      if (!cancelled) setShowOfflineBtn(true);
+    }, 5000);
+
     const ticker = setInterval(() => {
       if (cancelled) return;
       setProgress(Math.min(85, ((Date.now() - start) / 9500) * 85));
@@ -189,7 +235,7 @@ function ServerCheckPage({ onOnline, onOffline }) {
       ctrl.abort();
       clearInterval(ticker);
       setProgress(100);
-      setTimedOut(true);
+      setShowOfflineBtn(true);
     }, 10000);
 
     fetch(SERVER_URL + '/api/health', { signal: ctrl.signal })
@@ -199,6 +245,7 @@ function ServerCheckPage({ onOnline, onOffline }) {
         if (d && d.status === 'ok') {
           clearInterval(ticker);
           clearTimeout(hardLimit);
+          clearTimeout(offlineTimer);
           setProgress(100);
           setTimeout(() => { if (!cancelled) onOnline(); }, 280);
         }
@@ -207,42 +254,56 @@ function ServerCheckPage({ onOnline, onOffline }) {
         if (cancelled || err.name === 'AbortError') return;
         clearInterval(ticker);
         clearTimeout(hardLimit);
+        clearTimeout(offlineTimer);
         setProgress(100);
-        setTimedOut(true);
+        setShowOfflineBtn(true);
       });
 
     return () => {
       cancelled = true;
       clearInterval(ticker);
       clearTimeout(hardLimit);
+      clearTimeout(offlineTimer);
       ctrl.abort();
     };
   }, [onOnline]);
 
   return (
-    <div className="gp-page srv-check-page">
+    <div className="gp-page gp-home">
       <div className="gp-bg" /><div className="gp-overlay" />
-      <div className="srv-check-card">
-        <div className="srv-check-badge">◈ SQUADRON ◈</div>
-        <div className="srv-check-title">CONNEXION AU SERVEUR</div>
-        <div className="srv-check-bar-wrap">
-          <div
-            className="srv-check-bar"
-            style={{
-              width: progress + '%',
-              transition: timedOut ? 'none' : 'width 80ms linear',
-            }}
-          />
-        </div>
-        {timedOut ? (
-          <div className="srv-check-error-block">
-            <div className="srv-check-error-msg">Serveur introuvable</div>
-            <button className="sq-btn" onClick={onOffline}>Mode hors ligne</button>
+      <div className="sq-card">
+        <div className="sq-card-header">
+          <div className="sq-card-title">SQUADRON</div>
+          <div className={'sq-card-sub' + (showOfflineBtn ? ' srv-status-error' : ' srv-status-searching')}>
+            {showOfflineBtn ? 'Serveur introuvable — toujours en recherche' : 'Connexion au serveur…'}
           </div>
-        ) : (
-          <div className="srv-check-sub">Recherche du serveur…</div>
+        </div>
+
+        <div className="srv-inline-bar-wrap">
+          <div className="srv-inline-bar" style={{ width: progress + '%' }} />
+        </div>
+
+        <div className="sq-soldier-strip">
+          <div className="sq-soldier-grid">
+            {Array.from({ length: 8 }, (_, i) => <SoldierCardSkeleton key={i} />)}
+          </div>
+        </div>
+
+        {showOfflineBtn && (
+          <div className="srv-offline-action">
+            <button className="sq-btn sq-btn-offline" onClick={() => setShowModal(true)}>
+              ▶ JOUER HORS LIGNE
+            </button>
+          </div>
         )}
       </div>
+
+      {showModal && (
+        <OfflineWarningModal
+          onConfirm={() => { setShowModal(false); onOffline(); }}
+          onCancel={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -350,8 +411,11 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       className={'sq-soldier' + (selected ? ' selected' : '')}
       onClick={() => onSelect(soldier.id)}
     >
+      <div className="sq-soldier-level">1</div>
       <div className="sq-soldier-stage">
-        <AnimPreview cfg={soldier.config} animKey="idle" scale={0.85} facing={1} running={true} />
+        <div className="sq-stage-char">
+          <AnimPreview cfg={soldier.config} animKey="idle" scale={0.85} facing={1} running={true} />
+        </div>
       </div>
       <div className="sq-soldier-name">{soldier.name}</div>
       <div className="sq-skills-row">
