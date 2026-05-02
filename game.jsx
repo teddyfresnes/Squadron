@@ -2,7 +2,7 @@
 //   <GameApp> — owns the current page state (home / login / hq) and the
 //   selected squad name. Renders one page at a time inside a fading wrapper.
 //
-//   <HomePage>   — 5 random soldiers + create / join squad forms
+//   <HomePage>   — 8 random soldiers + create / join squad forms
 //   <LoginPage>  — black hacker-style password screen
 //   <HQPage>     — blank white placeholder (we'll fill it later)
 //
@@ -19,8 +19,87 @@
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 const SQUADS_KEY = 'squadron-squads';
+const SOLDIER_COUNT = 8;
 
 const SKILL1_NAMES = ['Glock 17', 'Uzi', 'Mossberg 500', 'AKS-74U', 'Steyr Scout'];
+
+const MALE_NAMES = [
+  'Achille', 'Adrien', 'Alaric', 'Albert', 'Aldric', 'Alexandre', 'Amaury', 'Anatole', 'Anselme', 'Antoine',
+  'Apollon', 'Archibald', 'Aristide', 'Armand', 'Arnaud', 'Arsène', 'Arthur', 'Aurélien', 'Balthazar',
+  'Barnabé', 'Bastien', 'Baudouin', 'Benoît', 'Bertrand', 'Boris', 'Brutus', 'Cassius', 'Célestin',
+  'César', 'Charlemagne', 'Christophe', 'Clément', 'Constantin', 'Cyprien', 'Damien', 'Désiré',
+  'Dimitri', 'Dorian', 'Edmond', 'Édouard', 'Egon', 'Eliott', 'Émeric', 'Émilien', 'Enguerrand',
+  'Étienne', 'Eustache', 'Évrard', 'Fabien', 'Faust', 'Félix', 'Ferdinand', 'Florian', 'Gabriel',
+  'Galahad', 'Gaspard', 'Gauthier', 'Geoffroy', 'Georges', 'Gildas', 'Godefroy', 'Grégoire',
+  'Guillaume', 'Gustave', 'Hadrien', 'Hannibal', 'Hector', 'Henri', 'Hercule', 'Honoré', 'Hubert',
+  'Hugo', 'Ignace', 'Igor', 'Ilan', 'Isidore', 'Ivan', 'Jacques', 'Jasper', 'Jean', 'Jérémie',
+  'Joachim', 'Jules', 'Julien', 'Karl', 'Kaspar', 'Kazimir', 'Klaus', 'Lancelot', 'Laurent',
+  'Léandre', 'Léon', 'Léonard', 'Léopold', 'Loïc', 'Lothaire', 'Louis', 'Lucien', 'Ludovic',
+  'Magnus', 'Marc', 'Marius', 'Martin', 'Matthias', 'Maxence', 'Maximilien', 'Mirko', 'Modeste',
+  'Mortimer', 'Nathaniel', 'Nestor', 'Nicéphore', 'Nikolaï', 'Norbert', 'Octave', 'Olaf',
+  'Olivier', 'Orphée', 'Oscar', 'Othon', 'Owen', 'Pacôme', 'Pascal', 'Patrice', 'Pierre',
+  'Quentin', 'Raphaël', 'Raoul', 'Régis', 'Rémi', 'Renaud', 'Reynold', 'Robin', 'Rodolphe',
+  'Roger', 'Roland', 'Roméo', 'Rufus', 'Salomon', 'Samson', 'Saturnin', 'Sébastien', 'Séraphin',
+  'Sigismond', 'Silas', 'Stanislas', 'Sven', 'Sylvestre', 'Tancrède', 'Théobald', 'Théodore',
+  'Théophile', 'Thibault', 'Thomas', 'Tiago', 'Timothée', 'Titus', 'Tobias', 'Tristan', 'Ulrich',
+  'Ulysse', 'Valentin', 'Valère', 'Vasco', 'Victor', 'Vincent', 'Vladimir', 'Wenceslas', 'Wilfried',
+  'Wolfgang', 'Xavier', 'Yannick', 'Yorick', 'Zacharie', 'Zéphyr'
+];
+
+const FEMALE_NAMES = [
+  'Adèle', 'Agathe', 'Agnès', 'Aimée', 'Albane', 'Alice', 'Aliénor', 'Alma', 'Amandine', 'Amélie',
+  'Anaïs', 'Andromaque', 'Angélique', 'Anouk', 'Apolline', 'Ariane', 'Armance', 'Astrid', 'Athéna',
+  'Aude', 'Augustine', 'Aurélie', 'Aurore', 'Avril', 'Aziliz', 'Bathilde', 'Béatrice', 'Bérengère',
+  'Bérénice', 'Blanche', 'Bénédicte', 'Bertille', 'Brunehaut', 'Calliope', 'Camille', 'Capucine',
+  'Carmen', 'Cassandre', 'Catherine', 'Cécile', 'Célestine', 'Célia', 'Charlotte', 'Chloé',
+  'Clara', 'Clarisse', 'Clémence', 'Cléopâtre', 'Clio', 'Clothilde', 'Colette', 'Constance',
+  'Coraline', 'Cordélia', 'Cyrielle', 'Daphné', 'Delphine', 'Diane', 'Dione', 'Edwige', 'Éléonore',
+  'Élisa', 'Éliane', 'Éloïse', 'Elsa', 'Elvire', 'Émeline', 'Emma', 'Énora', 'Esmée', 'Esther',
+  'Eulalie', 'Eustachia', 'Eva', 'Ève', 'Fanny', 'Faustine', 'Félicie', 'Flavie', 'Flore',
+  'Florence', 'Fortuna', 'Frédérique', 'Freya', 'Gabrielle', 'Gaëlle', 'Garance', 'Geneviève',
+  'Gisèle', 'Gwendoline', 'Hadassa', 'Hannah', 'Hélène', 'Héloïse', 'Hermine', 'Hermione',
+  'Hilda', 'Hortense', 'Ilona', 'Inès', 'Irène', 'Iris', 'Isabeau', 'Isaure', 'Iseult', 'Ismérie',
+  'Ivana', 'Jacinthe', 'Jade', 'Jeanne', 'Joséphine', 'Judith', 'Julie', 'Juliette', 'Justine',
+  'Kalliope', 'Kassia', 'Katarina', 'Lara', 'Laure', 'Léa', 'Léonie', 'Léontine', 'Lila',
+  'Lilou', 'Liv', 'Livia', 'Loriane', 'Lou', 'Louise', 'Lucile', 'Lucrèce', 'Lydie', 'Mahaut',
+  'Maïa', 'Malika', 'Marceline', 'Margaux', 'Marguerite', 'Mathilde', 'Maud', 'Mélanie',
+  'Mélissande', 'Mila', 'Mireille', 'Morgane', 'Muriel', 'Nadia', 'Naïma', 'Naomi', 'Natacha',
+  'Nausicaa', 'Nina', 'Nora', 'Norma', 'Nour', 'Océane', 'Octavie', 'Odette', 'Odile', 'Olga',
+  'Olympe', 'Ombeline', 'Ondine', 'Ophélie', 'Pauline', 'Pénélope', 'Perrine', 'Philippa',
+  'Pomeline', 'Prudence', 'Rachel', 'Reine', 'Rosalie', 'Rose', 'Roxane', 'Sabine', 'Salomé',
+  'Sarah', 'Selma', 'Séraphine', 'Sibylle', 'Sienna', 'Sigrid', 'Solange', 'Soline', 'Sonia',
+  'Sophie', 'Stella', 'Suzanne', 'Sybille', 'Sylvie', 'Tara', 'Tatiana', 'Théa', 'Thaïs',
+  'Théodora', 'Tiphaine', 'Ursula', 'Valentine', 'Vénus', 'Véra', 'Véronique', 'Victoire',
+  'Violette', 'Virginie', 'Vivienne', 'Wendy', 'Wilhelmine', 'Xena', 'Yael', 'Ysaline', 'Yseult',
+  'Zélie', 'Zoé'
+];
+
+const WEAPON_TYPE_LABELS = {
+  pistol: 'Pistolet',
+  smg: 'Mitraillette',
+  shotgun: 'Fusil à pompe',
+  rifle: 'Fusil d\'assaut',
+  sniper: 'Fusil de précision',
+  heavy: 'Arme lourde'
+};
+
+const STANCE_LABELS = {
+  'one-hand': 'Une main',
+  'compact': 'Compacte',
+  'shoulder': 'À l\'épaule',
+  'low-heavy': 'Basse / lourde',
+  'precision': 'Précision',
+  'braced': 'Calée'
+};
+
+const RECOIL_LABELS = {
+  'snap': 'Recul sec',
+  'buzz': 'Recul vibrant',
+  'medium': 'Recul moyen',
+  'pump': 'Recul à pompe',
+  'controlled-heavy': 'Recul lourd contrôlé',
+  'heavy': 'Recul lourd'
+};
 
 // ---------------- Squad storage ----------------
 function loadSquads() {
@@ -56,10 +135,6 @@ function verifySquadPassword(name, password) {
   return !!(s && s.password === password);
 }
 
-function listSquadNames() {
-  return Object.keys(loadSquads()).sort();
-}
-
 // ---------------- Random helpers ----------------
 function randInt(n) { return Math.floor(Math.random() * n); }
 function pick(arr) { return arr[randInt(arr.length)]; }
@@ -73,6 +148,11 @@ function pickSkills() {
   const allNames = (window.Weapons.list || []).map((w) => w.name).filter((n) => n !== skill1Name);
   const skill2Name = pick(allNames);
   return { skill1Name, skill2Name };
+}
+
+function pickSoldierName(bodyType) {
+  const list = bodyType === 'female' ? FEMALE_NAMES : MALE_NAMES;
+  return pick(list);
 }
 
 function randomHomeConfig(skill1Name) {
@@ -102,13 +182,15 @@ function randomHomeConfig(skill1Name) {
   return UI.normalizeCharacterConfig(cfg);
 }
 
-function buildSoldiers(count = 5) {
+function buildSoldiers(count = SOLDIER_COUNT) {
   const out = [];
   for (let i = 0; i < count; i++) {
     const skills = pickSkills();
+    const config = randomHomeConfig(skills.skill1Name);
     out.push({
       id: 'soldier-' + i + '-' + Math.random().toString(36).slice(2, 8),
-      config: randomHomeConfig(skills.skill1Name),
+      config,
+      name: pickSoldierName(config.bodyType),
       skill1Name: skills.skill1Name,
       skill2Name: skills.skill2Name
     });
@@ -130,6 +212,98 @@ function ModeToggleFab({ onSwitchMode, variant }) {
   );
 }
 
+// ---------------- SkillTooltip ----------------
+// Wraps a skill icon and shows a contextual tooltip on hover. For weapon
+// skills the tooltip contains the weapon name, key specs, and a sprite preview.
+// For non-weapon skills (future), `text` provides plain description content.
+//
+// Rendered through a portal so the tooltip can escape the parent strip's
+// horizontal-scroll overflow clipping.
+function SkillTooltip({ weapon, text, children }) {
+  const hasWeapon = !!weapon;
+  const WeaponIcon = window.SquadronUI && window.SquadronUI.WeaponIcon;
+  const wrapRef = useRef(null);
+  const [anchor, setAnchor] = useState(null);
+
+  const updateAnchor = useCallback(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setAnchor({ cx: r.left + r.width / 2, top: r.top });
+  }, []);
+
+  const handleEnter = () => updateAnchor();
+  const handleLeave = () => setAnchor(null);
+
+  // Re-anchor on scroll/resize so the tooltip tracks its source while open.
+  useEffect(() => {
+    if (!anchor) return;
+    window.addEventListener('scroll', updateAnchor, true);
+    window.addEventListener('resize', updateAnchor);
+    return () => {
+      window.removeEventListener('scroll', updateAnchor, true);
+      window.removeEventListener('resize', updateAnchor);
+    };
+  }, [anchor, updateAnchor]);
+
+  const tipBody = hasWeapon ? (
+    <>
+      <div className="sq-skill-tip-head">
+        <div className="sq-skill-tip-name">{weapon.name}</div>
+        <div className="sq-skill-tip-type">{WEAPON_TYPE_LABELS[weapon.type] || weapon.type}</div>
+      </div>
+      <div className="sq-skill-tip-image">
+        {WeaponIcon ? <WeaponIcon weapon={weapon} scale={2} /> : null}
+      </div>
+      <div className="sq-skill-tip-specs">
+        <div className="sq-skill-tip-spec">
+          <span className="sq-skill-tip-spec-key">Mains</span>
+          <span className="sq-skill-tip-spec-val">{weapon.twoHanded ? '2H' : '1H'}</span>
+        </div>
+        <div className="sq-skill-tip-spec">
+          <span className="sq-skill-tip-spec-key">Taille</span>
+          <span className="sq-skill-tip-spec-val">{weapon.width}×{weapon.height}px</span>
+        </div>
+        <div className="sq-skill-tip-spec">
+          <span className="sq-skill-tip-spec-key">Stance</span>
+          <span className="sq-skill-tip-spec-val">{STANCE_LABELS[weapon.stanceProfile] || weapon.stanceProfile || '—'}</span>
+        </div>
+        <div className="sq-skill-tip-spec">
+          <span className="sq-skill-tip-spec-key">Recul</span>
+          <span className="sq-skill-tip-spec-val">{RECOIL_LABELS[weapon.recoilProfile] || weapon.recoilProfile || '—'}</span>
+        </div>
+      </div>
+    </>
+  ) : (
+    <div className="sq-skill-tip-text">{text || 'Skill inconnue.'}</div>
+  );
+
+  const tipNode = anchor && ReactDOM.createPortal(
+    <div
+      className="sq-skill-tip"
+      role="tooltip"
+      style={{ left: anchor.cx, top: anchor.top }}
+    >
+      {tipBody}
+    </div>,
+    document.body
+  );
+
+  return (
+    <span
+      ref={wrapRef}
+      className="sq-skill-wrap"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      onFocus={handleEnter}
+      onBlur={handleLeave}
+    >
+      {children}
+      {tipNode}
+    </span>
+  );
+}
+
 // ---------------- RandomSoldierCard ----------------
 function RandomSoldierCard({ soldier, selected, onSelect }) {
   const { AnimPreview, WeaponGameIcon } = window.SquadronUI;
@@ -141,14 +315,18 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       type="button"
       className={'sq-soldier' + (selected ? ' selected' : '')}
       onClick={() => onSelect(soldier.id)}
-      title={'Soldat — ' + soldier.skill1Name + ' / ' + soldier.skill2Name}
     >
       <div className="sq-soldier-stage">
-        <AnimPreview cfg={soldier.config} animKey="idle" scale={1.4} facing={1} running={true} />
+        <AnimPreview cfg={soldier.config} animKey="idle" scale={0.85} facing={1} running={true} />
       </div>
+      <div className="sq-soldier-name">{soldier.name}</div>
       <div className="sq-skills-row">
-        {skill1 ? <WeaponGameIcon weapon={skill1} /> : <span className="sq-skill-fallback" />}
-        {skill2 ? <WeaponGameIcon weapon={skill2} /> : <span className="sq-skill-fallback" />}
+        {skill1
+          ? <SkillTooltip weapon={skill1}><WeaponGameIcon weapon={skill1} /></SkillTooltip>
+          : <span className="sq-skill-fallback" />}
+        {skill2
+          ? <SkillTooltip weapon={skill2}><WeaponGameIcon weapon={skill2} /></SkillTooltip>
+          : <span className="sq-skill-fallback" />}
       </div>
     </button>
   );
@@ -159,30 +337,45 @@ function HomePage({ soldiers, onCreate, onJoin }) {
   const [selectedId, setSelectedId] = useState(null);
   const [squadName, setSquadName] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
-  const [squads, setSquads] = useState(() => listSquadNames());
-
-  const refreshSquads = () => setSquads(listSquadNames());
+  const [joinName, setJoinName] = useState('');
+  const [createError, setCreateError] = useState(null);
+  const [joinError, setJoinError] = useState(null);
 
   const selectedSoldier = soldiers.find((s) => s.id === selectedId) || null;
-  const canCreate = !!selectedSoldier && squadName.trim().length >= 2 && password.length >= 1;
+  const trimmedName = squadName.trim();
+  const canCreate = !!selectedSoldier && trimmedName.length >= 2;
+
+  // Reason shown on hover over the disabled CRÉER button.
+  let disabledReason = '';
+  if (!selectedSoldier && trimmedName.length < 2) {
+    disabledReason = 'Choisis un soldat et donne un nom à ta squad.';
+  } else if (!selectedSoldier) {
+    disabledReason = 'Choisis un soldat fondateur.';
+  } else if (trimmedName.length < 2) {
+    disabledReason = 'Le nom de la squad doit faire au moins 2 caractères.';
+  }
 
   const handleCreate = (e) => {
     e.preventDefault();
-    setError(null);
-    if (!selectedSoldier) { setError('Sélectionne un soldat avant de créer ta squad.'); return; }
-    const name = squadName.trim();
-    if (name.length < 2) { setError('Le nom de la squad doit faire au moins 2 caractères.'); return; }
-    if (password.length < 1) { setError('Le mot de passe ne peut pas être vide.'); return; }
+    setCreateError(null);
+    if (!canCreate) return;
     const founder = {
       config: selectedSoldier.config,
+      name: selectedSoldier.name,
       skill1Name: selectedSoldier.skill1Name,
       skill2Name: selectedSoldier.skill2Name
     };
-    const res = createSquad(name, password, founder);
-    if (!res.ok) { setError(res.error); refreshSquads(); return; }
-    refreshSquads();
-    onCreate(name);
+    const res = createSquad(trimmedName, password, founder);
+    if (!res.ok) { setCreateError(res.error); return; }
+    onCreate(trimmedName);
+  };
+
+  const handleJoin = (e) => {
+    e.preventDefault();
+    setJoinError(null);
+    const name = joinName.trim();
+    if (name.length < 2) { setJoinError('Entre un nom de squad valide.'); return; }
+    onJoin(name);
   };
 
   return (
@@ -193,22 +386,24 @@ function HomePage({ soldiers, onCreate, onJoin }) {
       <div className="sq-card">
         <div className="sq-card-header">
           <div className="sq-card-title">SQUADRON</div>
-          <div className="sq-card-sub">Choisis ton soldat fondateur — crée ou rejoins une squad</div>
+          <div className="sq-card-sub">Une squad pour les gouverner tous</div>
         </div>
 
-        <div className="sq-soldier-grid">
-          {soldiers.map((s) => (
-            <RandomSoldierCard
-              key={s.id}
-              soldier={s}
-              selected={selectedId === s.id}
-              onSelect={setSelectedId}
-            />
-          ))}
+        <div className="sq-soldier-strip">
+          <div className="sq-soldier-grid">
+            {soldiers.map((s) => (
+              <RandomSoldierCard
+                key={s.id}
+                soldier={s}
+                selected={selectedId === s.id}
+                onSelect={setSelectedId}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="sq-actions">
-          <form className="sq-create" onSubmit={handleCreate}>
+          <form className="sq-create sq-col" onSubmit={handleCreate}>
             <div className="sq-section-title">CRÉER MA SQUAD</div>
             <div className="sq-fields">
               <input
@@ -217,16 +412,22 @@ function HomePage({ soldiers, onCreate, onJoin }) {
                 placeholder="Nom de la squad"
                 value={squadName}
                 maxLength={24}
-                onChange={(e) => { setSquadName(e.target.value); setError(null); }}
+                onChange={(e) => { setSquadName(e.target.value); setCreateError(null); }}
               />
               <input
                 type="password"
                 className="sq-input"
-                placeholder="Mot de passe"
+                placeholder="Mot de passe (optionnel)"
                 value={password}
                 maxLength={48}
-                onChange={(e) => { setPassword(e.target.value); setError(null); }}
+                onChange={(e) => { setPassword(e.target.value); setCreateError(null); }}
               />
+            </div>
+            <div className="sq-col-spacer" />
+            <div
+              className="sq-btn-wrap"
+              data-tooltip={canCreate ? '' : disabledReason}
+            >
               <button
                 type="submit"
                 className={'sq-btn sq-btn-primary' + (canCreate ? '' : ' is-disabled')}
@@ -235,40 +436,39 @@ function HomePage({ soldiers, onCreate, onJoin }) {
                 CRÉER
               </button>
             </div>
-            {!selectedSoldier ? (
-              <div className="sq-hint">Clique sur un soldat ci-dessus pour le sélectionner.</div>
-            ) : (
-              <div className="sq-hint sq-hint-ok">
-                Soldat fondateur : {selectedSoldier.skill1Name} + {selectedSoldier.skill2Name}
-              </div>
-            )}
-            {error ? <div className="sq-error">{error}</div> : null}
+            {createError ? <div className="sq-error">{createError}</div> : null}
           </form>
 
-          {squads.length > 0 ? (
-            <div className="sq-join">
-              <div className="sq-section-title">REJOINDRE UNE SQUAD</div>
-              <div className="sq-squad-list">
-                {squads.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    className="sq-squad-entry"
-                    onClick={() => onJoin(name)}
-                    title={'Se connecter à ' + name}
-                  >
-                    <span className="sq-squad-name">{name}</span>
-                    <span className="sq-squad-arrow">→</span>
-                  </button>
-                ))}
-              </div>
+          <div className="sq-or" aria-hidden="true">
+            <span className="sq-or-line" />
+            <span className="sq-or-text">OU</span>
+            <span className="sq-or-line" />
+          </div>
+
+          <form className="sq-join sq-col" onSubmit={handleJoin}>
+            <div className="sq-section-title">REJOINDRE UNE SQUAD</div>
+            <div className="sq-fields">
+              <input
+                type="text"
+                className="sq-input"
+                placeholder="Nom de la squad"
+                value={joinName}
+                maxLength={24}
+                onChange={(e) => { setJoinName(e.target.value); setJoinError(null); }}
+              />
             </div>
-          ) : (
-            <div className="sq-join sq-join-empty">
-              <div className="sq-section-title">REJOINDRE UNE SQUAD</div>
-              <div className="sq-hint">Aucune squad enregistrée pour le moment.</div>
+            <div className="sq-col-spacer" />
+            <div className="sq-btn-wrap">
+              <button
+                type="submit"
+                className={'sq-btn' + (joinName.trim().length >= 2 ? '' : ' is-disabled')}
+                disabled={joinName.trim().length < 2}
+              >
+                REJOINDRE
+              </button>
             </div>
-          )}
+            {joinError ? <div className="sq-error">{joinError}</div> : null}
+          </form>
         </div>
       </div>
     </div>
@@ -341,6 +541,10 @@ function LoginPage({ squadName, onSuccess, onBack }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!squadExists(squadName)) {
+      setError('ACCESS DENIED — squad introuvable.');
+      return;
+    }
     if (verifySquadPassword(squadName, password)) {
       onSuccess(squadName);
     } else {
@@ -396,7 +600,7 @@ function GameApp({ onSwitchMode }) {
   const [currentSquadName, setCurrentSquadName] = useState(null);
   // Random soldiers are generated once per GameApp mount (i.e. once per prod
   // session). Going home → login → back does NOT reshuffle them.
-  const [soldiers] = useState(() => buildSoldiers(5));
+  const [soldiers] = useState(() => buildSoldiers(SOLDIER_COUNT));
 
   // Force a known weapon skin so all home soldiers share the same texture.
   useEffect(() => {
