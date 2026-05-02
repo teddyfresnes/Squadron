@@ -114,13 +114,22 @@ function generateOneTrooper(idx, rng) {
   const hairStyles  = HAIR_STYLES[bodyType];
   const hairStyleIdx = seededPick(hairStyles, rng);
 
+  const skinIdx    = seededRandInt(SKIN_COUNT, rng);
+  const uniformIdx = seededRandInt(UNIFORM_COUNT, rng);
+  let   hairIdx    = seededRandInt(HAIR_COUNT, rng);
+  // Orange uniform (8) + Ginger hair (4) or Yellow uniform (7) + Blonde hair (5) are forbidden
+  while ((uniformIdx === 8 && hairIdx === 4) || (uniformIdx === 7 && hairIdx === 5)) {
+    hairIdx = seededRandInt(HAIR_COUNT, rng);
+  }
+  const eyeIdx     = seededRandInt(EYE_COUNT, rng);
+
   const config = {
     bodyType,
-    skinIdx:      seededRandInt(SKIN_COUNT, rng),
-    hairIdx:      seededRandInt(HAIR_COUNT, rng),
+    skinIdx,
+    hairIdx,
     hairStyleIdx,
-    eyeIdx:       seededRandInt(EYE_COUNT, rng),
-    uniformIdx:   seededRandInt(UNIFORM_COUNT, rng),
+    eyeIdx,
+    uniformIdx,
     vestOn:       false,
     backpackOn:   false,
     hatIdx:       0,
