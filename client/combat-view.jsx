@@ -11,7 +11,7 @@
   const STAGE_W = (UI && UI.STAGE_W) || 256;
   const STAGE_H = (UI && UI.STAGE_H) || 112;
   const GROUND_Y_RATIO = 0.84;          // where the ground line sits inside the arena
-  const BULLET_TRAIL_MS = 90;
+  const BULLET_TRAIL_MS = 220;          // turn-based pacing → trails linger longer
 
   function frameForState(state, stateT) {
     const anim = window.Anims[state] || window.Anims.idle;
@@ -21,7 +21,7 @@
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
-  function ArenaSoldier({ s, arenaH }) {
+  function ArenaSoldier({ s, arenaH, isActive }) {
     const TILE = window.CombatSim.TILE_PX;
     const SpriteCanvas = UI.SpriteCanvas;
     const frame = frameForState(s.state, s.stateT);
@@ -34,7 +34,8 @@
     const top = Math.round(groundY - stageH);
 
     return (
-      <div className="cv-soldier" style={{ left, top, width: stageW, height: stageH }}>
+      <div className={'cv-soldier' + (isActive ? ' is-active' : '')}
+           style={{ left, top, width: stageW, height: stageH }}>
         <SpriteCanvas
           cfg={s.cfg}
           animKey={s.state}
@@ -47,6 +48,7 @@
             <div className="cv-hpbar-fill" style={{ width: (100 * s.hp / s.hpMax) + '%' }} />
           </div>
         )}
+        {isActive && s.hp > 0 && <div className="cv-active-marker" />}
       </div>
     );
   }
@@ -227,7 +229,8 @@
           <div className="cv-bg" />
           {/* Soldiers, sorted so the one at the back lane renders first */}
           {battle.all.slice().sort((a, b) => a.laneOffsetPx - b.laneOffsetPx).map(s => (
-            <ArenaSoldier key={s.id} s={s} arenaH={arenaSize.h} />
+            <ArenaSoldier key={s.id} s={s} arenaH={arenaSize.h}
+                          isActive={battle.currentAction && battle.currentAction.actorId === s.id} />
           ))}
           <TrailsLayer trails={trails}
                        arenaW={arenaSize.w} arenaH={arenaSize.h}

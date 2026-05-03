@@ -2436,10 +2436,9 @@ html, body {
 }
 .cv-bg {
   position: absolute; inset: 0;
-  background-image: url('assets/images/covers_mode/armyvsarmy.png');
+  background-image: url('assets/images/scenes/forest.png');
   background-size: cover;
   background-position: center bottom;
-  opacity: 0.85;
 }
 .cv-bg::after {
   content: '';
@@ -2458,6 +2457,20 @@ html, body {
 }
 .cv-soldier canvas {
   display: block;
+}
+.cv-active-marker {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center,
+    rgba(255, 215, 122, 0.85) 0%,
+    rgba(255, 215, 122, 0.45) 40%,
+    rgba(255, 215, 122, 0) 75%);
+  pointer-events: none;
 }
 .cv-hpbar {
   position: absolute;
