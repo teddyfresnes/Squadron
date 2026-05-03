@@ -739,7 +739,14 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       />
     );
   } else if (subpage === 'battle' && battleTarget) {
-    main = (
+    const BattleScreen = window.HQBattleScreen;
+    main = BattleScreen ? (
+      <BattleScreen
+        mySquad={hq}
+        oppSquad={battleTarget}
+        onDone={() => { setSubpage(null); setBattleTarget(null); }}
+      />
+    ) : (
       <HQBattleSplash
         opp={battleTarget}
         onDone={() => { setSubpage(null); setBattleTarget(null); }}
