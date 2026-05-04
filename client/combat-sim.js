@@ -28,10 +28,10 @@
   const IDLE_TURN_DURATION = 0.4;
   const TURN_GAP = 0.04;                // tiny pause between turns for readability
 
-  const LANE_OFFSETS = { front: 0, mid: -40, back: -80 };
+  const LANE_OFFSETS = { front: 0, mid: -80, back: -180 };
   // Per-soldier Y spread within a lane so soldiers don't stack on one line.
   const LANE_Y_SPREAD = [0, 12, -12, 22, -22, 6, -6];
-  const ENTRY_DIST = 8;               // tiles each soldier runs from off-screen to their spawn
+  const ENTRY_DIST = 4;               // tiles each soldier runs from off-screen to their spawn
 
   // ── Weapon stats loader ───────────────────────────────────────────────────
   const statsByName = {};
@@ -99,8 +99,8 @@
     // Spawn positions close to the edges; each soldier runs the same ENTRY_DIST
     // so both teams arrive simultaneously without overlapping.
     const xSpawn = team === 'A'
-      ? 0.5 + idxInTeam * 1.0
-      : (ARENA_TILES - 0.5) - idxInTeam * 1.0;
+      ? 0.2 + idxInTeam * 0.5
+      : (ARENA_TILES - 0.2) - idxInTeam * 0.5;
     const xEntry = team === 'A' ? xSpawn - ENTRY_DIST : xSpawn + ENTRY_DIST;
     // Per-soldier Y offset within the lane so many soldiers in the same lane
     // don't all share one ground line.
