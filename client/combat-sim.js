@@ -29,6 +29,9 @@
   const TURN_GAP = 0.04;                // tiny pause between turns for readability
 
   const LANE_OFFSETS = { front: 0, mid: -20, back: -40 };
+  // Per-soldier Y spread within a lane so soldiers don't stack on one line.
+  const LANE_Y_SPREAD = [0, 12, -12, 22, -22, 6, -6];
+  const ENTRY_X_OFFSET = 5;           // tiles off-screen before running in
 
   // ── Weapon stats loader ───────────────────────────────────────────────────
   const statsByName = {};
@@ -93,10 +96,14 @@
     const weaponName = soldier.preferredWeapon || soldier.skill1Name || 'Glock 17';
     const stats = getWeaponStats(weaponName) || defaultStats();
     const lane = laneForCategory(stats.category);
-    const laneFwd = lane === 'front' ? 6 : (lane === 'mid' ? 3 : 1);
-    const xStart = team === 'A'
-      ? laneFwd + idxInTeam * 2.0
-      : (ARENA_TILES - 1) - laneFwd - idxInTeam * 2.0;
+    // Spawn positions at the far edges; soldiers run in from off-screen.
+    const xSpawn = team === 'A'
+      ? 1.5 + idxInTeam * 1.5
+      : (ARENA_TILES - 1.5) - idxInTeam * 1.5;
+    const xEntry = team === 'A' ? -ENTRY_X_OFFSET : ARENA_TILES + ENTRY_X_OFFSET;
+    // Per-soldier Y offset within the lane so many soldiers in the same lane
+    // don't all share one ground line.
+    const laneOffsetPx = LANE_OFFSETS[lane] + LANE_Y_SPREAD[idxInTeam % LANE_Y_SPREAD.length];
 
     return {
       id: (soldier.id || 'sld') + ':' + team + ':' + idxInTeam,
@@ -106,10 +113,11 @@
       weaponName,
       weapon: stats,
       lane,
-      laneOffsetPx: LANE_OFFSETS[lane],
+      laneOffsetPx,
       hp: hpMax,
       hpMax,
-      x: xStart,
+      x: xEntry,
+      xSpawn,
       facing: team === 'A' ? 1 : -1,
       state: 'idle',
       stateT: 0,
@@ -145,6 +153,7 @@
     let done = false;
     let winner = null;
     let endHoldT = 0;
+    let phase = 'entry';  // 'entry' → all run in simultaneously; 'combat' → turn-based
 
     function alive(team) {
       let n = 0;
@@ -274,7 +283,34 @@
       return action;
     }
 
+    // Entry phase: all soldiers run simultaneously from off-screen to their
+    // spawn positions, then the phase switches to turn-based combat.
+    function stepEntry(dt) {
+      let allArrived = true;
+      for (const s of all) {
+        const dx = s.xSpawn - s.x;
+        const dist = Math.abs(dx);
+        if (dist < 0.1) {
+          s.x = s.xSpawn;
+          if (s.state !== 'idle') { s.state = 'idle'; s.stateT = 0; }
+          else s.stateT += dt;
+        } else {
+          allArrived = false;
+          const dir = dx > 0 ? 1 : -1;
+          s.x += dir * Math.min(dist, SPEED_TILES_PER_SEC * dt);
+          s.facing = dir;
+          if (s.state !== 'run') { s.state = 'run'; s.stateT = 0; }
+          else s.stateT += dt;
+        }
+      }
+      if (allArrived) {
+        phase = 'combat';
+        for (const s of all) { s.state = 'idle'; s.stateT = 0; }
+      }
+    }
+
     function step(dt) {
+      if (phase === 'entry') { stepEntry(dt); return; }
       if (done) {
         endHoldT += dt;
         for (const s of all) if (s.state === 'dead') s.stateT += dt;
@@ -385,6 +421,7 @@
       all,
       events,
       step,
+      get phase() { return phase; },
       get done() { return done; },
       get winner() { return winner; },
       get time() { return worldT; },
