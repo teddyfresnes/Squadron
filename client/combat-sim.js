@@ -99,9 +99,9 @@
     // Spawn positions close to the edges; each soldier runs the same ENTRY_DIST
     // so both teams arrive simultaneously without overlapping.
     const xSpawn = team === 'A'
-      ? 0.2 + idxInTeam * 0.5
-      : (ARENA_TILES - 0.2) - idxInTeam * 0.5;
-    const xEntry = team === 'A' ? xSpawn - ENTRY_DIST : xSpawn + ENTRY_DIST;
+      ? 0.1 + idxInTeam * 0.5
+      : (ARENA_TILES - 0.1) - idxInTeam * 0.5;
+    const xEntry = team === 'A' ? -ENTRY_DIST : ARENA_TILES + ENTRY_DIST;
     // Per-soldier Y offset within the lane so many soldiers in the same lane
     // don't all share one ground line.
     const laneOffsetPx = LANE_OFFSETS[lane] + LANE_Y_SPREAD[idxInTeam % LANE_Y_SPREAD.length];
