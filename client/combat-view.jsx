@@ -7,11 +7,11 @@
   const { useState, useEffect, useRef } = React;
   const UI = window.SquadronUI;
 
-  const SPRITE_SCALE = 1.0;             // soldier sprite scale on the arena
   const STAGE_W = (UI && UI.STAGE_W) || 256;
   const STAGE_H = (UI && UI.STAGE_H) || 112;
-  const GROUND_Y_RATIO = 0.84;          // where the ground line sits inside the arena
+  const GROUND_Y_RATIO = 0.78;          // where the ground line sits inside the arena
   const BULLET_TRAIL_MS = 220;          // turn-based pacing → trails linger longer
+  const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
 
   function frameForState(state, stateT) {
     const anim = window.Anims[state] || window.Anims.idle;
@@ -21,15 +21,15 @@
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
-  function ArenaSoldier({ s, arenaH, isActive }) {
-    const TILE = window.CombatSim.TILE_PX;
+  function ArenaSoldier({ s, arenaH, pxPerTile, spriteScale, xOffset, isActive }) {
     const SpriteCanvas = UI.SpriteCanvas;
     const frame = frameForState(s.state, s.stateT);
-    const stageW = STAGE_W * SPRITE_SCALE;
-    const stageH = STAGE_H * SPRITE_SCALE;
-    const cx = s.x * TILE;
-    // Anchor the sprite's feet on the arena ground line.
-    const groundY = arenaH * GROUND_Y_RATIO + s.laneOffsetPx;
+    const stageW = STAGE_W * spriteScale;
+    const stageH = STAGE_H * spriteScale;
+    const cx = xOffset + s.x * pxPerTile;
+    // Lane offsets are authored at TILE=24; scale them with the live tile size.
+    const laneScale = pxPerTile / BASE_TILE_PX;
+    const groundY = arenaH * GROUND_Y_RATIO + s.laneOffsetPx * laneScale;
     const left = Math.round(cx - stageW / 2);
     const top = Math.round(groundY - stageH);
 
@@ -40,7 +40,7 @@
           cfg={s.cfg}
           animKey={s.state}
           frame={frame}
-          scale={SPRITE_SCALE}
+          scale={spriteScale}
           facing={s.facing}
         />
         {s.hp > 0 && (
@@ -54,7 +54,8 @@
   }
 
   // ── Bullet trails layer (SVG overlay) ─────────────────────────────────────
-  function TrailsLayer({ trails, arenaW, arenaH, nowMs }) {
+  function TrailsLayer({ trails, arenaW, arenaH, pxPerTile, spriteScale, xOffset, nowMs }) {
+    const laneScale = pxPerTile / BASE_TILE_PX;
     return (
       <svg className="cv-trails" width={arenaW} height={arenaH}
            viewBox={`0 0 ${arenaW} ${arenaH}`} preserveAspectRatio="none">
@@ -62,19 +63,18 @@
           const age = nowMs - tr.bornMs;
           const k = Math.max(0, 1 - age / BULLET_TRAIL_MS);
           if (k <= 0) return null;
-          const TILE = window.CombatSim.TILE_PX;
           const groundY = arenaH * GROUND_Y_RATIO;
-          const x1 = tr.ax * TILE;
-          const y1 = groundY + tr.ay - STAGE_H * SPRITE_SCALE * 0.55;
-          // Miss → randomised endpoint near the target so the trail doesn't always touch.
-          const x2 = tr.tx * TILE + (tr.hit ? 0 : tr.missDx);
-          const y2 = groundY + tr.ty - STAGE_H * SPRITE_SCALE * 0.55 + (tr.hit ? 0 : tr.missDy);
+          const chestY = STAGE_H * spriteScale * 0.55;
+          const x1 = xOffset + tr.ax * pxPerTile;
+          const y1 = groundY + tr.ay * laneScale - chestY;
+          const x2 = xOffset + tr.tx * pxPerTile + (tr.hit ? 0 : tr.missDx);
+          const y2 = groundY + tr.ty * laneScale - chestY + (tr.hit ? 0 : tr.missDy);
           return (
             <line key={tr.key}
                   x1={x1} y1={y1} x2={x2} y2={y2}
                   stroke={tr.hit ? '#ffd87a' : '#ffe9a8'}
                   strokeOpacity={k}
-                  strokeWidth={1.2} />
+                  strokeWidth={1.4} />
           );
         })}
       </svg>
@@ -128,12 +128,14 @@
     }, [mySquad, oppSquad]);
 
     // Resize observer to keep the arena width matching its container.
+    // Height tuned so we see most of the forest scene (it's ~4:3) without
+    // wasting too much vertical space.
     useEffect(() => {
       function measure() {
         const el = containerRef.current;
         if (!el) return;
         const w = el.clientWidth;
-        const h = Math.max(280, Math.min(420, Math.round(w * 0.28)));
+        const h = Math.max(320, Math.min(520, Math.round(w * 0.42)));
         setArenaSize({ w, h });
       }
       measure();
@@ -221,6 +223,14 @@
     }
 
     const nowMs = performance.now();
+    // Fit the whole battlefield (50 tiles) horizontally, leaving padding for
+    // sprite half-widths so wide weapons (AWP, Stinger) don't clip the edges.
+    const ARENA_TILES = window.CombatSim.ARENA_TILES;
+    const spriteScale = Math.min(1.0, arenaSize.w / 1200);
+    const sidePad = Math.round(STAGE_W * spriteScale * 0.5);
+    const usableW = Math.max(200, arenaSize.w - 2 * sidePad);
+    const pxPerTile = usableW / ARENA_TILES;
+    const xOffset = sidePad;
 
     return (
       <div className="cv-screen" ref={containerRef}>
@@ -230,10 +240,12 @@
           {/* Soldiers, sorted so the one at the back lane renders first */}
           {battle.all.slice().sort((a, b) => a.laneOffsetPx - b.laneOffsetPx).map(s => (
             <ArenaSoldier key={s.id} s={s} arenaH={arenaSize.h}
+                          pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
                           isActive={battle.currentAction && battle.currentAction.actorId === s.id} />
           ))}
           <TrailsLayer trails={trails}
                        arenaW={arenaSize.w} arenaH={arenaSize.h}
+                       pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
                        nowMs={nowMs} />
         </div>
         <div className="cv-hud">

@@ -2437,8 +2437,9 @@ html, body {
 .cv-bg {
   position: absolute; inset: 0;
   background-image: url('assets/images/scenes/forest.png');
-  background-size: cover;
-  background-position: center bottom;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 .cv-bg::after {
   content: '';
