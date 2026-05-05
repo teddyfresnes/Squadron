@@ -2033,6 +2033,14 @@ html, body {
   width: 100%;
   margin-top: 2px;
   letter-spacing: 0;
+  background: rgba(12, 14, 18, 0.78);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  box-shadow: none;
+}
+.hq-opp-attack:hover {
+  background: rgba(34, 38, 48, 0.95);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 .hq-opp-actions {
   text-align: center;
@@ -2043,6 +2051,9 @@ html, body {
   min-width: 3rem;
   padding: 0.55rem 0.9rem;
   font-size: 1rem;
+}
+.hq-opp-refresh[disabled] {
+  opacity: 0.35;
 }
 /* ── Recruit page ──────────────────────────────────────────────────────── */
 .hq-recruit-grid {
@@ -2566,6 +2577,14 @@ html, body {
 .cv-result-btn {
   margin-top: 6px;
   min-width: 180px;
+  background: rgba(12, 14, 18, 0.88);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  box-shadow: none;
+}
+.cv-result-btn:hover {
+  background: rgba(34, 38, 48, 0.95);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */

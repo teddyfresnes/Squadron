@@ -62,6 +62,14 @@ Tous les composants (renderer, SpriteCanvas, combat-sim, DB) échangent ce même
 
 ---
 
+## HQ matchmaking / power
+
+Dans `hq.jsx`, le power d'une squad vaut `sum(4 + soldier.level)` : un soldat niveau 1 donne 5 power, puis chaque niveau de soldat ajoute 1 power.
+
+La sélection Armée vs Armée est persistée par squad dans `localStorage` (`squadron-matchmaking-<squad>`), datée au jour courant et verrouillée jusqu'à un combat ou au reset de minuit. Elle privilégie les armées joueurs : HQ locaux en offline, `/api/squad/opponents/list` en online. Les bots complètent ensuite les paliers de power.
+
+---
+
 ## Hairstyles par bodyType
 
 Les indices de `hairStyleIdx` sont globaux (0–15). Chaque bodyType n'utilise qu'un sous-ensemble :

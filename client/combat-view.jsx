@@ -95,7 +95,7 @@
               ? `${survivors}/${mySquad.soldiers.length} soldats survivants — ${enemiesDown} ennemis abattus`
               : `${oppSquad.name} a survécu — ${enemiesDown}/${oppSquad.soldiers.length} ennemis abattus`}
           </div>
-          <button type="button" className="sq-btn sq-btn-primary cv-result-btn"
+          <button type="button" className="sq-btn cv-result-btn"
                   onClick={onContinue}>CONTINUER</button>
         </div>
       </div>

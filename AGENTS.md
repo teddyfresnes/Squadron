@@ -46,6 +46,7 @@ Tous les scripts sont chargés dans `Sprite Forge.html` dans cet ordre **exact**
 GET  /api/health                 → {status:'ok', version:'1.0.0'}
 GET  /api/troopers               → {troopers:[8 soldats], date}
 GET  /api/squad/:name            → {exists, hasPassword}
+GET  /api/squad/opponents/list   → {squads:[armées joueurs]} (fondateur seul tant que le HQ complet n'est pas sync serveur)
 POST /api/auth/register          body:{squadName,password,founder}  → {token,squadName}
 POST /api/auth/login             body:{squadName,password}           → {token,squadName}
 ```
@@ -83,6 +84,7 @@ Ces correspondances **doivent rester cohérentes** entre plusieurs fichiers :
 | Tailles palette (SKIN, HAIR, EYE, UNIFORM) | `client/palette.js` ↔ `server/utils/generateTroopers.js` |
 | SKILL1_NAMES / SKILL1_INDICES | `client/game.jsx` ↔ `server/utils/generateTroopers.js` |
 | Animations référencées par le sim | `client/animations.js` (Anims) ↔ `client/combat-sim.js` (clés 'aim','shoot','hurt','run','idle','dead') |
+| Calcul du power squad | `client/hq.jsx` ↔ `server/routes/squads.js` (1 soldat niv.1 = 5 power, +1 par niveau soldat) |
 
 ---
 

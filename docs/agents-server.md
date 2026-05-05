@@ -27,11 +27,15 @@
 GET  /api/health                 → {status:'ok', version:'1.0.0'}
 GET  /api/troopers               → {troopers:[8 soldats], date}
 GET  /api/squad/:name            → {exists, hasPassword}
+GET  /api/squad/opponents/list?exclude=<name>
+                                → {squads:[{name,soldiers,power,level,source:'player'}]}
 POST /api/auth/register          body:{squadName,password,founder{name,config,skill1Name,skill2Name}}
                                  → 201 {token, squadName}
 POST /api/auth/login             body:{squadName,password}
                                  → 200 {token, squadName}
 ```
+
+`/api/squad/opponents/list` expose les squads enregistrées pour le matchmaking. Tant que le serveur ne synchronise pas le HQ complet, chaque armée serveur contient uniquement le fondateur enregistré, donc power 5.
 
 ---
 

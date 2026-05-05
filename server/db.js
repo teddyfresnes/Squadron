@@ -27,6 +27,10 @@ function findByName(name) {
   return load().squads.find(s => s.name.toLowerCase() === lo) || null;
 }
 
+function listSquads() {
+  return load().squads.slice();
+}
+
 // Returns inserted id; throws { code: 'SQLITE_CONSTRAINT_UNIQUE' } on duplicate
 function insertSquad({ name, passwordHash, founderName, founderConfig, founderSkill1, founderSkill2, isSecure }) {
   const d = load();
@@ -39,4 +43,4 @@ function insertSquad({ name, passwordHash, founderName, founderConfig, founderSk
   return id;
 }
 
-module.exports = { findByName, insertSquad };
+module.exports = { findByName, listSquads, insertSquad };
