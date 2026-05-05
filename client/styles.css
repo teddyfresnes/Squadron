@@ -1091,6 +1091,32 @@ html, body {
   margin-top: 8px;
 }
 
+.sq-last-squad {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--border-2);
+  border-radius: 5px;
+  padding: 6px 10px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.sq-last-squad:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.sq-last-squad strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 /* ----------------------------------------------------------------- */
 /* Hacker login                                                         */
 /* ----------------------------------------------------------------- */
@@ -1760,14 +1786,22 @@ html, body {
   margin-bottom: 4px;
 }
 .hq-play-title {
-  font-family: 'Black Ops One', 'JetBrains Mono', monospace;
+  font-family: 'Bangers', 'Black Ops One', monospace;
   font-size: clamp(2.4rem, 5.5vw, 6.5rem);
   line-height: 0.9;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   color: var(--text);
   font-weight: 400;
   text-transform: uppercase;
   max-width: 100%;
+}
+.hq-squad-prefix {
+  font-size: 0.52em;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  vertical-align: middle;
+  margin-right: 0.22em;
+  opacity: 0.85;
 }
 
 .hq-modes {

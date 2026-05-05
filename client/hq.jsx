@@ -344,7 +344,7 @@ function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting, tokens
 const PLAY_MODES = [
   {
     id: 'army-vs-army',
-    label: 'Armée vs Armée',
+    label: 'Squad vs Squad',
     cover: 'assets/images/covers_mode/armyvsarmy.png',
     available: true,
   },
@@ -373,7 +373,7 @@ function HQPlay({ squadName, onPickMode }) {
     <div className="hq-play">
       <div className="hq-play-header">
         <div className="hq-play-eyebrow">QUARTIER GÉNÉRAL</div>
-        <h1 className="hq-play-title">{squadName}</h1>
+        <h1 className="hq-play-title"><span className="hq-squad-prefix">SQUADRON</span>{squadName}</h1>
       </div>
 
       <div className="hq-modes">
@@ -443,7 +443,6 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
   const myPower = calcSquadPower(mySquad.soldiers);
   const [initialPack] = useState(() => loadOpponentPack(mySquad.name, myPower));
   const [playerSquads, setPlayerSquads] = useState(() => loadLocalPlayerSquads(mySquad.name));
-  const [canRefresh, setCanRefresh] = useState(() => !!(initialPack && initialPack.canRefresh));
   const [opponents, setOpponents] = useState(() => {
     if (initialPack) return initialPack.opponents;
     const initial = buildOpponentSelection({
@@ -456,11 +455,10 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
     return initial;
   });
 
-  const rebuildOpponents = useCallback((players, nonce, refreshable) => {
+  const rebuildOpponents = useCallback((players, nonce) => {
     const next = buildOpponentSelection({ mySquad, myPower, playerSquads: players, nonce });
     setOpponents(next);
-    setCanRefresh(!!refreshable);
-    saveOpponentPack(mySquad.name, { date: todayKey(), myPower, canRefresh: !!refreshable, opponents: next });
+    saveOpponentPack(mySquad.name, { date: todayKey(), myPower, canRefresh: false, opponents: next });
   }, [mySquad, myPower]);
 
   useEffect(() => {
@@ -473,39 +471,22 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
       }
       if (cancelled) return;
       setPlayerSquads(players);
-      if (!initialPack) rebuildOpponents(players, 'players-' + players.length, false);
+      if (!initialPack) rebuildOpponents(players, 'players-' + players.length);
     }
     loadPlayers();
     return () => { cancelled = true; };
   }, [mySquad.name, myPower, serverOnline, initialPack, rebuildOpponents]);
 
-  const handleRefresh = () => {
-    if (!canRefresh) return;
-    rebuildOpponents(playerSquads, Date.now().toString(36), false);
-  };
-
   return (
     <div className="hq-opponents">
       <button type="button" className="hq-back-btn" onClick={onBack}>← Retour</button>
 
-      <h2 className="hq-section-title hq-opponents-title">Armée vs Armée</h2>
+      <h2 className="hq-section-title hq-opponents-title">Squad vs Squad</h2>
 
       <div className="hq-opp-grid">
         {opponents.map((opp, i) => (
           <OpponentCard key={(opp.source || 'opp') + '-' + opp.name + '-' + i} opp={opp} myPower={myPower} onAttack={() => onAttack(opp)} />
         ))}
-      </div>
-
-      <div className="hq-opp-actions">
-        <button
-          type="button"
-          className="sq-btn hq-opp-refresh"
-          onClick={handleRefresh}
-          disabled={!canRefresh}
-          title={canRefresh ? 'Actualiser les armées proposées' : 'Disponible après un combat ou au reset de minuit'}
-        >
-          ↻
-        </button>
       </div>
     </div>
   );

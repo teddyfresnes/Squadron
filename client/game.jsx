@@ -6,6 +6,7 @@
 const { useState, useEffect, useRef, useCallback } = React;
 
 const SQUADS_KEY    = 'squadron-squads';
+const LAST_SQUAD_KEY = 'squadron-last-squad';
 const SOLDIER_COUNT = 10;
 const SKILL1_NAMES  = ['Glock 17', 'Uzi', 'Mossberg 500', 'AKS-74U', 'Steyr Scout'];
 const SERVER_URL    = 'http://127.0.0.1:3001';
@@ -431,6 +432,9 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
   const [createError,  setCreateError]  = useState(null);
   const [joinError,    setJoinError]    = useState(null);
   const [creating,     setCreating]     = useState(false);
+  const [lastSquad,    setLastSquad]    = useState(() => {
+    try { return localStorage.getItem(LAST_SQUAD_KEY) || null; } catch (_) { return null; }
+  });
 
   const selectedSoldier = soldiers.find(s => s.id === selectedId) || null;
   const trimmedName     = squadName.trim();
@@ -462,7 +466,14 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
     setJoinError(null);
     const name = joinName.trim();
     if (name.length < 2) { setJoinError('Entre un nom de squad valide.'); return; }
+    try { localStorage.setItem(LAST_SQUAD_KEY, name); setLastSquad(name); } catch (_) {}
     onJoin(name);
+  };
+
+  const handleLastSquadClick = () => {
+    if (!lastSquad) return;
+    try { localStorage.setItem(LAST_SQUAD_KEY, lastSquad); } catch (_) {}
+    onJoin(lastSquad);
   };
 
   return (
@@ -513,6 +524,11 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
             <div className="sq-section-title">REJOINDRE UNE SQUAD</div>
             <div className="sq-fields">
               <input type="text" className="sq-input" placeholder="Nom de la squad" value={joinName} maxLength={24} autoComplete="off" onChange={e => { setJoinName(e.target.value); setJoinError(null); }} />
+              {lastSquad && (
+                <button type="button" className="sq-last-squad" onClick={handleLastSquadClick}>
+                  ↩ Dernière connexion : <strong>{lastSquad}</strong>
+                </button>
+              )}
             </div>
             <div className="sq-col-spacer" />
             <div className="sq-btn-wrap">
