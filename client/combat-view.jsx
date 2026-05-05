@@ -13,9 +13,13 @@
   const BULLET_TRAIL_MS = 220;          // turn-based pacing → trails linger longer
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
   const DEFAULT_MAGAZINE_SIZE = 8;
+  const HP_FLASH_MS = 1700;
+  const SHADOW_FOOT_Y = STAGE_H * 0.705;
   const BODY_PART_META = [
     { key: 'head', className: 'head', label: 'Tete' },
-    { key: 'torso', className: 'torso', label: 'Torse' },
+    { key: 'chestLeft', className: 'chest-left', label: 'Torse gauche', fallbackKey: 'torso' },
+    { key: 'chestRight', className: 'chest-right', label: 'Torse droit', fallbackKey: 'torso' },
+    { key: 'abdomen', className: 'abdomen', label: 'Ventre', fallbackKey: 'torso' },
     { key: 'leftArm', className: 'left-arm', label: 'Bras gauche' },
     { key: 'rightArm', className: 'right-arm', label: 'Bras droit' },
     { key: 'leftLeg', className: 'left-leg', label: 'Jambe gauche' },
@@ -53,6 +57,10 @@
     return clamp(100 * (s.hp || 0) / Math.max(1, s.hpMax || 1), 0, 100);
   }
 
+  function hpText(s) {
+    return Math.ceil(Math.max(0, s.hp || 0)) + '/' + Math.max(1, s.hpMax || 1) + ' PV';
+  }
+
   function getWeaponByName(name) {
     if (!name) return null;
     const G = window.SquadronGame && window.SquadronGame.helpers;
@@ -64,15 +72,21 @@
     return list.find(w => w.name === name) || null;
   }
 
-  function uniqueWeaponNames(s) {
+  function inventoryWeaponNames(s) {
     const seen = new Set();
-    return [s.weaponName, s.preferredWeapon, s.skill1Name, s.skill2Name]
-      .filter(Boolean)
-      .filter(name => {
-        if (seen.has(name)) return false;
-        seen.add(name);
-        return true;
-      });
+    const names = [];
+    function add(name) {
+      if (!name || seen.has(name)) return;
+      seen.add(name);
+      names.push(name);
+    }
+    add(s.weaponName);
+    const unlocked = Array.isArray(s.unlockedWeapons) ? s.unlockedWeapons : [];
+    unlocked.forEach(add);
+    add(s.preferredWeapon);
+    add(s.skill1Name);
+    add(s.skill2Name);
+    return names;
   }
 
   function magazineSizeFor(s) {
@@ -81,11 +95,14 @@
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
-  function ArenaSoldier({ s, arenaH, pxPerTile, spriteScale, xOffset, isActive, isSelected, onSelect }) {
+  function ArenaSoldier({ s, arenaH, pxPerTile, spriteScale, xOffset, isActive, isSelected, showHpBar, onSelect }) {
     const SpriteCanvas = UI.SpriteCanvas;
     const frame = frameForState(s.state, s.stateT);
     const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
     const life = hpPct(s);
+    const hpLabel = hpText(s);
+    const shadowTop = Math.round(SHADOW_FOOT_Y * spriteScale);
+    const hpTop = Math.round(STAGE_H * 0.39 * spriteScale);
 
     function handleClick(ev) {
       ev.stopPropagation();
@@ -99,6 +116,7 @@
               onClick={handleClick}
               aria-label={(s.name || 'Soldat') + ', niveau ' + (s.level || 1)}
               aria-pressed={isSelected}>
+        <div className="cv-ground-shadow" style={{ top: shadowTop }} />
         <SpriteCanvas
           cfg={s.cfg}
           animKey={s.state}
@@ -106,23 +124,29 @@
           scale={spriteScale}
           facing={s.facing}
         />
-        {s.hp > 0 && (
-          <div className="cv-hpbar">
+        {showHpBar && (
+          <div className="cv-hpbar" style={{ top: hpTop }} title={hpLabel} aria-label={hpLabel}>
             <div className="cv-hpbar-fill" style={{ width: life + '%' }} />
           </div>
         )}
-        {isActive && s.hp > 0 && <div className="cv-active-marker" />}
         {isSelected && <div className="cv-selected-marker" />}
       </button>
     );
   }
 
+  function hitLevelFor(hits, part) {
+    const direct = clamp(hits[part.key] || 0, 0, 2);
+    if (direct > 0) return direct;
+    return part.fallbackKey ? clamp(hits[part.fallbackKey] || 0, 0, 2) : 0;
+  }
+
   function BodyGraph({ s }) {
     const hits = s.bodyHits || {};
+    const hpLabel = hpText(s);
     return (
-      <div className="cv-body-graph" role="img" aria-label="Etat du corps">
+      <div className="cv-body-graph" role="img" aria-label={'Etat du corps, ' + hpLabel} title={hpLabel} data-hp={hpLabel}>
         {BODY_PART_META.map(part => {
-          const hitLevel = clamp(hits[part.key] || 0, 0, 2);
+          const hitLevel = hitLevelFor(hits, part);
           return (
             <span key={part.key}
                   className={'cv-body-node cv-body-' + part.className + ' hit-' + hitLevel}
@@ -150,14 +174,15 @@
   function SoldierInspectMenu({ s, arenaW, arenaH, pxPerTile, spriteScale, xOffset, onClose }) {
     const G = window.SquadronGame && window.SquadronGame.helpers;
     const SkillTooltip = G && G.SkillTooltip;
-    const WeaponGameIcon = UI.WeaponGameIcon;
+    const WeaponIcon = UI.WeaponIcon;
     const activeWeapon = getWeaponByName(s.weaponName);
-    const skillWeapons = uniqueWeaponNames(s).map(getWeaponByName).filter(Boolean);
+    const inventoryWeapons = inventoryWeaponNames(s).map(getWeaponByName).filter(Boolean);
     const magSize = magazineSizeFor(s);
     const life = hpPct(s);
+    const hpLabel = hpText(s);
     const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
-    const panelW = Math.max(252, Math.min(332, arenaW - 16));
-    const panelH = 278;
+    const panelW = Math.max(282, Math.min(376, arenaW - 16));
+    const panelH = 320;
     const rawLeft = s.team === 'A'
       ? layout.left + layout.stageW - 18
       : layout.left - panelW + 18;
@@ -179,7 +204,10 @@
         </div>
         <div className="cv-inspect-main">
           <div className="cv-inspect-vitals">
-            <div className={'cv-life-rail' + (life <= 35 ? ' is-low' : '')} aria-hidden="true">
+            <div className={'cv-life-rail' + (life <= 35 ? ' is-low' : '')}
+                 title={hpLabel}
+                 data-hp={hpLabel}
+                 aria-label={hpLabel}>
               <div className="cv-life-fill" style={{ height: life + '%' }} />
             </div>
             <BodyGraph s={s} />
@@ -187,17 +215,20 @@
           <div className="cv-inspect-loadout">
             <div className="cv-inspect-weapon">
               <div className="cv-inspect-weapon-head">
-                {activeWeapon && WeaponGameIcon ? <WeaponGameIcon weapon={activeWeapon} /> : <span className="cv-weapon-placeholder" />}
+                {activeWeapon && WeaponIcon
+                  ? <span className="cv-weapon-2d"><WeaponIcon weapon={activeWeapon} scale={0.62} /></span>
+                  : <span className="cv-weapon-placeholder" />}
                 <div className="cv-inspect-weapon-name">{s.weaponName || 'Arme'}</div>
               </div>
               <AmmoRow total={magSize} filled={magSize} />
               <AmmoRow total={magSize} filled={magSize} small />
             </div>
-            <div className="cv-inspect-skills">
-              {skillWeapons.map(w => {
+            <div className="cv-inspect-inventory" aria-label="Inventaire armes">
+              {inventoryWeapons.map(w => {
+                const preferred = w.name === s.weaponName || w.name === s.preferredWeapon;
                 const icon = (
-                  <span className="cv-inspect-skill">
-                    {WeaponGameIcon ? <WeaponGameIcon weapon={w} /> : null}
+                  <span className={'cv-inspect-inventory-weapon' + (preferred ? ' is-equipped' : '')} title={w.name}>
+                    {WeaponIcon ? <WeaponIcon weapon={w} scale={0.48} /> : null}
                   </span>
                 );
                 return SkillTooltip
@@ -264,11 +295,15 @@
   // ── Main battle screen component ──────────────────────────────────────────
   function HQBattleScreen({ mySquad, oppSquad, onDone }) {
     const containerRef = useRef(null);
+    const pausedRef = useRef(false);
+    const resultShownRef = useRef(false);
     const [arenaSize, setArenaSize] = useState({ w: 1200, h: 320 });
     const [, setTick] = useState(0);
     const [trails, setTrails] = useState([]);
+    const [hpFlashes, setHpFlashes] = useState({});
     const [resultShown, setResultShown] = useState(false);
     const [selectedSoldierId, setSelectedSoldierId] = useState(null);
+    const [pauseMode, setPauseMode] = useState(null);
 
     // Build the battle once stats are loaded.
     const [battle, setBattle] = useState(null);
@@ -283,10 +318,19 @@
           seed
         });
         setSelectedSoldierId(null);
+        setPauseMode(null);
+        setHpFlashes({});
+        setTrails([]);
+        resultShownRef.current = false;
+        setResultShown(false);
         setBattle(b);
       });
       return () => { alive = false; };
     }, [mySquad, oppSquad]);
+
+    useEffect(() => {
+      pausedRef.current = pauseMode !== null;
+    }, [pauseMode]);
 
     // Resize observer to keep the arena width matching its container.
     // Height tuned so we see most of the forest scene (it's ~4:3) without
@@ -323,6 +367,13 @@
 
       function loop(t) {
         const now = t;
+        if (pausedRef.current) {
+          lastT = now;
+          acc = 0;
+          raf = requestAnimationFrame(loop);
+          return;
+        }
+
         const dt = (now - lastT) / 1000;
         lastT = now;
         acc += Math.min(dt, 0.1); // cap to avoid spiral after tab switch
@@ -337,21 +388,29 @@
         // Pull new shoot events into the trails list.
         if (battle.events.length > lastEventIdx) {
           const newOnes = [];
+          const newHpFlashes = {};
           for (let i = lastEventIdx; i < battle.events.length; i++) {
             const ev = battle.events[i];
-            if (ev.type !== 'shoot') continue;
-            newOnes.push({
-              key: 'tr' + i,
-              ax: ev.ax, ay: ev.ay,
-              tx: ev.tx, ty: ev.ty,
-              hit: ev.hit,
-              missDx: (trailRng() - 0.5) * 24,
-              missDy: (trailRng() - 0.5) * 14,
-              bornMs: now
-            });
+            if (ev.type === 'shoot') {
+              newOnes.push({
+                key: 'tr' + i,
+                ax: ev.ax, ay: ev.ay,
+                tx: ev.tx, ty: ev.ty,
+                hit: ev.hit,
+                missDx: (trailRng() - 0.5) * 24,
+                missDy: (trailRng() - 0.5) * 14,
+                bornMs: now
+              });
+            }
+            if (ev.type === 'hit' || ev.type === 'die') {
+              newHpFlashes[ev.targetId] = now + HP_FLASH_MS;
+            }
           }
           if (newOnes.length) {
             setTrails(prev => prev.concat(newOnes));
+          }
+          if (Object.keys(newHpFlashes).length) {
+            setHpFlashes(prev => Object.assign({}, prev, newHpFlashes));
           }
           lastEventIdx = battle.events.length;
         }
@@ -361,9 +420,21 @@
           const kept = prev.filter(tr => now - tr.bornMs < BULLET_TRAIL_MS);
           return kept.length === prev.length ? prev : kept;
         });
+        setHpFlashes(prev => {
+          const keys = Object.keys(prev);
+          if (!keys.length) return prev;
+          let changed = false;
+          const next = {};
+          for (const key of keys) {
+            if (prev[key] > now) next[key] = prev[key];
+            else changed = true;
+          }
+          return changed ? next : prev;
+        });
         setTick(n => (n + 1) % 1000000);
 
-        if (battle.done && battle.endHoldT >= 1.2 && !resultShown) {
+        if (battle.done && battle.endHoldT >= 1.2 && !resultShownRef.current) {
+          resultShownRef.current = true;
           setResultShown(true);
         }
 
@@ -373,7 +444,7 @@
       return () => cancelAnimationFrame(raf);
       // tick is intentionally omitted — the loop owns its own cadence
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [battle, resultShown]);
+    }, [battle]);
 
     if (!battle) {
       return (
@@ -394,12 +465,33 @@
     const pxPerTile = usableW / ARENA_TILES;
     const xOffset = sidePad;
     const selectedSoldier = battle.all.find(s => s.id === selectedSoldierId) || null;
+    const isPaused = pauseMode !== null;
+
+    function handleArenaClick() {
+      if (selectedSoldierId) {
+        setSelectedSoldierId(null);
+        setPauseMode(null);
+        return;
+      }
+      setPauseMode(prev => prev === 'manual' ? null : 'manual');
+    }
+
+    function handleSelectSoldier(id) {
+      const next = selectedSoldierId === id ? null : id;
+      setSelectedSoldierId(next);
+      setPauseMode(next ? 'inspect' : null);
+    }
+
+    function closeInspect() {
+      setSelectedSoldierId(null);
+      setPauseMode(null);
+    }
 
     return (
-      <div className="cv-screen" ref={containerRef}>
-        <div className="cv-arena"
+      <div className={'cv-screen' + (isPaused ? ' is-paused' : '')} ref={containerRef}>
+        <div className={'cv-arena' + (isPaused ? ' is-paused' : '')}
              style={{ width: arenaSize.w, height: arenaSize.h }}
-             onClick={() => setSelectedSoldierId(null)}>
+             onClick={handleArenaClick}>
           <div className="cv-bg" />
           {/* Soldiers, sorted so the one at the back lane renders first */}
           {battle.all.slice().sort((a, b) => a.laneOffsetPx - b.laneOffsetPx).map(s => (
@@ -407,12 +499,18 @@
                           pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
                           isActive={(battle.activeActions || []).some(a => a.actorId === s.id)}
                           isSelected={selectedSoldierId === s.id}
-                          onSelect={(id) => setSelectedSoldierId(prev => prev === id ? null : id)} />
+                          showHpBar={!!(hpFlashes[s.id] && hpFlashes[s.id] > nowMs)}
+                          onSelect={handleSelectSoldier} />
           ))}
           <TrailsLayer trails={trails}
                        arenaW={arenaSize.w} arenaH={arenaSize.h}
                        pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
                        nowMs={nowMs} />
+          {isPaused && (
+            <div className="cv-pause-overlay" aria-hidden="true">
+              <div className="cv-pause-text">PAUSE</div>
+            </div>
+          )}
           {selectedSoldier && (
             <SoldierInspectMenu
               s={selectedSoldier}
@@ -421,7 +519,7 @@
               pxPerTile={pxPerTile}
               spriteScale={spriteScale}
               xOffset={xOffset}
-              onClose={() => setSelectedSoldierId(null)}
+              onClose={closeInspect}
             />
           )}
         </div>

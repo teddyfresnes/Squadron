@@ -94,7 +94,7 @@ sniper×10   : 43–52  (AWP, AWM, SVD, PSG1, M200, M82, HS50, Hecate, Scout, CM
 pistol×8    : 53–60  (PPK, Python, M29, Redhawk, Glock17, Desert Eagle, M1911, Makarov)
 ```
 
-Stats gameplay dans `weapon-config.json` ; rendu visuel dans `weapons.js`.  
+Stats gameplay dans `weapon-config.json` ; rendu visuel dans `weapons.js`. Depuis `schemaVersion: 2`, les dégâts utilisent `damageMin`/`damageMax` par balle, et `damage` reste une moyenne/fallback d'affichage.
 IDs texte : `SMG-01`, `RIFLE-01`, etc. — doivent correspondre entre les deux fichiers.
 
 ---

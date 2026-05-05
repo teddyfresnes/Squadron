@@ -119,9 +119,9 @@ smg, heavy, shotgun → 'front'
 
 ```js
 { t, type: 'turn',  actorId, action: 'move'|'shoot'|'idle' }
-{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, bodyPart?: 'head'|'torso'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg' }
-{ t, type: 'hit',   targetId, hp, bodyPart, bodyHits }
-{ t, type: 'die',   targetId, bodyPart }
+{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, bodyPart?: 'head'|'chestLeft'|'chestRight'|'abdomen'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg', damage }
+{ t, type: 'hit',   targetId, hp, bodyPart, damage, bodyHits }
+{ t, type: 'die',   targetId, bodyPart, damage }
 { t, type: 'end',   winner: 'A'|'B'|'draw' }
 ```
 
@@ -154,8 +154,8 @@ smg, heavy, shotgun → 'front'
 
 - Crée la bataille au mount (après `loadWeaponStats()`)
 - Loop `requestAnimationFrame` : accumulator fixe-step (`DT`), max 6 pas par frame
-- `ArenaSoldier` : `<button>` positionné absolument avec `<SpriteCanvas>` + barre de vie, cliquable pour ouvrir le panneau soldat
-- `SoldierInspectMenu` : panneau contextuel (nom, niveau, corps touché, vie verticale, munitions, skills armes avec tooltip)
+- `ArenaSoldier` : `<button>` positionné absolument avec `<SpriteCanvas>` + ombre au sol ; la barre de vie au-dessus du soldat n'apparait que brièvement après un hit
+- `SoldierInspectMenu` : panneau contextuel (nom, niveau, corps touché, vie verticale, munitions, inventaire armes en vignettes 2D avec tooltip)
 - `TrailsLayer` : SVG overlay, trails disparaissent en 220 ms
 - `ResultOverlay` : affiché quand `battle.done && battle.endHoldT >= 1.2`
 
@@ -176,10 +176,20 @@ Le niveau est lu depuis `soldier.level` si présent, sinon `1`.
 Chaque combattant expose `bodyHits` :
 
 ```js
-{ head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 }
+{
+  head: 0,
+  chestLeft: 0, chestRight: 0, abdomen: 0,
+  leftArm: 0, rightArm: 0,
+  leftLeg: 0, rightLeg: 0,
+  torso: 0 // compat anciennes sauvegardes/events
+}
 ```
 
 À chaque tir réussi, le simulateur choisit une zone de façon déterministe et incrémente cette zone jusqu'à 2. Le rendu utilise 0 = neutre, 1 = rouge clair, 2 = rouge foncé.
+
+## Dégâts armes
+
+`weapon-config.json` schemaVersion 2 expose `damageMin` et `damageMax`. À chaque balle, `combat-sim.js` tire un entier déterministe dans cette plage ; `damage` reste une moyenne/fallback pour les UI anciennes.
 
 ---
 

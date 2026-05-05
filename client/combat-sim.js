@@ -49,10 +49,12 @@
   const SPAWN_SPACING_TILES = 0.9;     // horizontal spacing between spawn slots
   const SOLO_SPAWN_FROM_EDGE = 2.2;    // a lone soldier is centered in its small side area
   const LANE_RANK = { back: 0, mid: 1, front: 2 };
-  const BODY_PARTS = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+  const BODY_PARTS = ['head', 'chestLeft', 'chestRight', 'abdomen', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg', 'torso'];
   const BODY_PART_WEIGHTS = [
     { key: 'head', weight: 12 },
-    { key: 'torso', weight: 34 },
+    { key: 'chestLeft', weight: 12 },
+    { key: 'chestRight', weight: 12 },
+    { key: 'abdomen', weight: 10 },
     { key: 'leftArm', weight: 13 },
     { key: 'rightArm', weight: 13 },
     { key: 'leftLeg', weight: 14 },
@@ -101,7 +103,16 @@
       roll -= p.weight;
       if (roll <= 0) return p.key;
     }
-    return 'torso';
+    return 'abdomen';
+  }
+
+  function rollDamage(stats, rng) {
+    const rawMin = stats && stats.damageMin != null ? stats.damageMin : (stats && stats.damage != null ? stats.damage : 1);
+    const rawMax = stats && stats.damageMax != null ? stats.damageMax : (stats && stats.damage != null ? stats.damage : rawMin);
+    const min = Math.max(0, Math.floor(Math.min(rawMin, rawMax)));
+    const max = Math.max(min, Math.floor(Math.max(rawMin, rawMax)));
+    if (max <= min) return min;
+    return min + Math.floor((rng ? rng() : Math.random()) * (max - min + 1));
   }
 
   function spawnXFor(team, idxInTeam, teamSize) {
@@ -135,7 +146,7 @@
   function defaultStats() {
     return {
       name: 'Glock 17', category: 'pistol',
-      damage: 10, accuracy: 0.5, shootSpeed: 2, burst: 1,
+      damage: 2, damageMin: 1, damageMax: 2, accuracy: 0.5, shootSpeed: 2, burst: 1,
       recovery: 0.2, rangeMin: 1, rangeMax: 10
     };
   }
@@ -209,6 +220,7 @@
       cfg: soldier.config,
       skill1Name: soldier.skill1Name || null,
       skill2Name: soldier.skill2Name || null,
+      unlockedWeapons: Array.isArray(soldier.unlockedWeapons) ? soldier.unlockedWeapons.slice() : null,
       preferredWeapon: soldier.preferredWeapon || null,
       weaponName,
       weapon: stats,
@@ -370,7 +382,8 @@
         shots.push({
           atT: aimDur + i * recovery,        // local time within the turn
           hit: rng() < (w.accuracy != null ? w.accuracy : 0.5),
-          part: rollHitPart(rng)
+          part: rollHitPart(rng),
+          damage: rollDamage(w, rng)
         });
       }
       const lastShotT = shots[shots.length - 1].atT;
@@ -382,7 +395,6 @@
         startT: worldT, duration,
         aimDur, shots, shotsFired: 0,
         facing: actor.facing,
-        damage: w.damage,
         ax: actor.x, ay: actor.laneOffsetPx,
         tx: target.x, ty: target.laneOffsetPx
       };
@@ -502,20 +514,22 @@
               ax: actor.x, ay: actor.laneOffsetPx,
               tx: target.x, ty: target.laneOffsetPx,
               hit: shot.hit,
-              bodyPart: shot.hit ? bodyPart : null
+              bodyPart: shot.hit ? bodyPart : null,
+              damage: shot.hit ? shot.damage : 0
             });
             if (shot.hit) {
               target.bodyHits[bodyPart] = Math.min(2, (target.bodyHits[bodyPart] || 0) + 1);
-              target.hp = Math.max(0, target.hp - a.damage);
+              target.hp = Math.max(0, target.hp - shot.damage);
               if (target.hp <= 0) {
                 target.state = 'dead'; target.stateT = 0;
-                events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart });
+                events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: shot.damage });
               } else {
                 target.state = 'hurt'; target.stateT = 0;
                 events.push({
                   t: worldT, type: 'hit',
                   targetId: target.id, hp: target.hp,
                   bodyPart,
+                  damage: shot.damage,
                   bodyHits: Object.assign({}, target.bodyHits)
                 });
               }

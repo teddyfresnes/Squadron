@@ -331,6 +331,11 @@ function SkillTooltip({ weapon, text, tipDir = 'above', children }) {
   }, [anchor, updateAnchor]);
 
   const stats = weapon ? weaponStats[weapon.id] : null;
+  const damageText = stats
+    ? (stats.damageMin != null && stats.damageMax != null
+      ? (stats.damageMin === stats.damageMax ? String(stats.damageMin) : stats.damageMin + '-' + stats.damageMax)
+      : String(stats.damage))
+    : '';
 
   const tipBody = weapon ? (
     <>
@@ -345,7 +350,7 @@ function SkillTooltip({ weapon, text, tipDir = 'above', children }) {
         <div className="sq-skill-tip-specs">
           <div className="sq-skill-tip-spec">
             <span className="sq-skill-tip-spec-key">Dégâts</span>
-            <span className="sq-skill-tip-spec-val">{stats.damage} <span className="sq-skill-tip-unit">HP</span></span>
+            <span className="sq-skill-tip-spec-val">{damageText} <span className="sq-skill-tip-unit">HP</span></span>
           </div>
           <div className="sq-skill-tip-spec">
             <span className="sq-skill-tip-spec-key">Précision</span>
@@ -394,7 +399,7 @@ function SkillTooltip({ weapon, text, tipDir = 'above', children }) {
 
 // ── RandomSoldierCard ────────────────────────────────────────────────────────
 function RandomSoldierCard({ soldier, selected, onSelect }) {
-  const { AnimPreview, WeaponGameIcon } = window.SquadronUI;
+  const { AnimPreview, WeaponIcon } = window.SquadronUI;
   const skill1 = getWeaponByName(soldier.skill1Name);
   const skill2 = getWeaponByName(soldier.skill2Name);
   return (
@@ -413,10 +418,10 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       <div className="sq-soldier-name">{soldier.name}</div>
       <div className="sq-skills-row">
         {skill1
-          ? <SkillTooltip weapon={skill1} tipDir="below"><WeaponGameIcon weapon={skill1} /></SkillTooltip>
+          ? <SkillTooltip weapon={skill1} tipDir="below"><span className="sq-skill-weapon-2d"><WeaponIcon weapon={skill1} scale={0.45} /></span></SkillTooltip>
           : <span className="sq-skill-fallback" />}
         {skill2
-          ? <SkillTooltip weapon={skill2} tipDir="below"><WeaponGameIcon weapon={skill2} /></SkillTooltip>
+          ? <SkillTooltip weapon={skill2} tipDir="below"><span className="sq-skill-weapon-2d"><WeaponIcon weapon={skill2} scale={0.45} /></span></SkillTooltip>
           : <span className="sq-skill-fallback" />}
       </div>
     </button>
