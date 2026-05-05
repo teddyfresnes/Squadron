@@ -1,25 +1,25 @@
-// Combat simulator — strict turn-based, Minitroopers-style.
+﻿// Combat simulator â€” semi-simultaneous, Minitroopers-style.
 //
-// At any given moment ONE soldier acts. A turn is one of:
+// At any given moment one or two soldiers can act. An action is one of:
 //   - move      (walk a Speed-bound distance toward/away from target)
 //   - shoot     (aim if not already aimed, then fire one burst at the target)
-//   - idle      (no enemies left or unreachable — short pause)
-// While the active soldier animates their action, every other soldier holds
-// idle (or finishes a hurt/dead anim if they were just hit).
+//   - idle      (no enemies left or unreachable â€” short pause)
+// While active soldiers animate their actions, every other soldier holds idle
+// (or finishes a hurt/dead anim if they were just hit).
 //
 // Turn order is driven by per-soldier `cooldown`: the next actor is whoever
 // has the smallest cooldown. Tie-break: higher initiative, then deterministic
 // id ordering. Initiative is wired in but stays at 0 in V1 (boost skills land
-// later). After acting, the soldier's cooldown is pushed forward by the
-// action's full duration plus a small TURN_GAP, so the next-min picker rolls
-// to the next free unit.
+// later). After planning an action, the soldier's cooldown is pushed forward by
+// the action's full duration plus a small TURN_GAP. The scheduler sometimes
+// lets a second ready actor start before the first action finishes.
 //
 // Battle is deterministic: every dice roll uses a seeded mulberry32 RNG, so
 // the same `seed` produces an identical fight bit-for-bit.
 
 (function () {
 
-  // ── Tunables ──────────────────────────────────────────────────────────────
+  // â”€â”€ Tunables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const DT = 1 / 60;
   const SPEED_TILES_PER_SEC = 6;        // base movement speed
   const TILE_PX = 24;
@@ -27,6 +27,10 @@
   const MOVE_STEP_TILES = 4;            // distance covered in a single move turn
   const IDLE_TURN_DURATION = 0.4;
   const TURN_GAP = 0.04;                // tiny pause between turns for readability
+  const MAX_ACTIVE_ACTIONS = 2;         // Minitroopers-like overlaps, but never a full scrum
+  const OVERLAP_CHANCE = 0.18;
+  const AIM_OVERLAP_CHANCE = 0.34;
+  const OVERLAP_RETRY_DELAY = 0.28;
 
   const LANE_OFFSETS = { front: 0, mid: -80, back: -180 };
   // Per-soldier Y spread within a lane so soldiers don't stack on one line.
@@ -46,7 +50,7 @@
   const SOLO_SPAWN_FROM_EDGE = 2.2;    // a lone soldier is centered in its small side area
   const LANE_RANK = { back: 0, mid: 1, front: 2 };
 
-  // ── Weapon stats loader ───────────────────────────────────────────────────
+  // â”€â”€ Weapon stats loader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const statsByName = {};
   let statsLoadPromise = null;
 
@@ -83,7 +87,7 @@
     return team === 'A' ? fromEdge : ARENA_TILES - fromEdge;
   }
 
-  // ── RNG ───────────────────────────────────────────────────────────────────
+  // â”€â”€ RNG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function mulberry32(a) {
     return function () {
       let t = a += 0x6D2B79F5;
@@ -102,7 +106,7 @@
     return h >>> 0;
   }
 
-  // ── Combatant ─────────────────────────────────────────────────────────────
+  // â”€â”€ Combatant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function defaultStats() {
     return {
       name: 'Glock 17', category: 'pistol',
@@ -199,7 +203,7 @@
     };
   }
 
-  // ── Battle ────────────────────────────────────────────────────────────────
+  // â”€â”€ Battle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function createBattle(opts) {
     const seedStr = opts.seed || ('battle-' + Date.now());
     const rng = mulberry32(hashStr(seedStr));
@@ -223,12 +227,13 @@
 
     const events = [];
     let worldT = 0;
-    let current = null;
+    let activeActions = [];
     let done = false;
     let winner = null;
     let endHoldT = 0;
-    let phase = 'entry';  // 'entry' → all run in simultaneously; 'combat' → turn-based
+    let phase = 'entry';  // 'entry' â†’ all run in simultaneously; 'combat' â†’ turn-based
     let entryT = 0;
+    let overlapRetryT = 0;
 
     function alive(team) {
       let n = 0;
@@ -250,6 +255,8 @@
       let best = null;
       for (const s of all) {
         if (s.hp <= 0) continue;
+        if (s.cooldown > worldT) continue;
+        if (activeActions.some(a => a.actorId === s.id)) continue;
         if (!best) { best = s; continue; }
         if (s.cooldown < best.cooldown) { best = s; continue; }
         if (s.cooldown > best.cooldown) continue;
@@ -271,13 +278,8 @@
 
       const actor = pickNextActor();
       if (!actor) {
-        done = true; winner = 'draw';
-        events.push({ t: worldT, type: 'end', winner });
         return null;
       }
-
-      // Advance world clock to actor's turn.
-      if (actor.cooldown > worldT) worldT = actor.cooldown;
 
       const target = findTarget(actor);
       if (!target) {
@@ -300,10 +302,10 @@
       const tooFar   = d > w.rangeMax;
       const tooClose = (w.rangeMin || 0) > 0 && d < w.rangeMin;
 
-      // ── MOVE turn ─────────────────────────────────────────────────────────
+      // â”€â”€ MOVE turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (tooFar || tooClose) {
         const dir = tooFar ? sign(dx) : -sign(dx);
-        // Don't overshoot past the firing window — close to rangeMax (or back
+        // Don't overshoot past the firing window â€” close to rangeMax (or back
         // out to rangeMin) without flipping past it on a single step.
         let stepDist = MOVE_STEP_TILES;
         if (tooFar) {
@@ -326,7 +328,7 @@
         return action;
       }
 
-      // ── SHOOT turn ────────────────────────────────────────────────────────
+      // â”€â”€ SHOOT turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const burst = Math.max(1, w.burst || 1);
       const aimDur = actor.aimed ? 0 : animDur('aim');
       const shotAnim = animDur('shoot');
@@ -393,45 +395,63 @@
       }
     }
 
-    function step(dt) {
-      if (phase === 'entry') { stepEntry(dt); return; }
-      if (done) {
-        endHoldT += dt;
-        for (const s of all) if (s.state === 'dead') s.stateT += dt;
-        return;
+    function hasAimInProgress() {
+      return activeActions.some(a => a.type === 'shoot' && a.elapsed < a.aimDur);
+    }
+
+    function finishBattleIfNeeded() {
+      const aA = alive('A'), aB = alive('B');
+      if (aA > 0 && aB > 0) return false;
+      done = true;
+      winner = aA > 0 ? 'A' : (aB > 0 ? 'B' : 'draw');
+      activeActions = [];
+      events.push({ t: worldT, type: 'end', winner });
+      return true;
+    }
+
+    function startAction(action) {
+      action.elapsed = 0;
+      const actor = all.find(s => s.id === action.actorId);
+      if (!actor || actor.hp <= 0) return false;
+
+      if (action.type === 'move') {
+        actor.state = 'run'; actor.stateT = 0;
+        actor.facing = action.facing;
+      } else if (action.type === 'shoot') {
+        actor.facing = action.facing;
+        if (action.aimDur > 0) { actor.state = 'aim'; actor.stateT = 0; }
+        else { actor.state = 'shoot'; actor.stateT = 0; }
+      } else {
+        actor.state = 'idle';
       }
 
-      if (!current) {
-        current = planAction();
-        if (!current) return;
-        current.elapsed = 0;
-        const actor = all.find(s => s.id === current.actorId);
-        // Reset everyone non-actor to idle if they're not in hurt/dead.
-        for (const s of all) {
-          if (s.id === current.actorId) continue;
-          if (s.state === 'hurt' || s.state === 'dead') continue;
-          s.state = 'idle';  // stateT keeps cycling so idle keeps breathing
-        }
-        // Initialize actor anim
-        if (current.type === 'move') {
-          actor.state = 'run'; actor.stateT = 0;
-          actor.facing = current.facing;
-        } else if (current.type === 'shoot') {
-          actor.facing = current.facing;
-          if (current.aimDur > 0) { actor.state = 'aim'; actor.stateT = 0; }
-          else { actor.state = 'shoot'; actor.stateT = 0; }
-        } else {
-          actor.state = 'idle';
-        }
-        events.push({ t: worldT, type: 'turn', actorId: current.actorId, action: current.type });
-      }
+      activeActions.push(action);
+      events.push({ t: worldT, type: 'turn', actorId: action.actorId, action: action.type });
+      return true;
+    }
 
-      current.elapsed += dt;
-      const a = current;
+    function scheduleActions() {
+      while (!done && activeActions.length < MAX_ACTIVE_ACTIONS) {
+        if (activeActions.length > 0) {
+          if (worldT < overlapRetryT) return;
+          const chance = hasAimInProgress() ? AIM_OVERLAP_CHANCE : OVERLAP_CHANCE;
+          if (rng() >= chance) {
+            overlapRetryT = worldT + OVERLAP_RETRY_DELAY;
+            return;
+          }
+        }
+
+        const action = planAction();
+        if (!action) return;
+        startAction(action);
+      }
+    }
+
+    function driveAction(a, dt, completed) {
+      a.elapsed += dt;
       const actor = all.find(s => s.id === a.actorId);
-      if (!actor) { current = null; return; }
+      if (!actor || actor.hp <= 0) { completed.add(a); return; }
 
-      // ── Drive the actor's animation per action type ─────────────────────
       if (a.type === 'move') {
         const t = clamp(a.elapsed / a.duration, 0, 1);
         actor.x = lerp(a.fromX, a.toX, t);
@@ -440,36 +460,34 @@
         else actor.stateT += dt;
       } else if (a.type === 'shoot') {
         actor.facing = a.facing;
-        // Fire any shots whose scheduled local time has arrived.
         while (a.shotsFired < a.shots.length && a.elapsed >= a.shots[a.shotsFired].atT) {
           const shot = a.shots[a.shotsFired++];
           const target = all.find(s => s.id === a.targetId);
-          if (target) {
+          if (target && target.hp > 0) {
             events.push({
-              t: worldT + a.elapsed, type: 'shoot',
+              t: worldT, type: 'shoot',
               actorId: a.actorId, targetId: a.targetId,
               ax: actor.x, ay: actor.laneOffsetPx,
               tx: target.x, ty: target.laneOffsetPx,
               hit: shot.hit
             });
-            if (shot.hit && target.hp > 0) {
+            if (shot.hit) {
               target.hp = Math.max(0, target.hp - a.damage);
               if (target.hp <= 0) {
                 target.state = 'dead'; target.stateT = 0;
-                events.push({ t: worldT + a.elapsed, type: 'die', targetId: target.id });
+                events.push({ t: worldT, type: 'die', targetId: target.id });
               } else {
                 target.state = 'hurt'; target.stateT = 0;
-                events.push({ t: worldT + a.elapsed, type: 'hit', targetId: target.id, hp: target.hp });
+                events.push({ t: worldT, type: 'hit', targetId: target.id, hp: target.hp });
               }
             }
           }
-          // Restart shoot anim on every shot so the muzzle flash plays each time.
           actor.state = 'shoot'; actor.stateT = 0;
         }
 
         if (a.elapsed < a.aimDur) {
           if (actor.state !== 'aim') { actor.state = 'aim'; actor.stateT = a.elapsed; }
-          else actor.stateT = a.elapsed; // sync to absolute action time
+          else actor.stateT = a.elapsed;
         } else if (actor.state === 'aim') {
           actor.state = 'shoot'; actor.stateT = 0;
         } else if (actor.state === 'shoot') {
@@ -480,25 +498,47 @@
         else actor.stateT += dt;
       }
 
-      // ── Drive every non-actor's anim ────────────────────────────────────
+      if (a.elapsed >= a.duration) {
+        if (typeof a.commit === 'function') a.commit();
+        completed.add(a);
+      }
+    }
+
+    function driveInactiveAnimations(dt) {
+      const activeIds = new Set(activeActions.map(a => a.actorId));
       for (const s of all) {
-        if (s.id === a.actorId) continue;
+        if (activeIds.has(s.id)) continue;
         if (s.state === 'dead') { s.stateT += dt; continue; }
         if (s.state === 'hurt') {
           s.stateT += dt;
           if (s.stateT >= animDur('hurt')) { s.state = 'idle'; s.stateT = 0; }
           continue;
         }
-        // Idle keeps cycling.
         if (s.state !== 'idle') { s.state = 'idle'; s.stateT = 0; }
         else s.stateT += dt;
       }
+    }
 
-      if (a.elapsed >= a.duration) {
-        if (typeof a.commit === 'function') a.commit();
-        worldT = a.startT + a.duration;
-        current = null;
+    function stepConcurrent(dt) {
+      if (phase === 'entry') { stepEntry(dt); return; }
+      if (done) {
+        endHoldT += dt;
+        for (const s of all) if (s.state === 'dead') s.stateT += dt;
+        return;
       }
+
+      worldT += dt;
+      scheduleActions();
+
+      const completed = new Set();
+      for (const a of activeActions.slice()) driveAction(a, dt, completed);
+      activeActions = activeActions.filter(a => !completed.has(a));
+      driveInactiveAnimations(dt);
+      finishBattleIfNeeded();
+    }
+
+    function step(dt) {
+      stepConcurrent(dt);
     }
 
     return {
@@ -510,7 +550,8 @@
       get winner() { return winner; },
       get time() { return worldT; },
       get endHoldT() { return endHoldT; },
-      get currentAction() { return current; },
+      get currentAction() { return activeActions[0] || null; },
+      get activeActions() { return activeActions.slice(); },
       aliveCount: (team) => alive(team)
     };
   }

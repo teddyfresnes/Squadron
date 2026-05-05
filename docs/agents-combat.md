@@ -6,7 +6,7 @@
 
 ## Vue d'ensemble
 
-Le combat est **tour par tour strict, déterministe**. Un seul soldat agit à la fois ; les autres restent en idle (ou finissent leur anim hurt/dead). L'ordre des tours est géré par un `cooldown` par soldat — le prochain acteur est celui dont le cooldown est le plus petit.
+Le combat est **semi-simultané et déterministe**. L'ordre des actions reste géré par un `cooldown` par soldat, mais le scheduler peut parfois lancer une deuxième action pendant qu'une première est encore en cours (maximum 2 actions actives). Les autres soldats restent en idle, ou finissent leur anim hurt/dead.
 
 **Deux fichiers** :
 - `combat-sim.js` — simulateur pur JS (pas de DOM), exposed via `window.CombatSim`
@@ -38,7 +38,8 @@ battle.winner       // 'A' | 'B' | 'draw' | null
 battle.phase        // 'entry' | 'combat'
 battle.time         // worldT en secondes
 battle.endHoldT     // temps écoulé depuis la fin (pour délai avant overlay résultat)
-battle.currentAction // action en cours {actorId, type, startT, duration, …}
+battle.currentAction // première action active, compat ancienne API
+battle.activeActions // actions actives [{actorId, type, startT, duration, …}], max 2
 battle.aliveCount('A')  // soldats vivants de l'équipe A
 ```
 
@@ -51,7 +52,9 @@ battle.aliveCount('A')  // soldats vivants de l'équipe A
            (ENTRY_DIST = 4 tuiles). Pas de combat pendant cette phase.
            Quand tous sont arrivés → switch vers 'combat'.
 
-'combat' → tour par tour. Un acteur à la fois, décidé par pickNextActor() (cooldown minimal).
+'combat' → semi-simultané. Le premier acteur prêt démarre selon pickNextActor()
+           (cooldown minimal). Pendant son action, une deuxième action peut démarrer
+           selon OVERLAP_CHANCE, avec une chance plus forte pendant une visée.
            Tie-break : initiative (V1 = 0 partout), puis orderIdx (interleaved A/B à l'init).
 ```
 
@@ -82,6 +85,10 @@ SPAWN_SPACING_TILES = 0.9  // écart horizontal entre slots de spawn
 SOLO_SPAWN_FROM_EDGE = 2.2 // position d'un soldat seul dans sa zone de côté
 MOVE_STEP_TILES = 4        // distance max d'un tour de déplacement
 TURN_GAP = 0.04            // pause entre tours
+MAX_ACTIVE_ACTIONS = 2     // nombre max d'actions simultanées
+OVERLAP_CHANCE = 0.18      // chance de lancer une action pendant une autre
+AIM_OVERLAP_CHANCE = 0.34  // chance pendant qu'un soldat vise
+OVERLAP_RETRY_DELAY = 0.28 // délai avant de retenter un chevauchement refusé
 LANE_OFFSETS = { front:0, mid:-80, back:-180 }  // décalage Y par lane (en px)
 LANE_Y_SPREAD = [0, 12, -12, 22, -22, 6, -6]
 SPAWN_Y_MIN/MAX = -202/22  // limites verticales conservées depuis les anciennes lanes

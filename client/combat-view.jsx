@@ -242,7 +242,7 @@
           {battle.all.slice().sort((a, b) => a.laneOffsetPx - b.laneOffsetPx).map(s => (
             <ArenaSoldier key={s.id} s={s} arenaH={arenaSize.h}
                           pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
-                          isActive={battle.currentAction && battle.currentAction.actorId === s.id} />
+                          isActive={(battle.activeActions || []).some(a => a.actorId === s.id)} />
           ))}
           <TrailsLayer trails={trails}
                        arenaW={arenaSize.w} arenaH={arenaSize.h}
