@@ -78,12 +78,22 @@ TILE_PX = 24               // taille référence d'une tuile en px
 ARENA_TILES = 50           // largeur de l'arène en tuiles
 ENTRY_DIST = 4             // distance d'entrée depuis hors-écran
 SPAWN_EDGE_GUTTER = 0.1    // spawn le plus proche du bord logique
-SPAWN_SPACING_TILES = 1.2  // écart horizontal entre slots de spawn
+SPAWN_SPACING_TILES = 0.9  // écart horizontal entre slots de spawn
 SOLO_SPAWN_FROM_EDGE = 2.2 // position d'un soldat seul dans sa zone de côté
 MOVE_STEP_TILES = 4        // distance max d'un tour de déplacement
 TURN_GAP = 0.04            // pause entre tours
 LANE_OFFSETS = { front:0, mid:-80, back:-180 }  // décalage Y par lane (en px)
+LANE_Y_SPREAD = [0, 12, -12, 22, -22, 6, -6]
+SPAWN_Y_MIN/MAX = -202/22  // limites verticales conservées depuis les anciennes lanes
+SPAWN_Y_CENTER = -90       // soldat seul centré verticalement dans l'herbe
+FORMATION_FULL_SIZE = 8    // une équipe de 8 utilise toute l'enveloppe verticale
+FORMATION_Y_JITTER = 7     // petite variation Y pseudo-aléatoire, clampée aux limites
+ENTRY_DELAY_MAX = 0.18     // retard d'entrée pour lignes proches
+ENTRY_DELAY_RANDOM = 0.07  // micro-retard aléatoire additionnel
+ENTRY_CLOSE_LINE_PX = 34   // seuil de ligne presque identique
 ```
+
+La formation verticale est assignée par équipe après la création des combattants : un soldat seul est placé à `SPAWN_Y_CENTER`; les escouades plus grandes remplissent progressivement l'enveloppe `SPAWN_Y_MIN..SPAWN_Y_MAX`, sans dépasser ces anciennes limites. Les rôles d'arme gardent leur ordre visuel (`back`, `mid`, `front`), puis un léger jitter déterministe évite une grille trop rigide.
 
 ---
 

@@ -31,10 +31,19 @@
   const LANE_OFFSETS = { front: 0, mid: -80, back: -180 };
   // Per-soldier Y spread within a lane so soldiers don't stack on one line.
   const LANE_Y_SPREAD = [0, 12, -12, 22, -22, 6, -6];
+  const SPAWN_Y_MIN = LANE_OFFSETS.back + Math.min.apply(null, LANE_Y_SPREAD);
+  const SPAWN_Y_MAX = LANE_OFFSETS.front + Math.max.apply(null, LANE_Y_SPREAD);
+  const SPAWN_Y_CENTER = (SPAWN_Y_MIN + SPAWN_Y_MAX) / 2;
+  const FORMATION_FULL_SIZE = 8;
+  const FORMATION_Y_JITTER = 7;
+  const ENTRY_DELAY_MAX = 0.18;
+  const ENTRY_DELAY_RANDOM = 0.07;
+  const ENTRY_CLOSE_LINE_PX = 34;
   const ENTRY_DIST = 4;               // tiles each soldier runs from off-screen to their spawn
   const SPAWN_EDGE_GUTTER = 0.1;       // nearest spawn stays right next to the side
   const SPAWN_SPACING_TILES = 0.9;     // horizontal spacing between spawn slots
   const SOLO_SPAWN_FROM_EDGE = 2.2;    // a lone soldier is centered in its small side area
+  const LANE_RANK = { back: 0, mid: 1, front: 2 };
 
   // ── Weapon stats loader ───────────────────────────────────────────────────
   const statsByName = {};
@@ -101,7 +110,47 @@
     };
   }
 
-  function buildCombatant(soldier, team, idxInTeam, teamSize) {
+  function assignTeamFormation(team, rng) {
+    const n = team.length;
+    if (!n) return;
+    if (n === 1) {
+      team[0].laneOffsetPx = SPAWN_Y_CENTER;
+      team[0].entryDelay = 0;
+      return;
+    }
+
+    const sorted = team.slice().sort((a, b) => {
+      const byLane = (LANE_RANK[a.lane] || 0) - (LANE_RANK[b.lane] || 0);
+      if (byLane) return byLane;
+      return a.formationRoll - b.formationRoll;
+    });
+
+    const fullSpan = SPAWN_Y_MAX - SPAWN_Y_MIN;
+    const spanK = n <= 1 ? 0 : Math.min(1, (n - 1) / (FORMATION_FULL_SIZE - 1));
+    const usedSpan = fullSpan * spanK;
+    const yMin = SPAWN_Y_CENTER - usedSpan / 2;
+    const yMax = SPAWN_Y_CENTER + usedSpan / 2;
+
+    for (let i = 0; i < sorted.length; i++) {
+      const t = n <= 1 ? 0.5 : i / (n - 1);
+      const baseY = lerp(yMin, yMax, t);
+      const jitter = n <= 1 ? 0 : (rng() - 0.5) * FORMATION_Y_JITTER * 2;
+      sorted[i].laneOffsetPx = clamp(baseY + jitter, SPAWN_Y_MIN, SPAWN_Y_MAX);
+    }
+
+    const byLine = team.slice().sort((a, b) => a.laneOffsetPx - b.laneOffsetPx);
+    for (let i = 0; i < byLine.length; i++) {
+      let closeBefore = 0;
+      for (let j = i - 1; j >= 0; j--) {
+        if (byLine[i].laneOffsetPx - byLine[j].laneOffsetPx > ENTRY_CLOSE_LINE_PX) break;
+        closeBefore++;
+      }
+      const lineDelay = Math.min(ENTRY_DELAY_MAX, closeBefore * 0.04);
+      byLine[i].entryDelay = Math.min(ENTRY_DELAY_MAX, lineDelay + rng() * ENTRY_DELAY_RANDOM);
+    }
+  }
+
+  function buildCombatant(soldier, team, idxInTeam, teamSize, rng) {
     const level = soldier.level || 1;
     const hpMax = 10 + 2 * (level - 1);
     const weaponName = soldier.preferredWeapon || soldier.skill1Name || 'Glock 17';
@@ -135,6 +184,8 @@
       initiative: 0,          // boost stat (V1: always 0; ready for skills)
       aimed: false,
       lastTargetId: null,
+      formationRoll: rng ? rng() : 0,
+      entryDelay: 0,
       orderIdx: 0             // assigned below for stable tiebreak
     };
   }
@@ -146,8 +197,10 @@
 
     const teamASoldiers = (opts.teamA && opts.teamA.soldiers || []);
     const teamBSoldiers = (opts.teamB && opts.teamB.soldiers || []);
-    const A = teamASoldiers.map((s, i) => buildCombatant(s, 'A', i, teamASoldiers.length));
-    const B = teamBSoldiers.map((s, i) => buildCombatant(s, 'B', i, teamBSoldiers.length));
+    const A = teamASoldiers.map((s, i) => buildCombatant(s, 'A', i, teamASoldiers.length, rng));
+    const B = teamBSoldiers.map((s, i) => buildCombatant(s, 'B', i, teamBSoldiers.length, rng));
+    assignTeamFormation(A, rng);
+    assignTeamFormation(B, rng);
     const all = A.concat(B);
 
     // Interleave initial turn order so neither team grabs the whole opening
@@ -166,6 +219,7 @@
     let winner = null;
     let endHoldT = 0;
     let phase = 'entry';  // 'entry' → all run in simultaneously; 'combat' → turn-based
+    let entryT = 0;
 
     function alive(team) {
       let n = 0;
@@ -298,8 +352,17 @@
     // Entry phase: all soldiers run simultaneously from off-screen to their
     // spawn positions, then the phase switches to turn-based combat.
     function stepEntry(dt) {
+      entryT += dt;
       let allArrived = true;
       for (const s of all) {
+        if (entryT < s.entryDelay) {
+          allArrived = false;
+          s.facing = s.team === 'A' ? 1 : -1;
+          if (s.state !== 'idle') { s.state = 'idle'; s.stateT = 0; }
+          else s.stateT += dt;
+          continue;
+        }
+
         const dx = s.xSpawn - s.x;
         const dist = Math.abs(dx);
         if (dist < 0.1) {
