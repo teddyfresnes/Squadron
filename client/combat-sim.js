@@ -49,6 +49,15 @@
   const SPAWN_SPACING_TILES = 0.9;     // horizontal spacing between spawn slots
   const SOLO_SPAWN_FROM_EDGE = 2.2;    // a lone soldier is centered in its small side area
   const LANE_RANK = { back: 0, mid: 1, front: 2 };
+  const BODY_PARTS = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+  const BODY_PART_WEIGHTS = [
+    { key: 'head', weight: 12 },
+    { key: 'torso', weight: 34 },
+    { key: 'leftArm', weight: 13 },
+    { key: 'rightArm', weight: 13 },
+    { key: 'leftLeg', weight: 14 },
+    { key: 'rightLeg', weight: 14 }
+  ];
 
   // â”€â”€ Weapon stats loader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const statsByName = {};
@@ -78,6 +87,22 @@
   function lerp(a, b, t) { return a + (b - a) * t; }
   function sign(v) { return v > 0 ? 1 : (v < 0 ? -1 : 0); }
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  function emptyBodyHits() {
+    const hits = {};
+    for (const p of BODY_PARTS) hits[p] = 0;
+    return hits;
+  }
+
+  function rollHitPart(rng) {
+    const total = BODY_PART_WEIGHTS.reduce((sum, p) => sum + p.weight, 0);
+    let roll = (rng ? rng() : Math.random()) * total;
+    for (const p of BODY_PART_WEIGHTS) {
+      roll -= p.weight;
+      if (roll <= 0) return p.key;
+    }
+    return 'torso';
+  }
 
   function spawnXFor(team, idxInTeam, teamSize) {
     const n = Math.max(1, teamSize || 1);
@@ -179,10 +204,15 @@
     return {
       id: (soldier.id || 'sld') + ':' + team + ':' + idxInTeam,
       name: soldier.name,
+      level,
       team,
       cfg: soldier.config,
+      skill1Name: soldier.skill1Name || null,
+      skill2Name: soldier.skill2Name || null,
+      preferredWeapon: soldier.preferredWeapon || null,
       weaponName,
       weapon: stats,
+      bodyHits: emptyBodyHits(),
       lane,
       laneOffsetPx,
       hp: hpMax,
@@ -339,7 +369,8 @@
       for (let i = 0; i < burst; i++) {
         shots.push({
           atT: aimDur + i * recovery,        // local time within the turn
-          hit: rng() < (w.accuracy != null ? w.accuracy : 0.5)
+          hit: rng() < (w.accuracy != null ? w.accuracy : 0.5),
+          part: rollHitPart(rng)
         });
       }
       const lastShotT = shots[shots.length - 1].atT;
@@ -464,21 +495,29 @@
           const shot = a.shots[a.shotsFired++];
           const target = all.find(s => s.id === a.targetId);
           if (target && target.hp > 0) {
+            const bodyPart = shot.part || 'torso';
             events.push({
               t: worldT, type: 'shoot',
               actorId: a.actorId, targetId: a.targetId,
               ax: actor.x, ay: actor.laneOffsetPx,
               tx: target.x, ty: target.laneOffsetPx,
-              hit: shot.hit
+              hit: shot.hit,
+              bodyPart: shot.hit ? bodyPart : null
             });
             if (shot.hit) {
+              target.bodyHits[bodyPart] = Math.min(2, (target.bodyHits[bodyPart] || 0) + 1);
               target.hp = Math.max(0, target.hp - a.damage);
               if (target.hp <= 0) {
                 target.state = 'dead'; target.stateT = 0;
-                events.push({ t: worldT, type: 'die', targetId: target.id });
+                events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart });
               } else {
                 target.state = 'hurt'; target.stateT = 0;
-                events.push({ t: worldT, type: 'hit', targetId: target.id, hp: target.hp });
+                events.push({
+                  t: worldT, type: 'hit',
+                  targetId: target.id, hp: target.hp,
+                  bodyPart,
+                  bodyHits: Object.assign({}, target.bodyHits)
+                });
               }
             }
           }
@@ -564,7 +603,8 @@
     TILE_PX,
     ARENA_TILES,
     SPEED_TILES_PER_SEC,
-    LANE_OFFSETS
+    LANE_OFFSETS,
+    BODY_PARTS
   };
 
 })();

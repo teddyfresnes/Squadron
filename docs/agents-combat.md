@@ -31,7 +31,7 @@ const battle = window.CombatSim.createBattle({
 battle.step(DT);
 
 // Lecture état
-battle.all          // [{id, name, team, cfg, hp, hpMax, x, facing, state, stateT, lane, laneOffsetPx, …}]
+battle.all          // [{id, name, team, cfg, level, weaponName, skill1Name, skill2Name, hp, hpMax, bodyHits, x, facing, state, stateT, lane, laneOffsetPx, …}]
 battle.events       // [{t, type:'turn'|'shoot'|'hit'|'die'|'end', …}]
 battle.done         // bool
 battle.winner       // 'A' | 'B' | 'draw' | null
@@ -119,9 +119,9 @@ smg, heavy, shotgun → 'front'
 
 ```js
 { t, type: 'turn',  actorId, action: 'move'|'shoot'|'idle' }
-{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool }
-{ t, type: 'hit',   targetId, hp }
-{ t, type: 'die',   targetId }
+{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, bodyPart?: 'head'|'torso'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg' }
+{ t, type: 'hit',   targetId, hp, bodyPart, bodyHits }
+{ t, type: 'die',   targetId, bodyPart }
 { t, type: 'end',   winner: 'A'|'B'|'draw' }
 ```
 
@@ -154,7 +154,8 @@ smg, heavy, shotgun → 'front'
 
 - Crée la bataille au mount (après `loadWeaponStats()`)
 - Loop `requestAnimationFrame` : accumulator fixe-step (`DT`), max 6 pas par frame
-- `ArenaSoldier` : `<div>` positionné absolument avec `<SpriteCanvas>` + barre de vie
+- `ArenaSoldier` : `<button>` positionné absolument avec `<SpriteCanvas>` + barre de vie, cliquable pour ouvrir le panneau soldat
+- `SoldierInspectMenu` : panneau contextuel (nom, niveau, corps touché, vie verticale, munitions, skills armes avec tooltip)
 - `TrailsLayer` : SVG overlay, trails disparaissent en 220 ms
 - `ResultOverlay` : affiché quand `battle.done && battle.endHoldT >= 1.2`
 
@@ -166,7 +167,19 @@ smg, heavy, shotgun → 'front'
 hpMax = 10 + 2 * (level - 1)   // level par défaut = 1 → hpMax = 10
 ```
 
-Level non implémenté côté client actuellement (toujours 1).
+Le niveau est lu depuis `soldier.level` si présent, sinon `1`.
+
+---
+
+## Zones du corps
+
+Chaque combattant expose `bodyHits` :
+
+```js
+{ head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 }
+```
+
+À chaque tir réussi, le simulateur choisit une zone de façon déterministe et incrémente cette zone jusqu'à 2. Le rendu utilise 0 = neutre, 1 = rouge clair, 2 = rouge foncé.
 
 ---
 

@@ -2538,11 +2538,20 @@ html, body {
   pointer-events: none;
 }
 .cv-soldier {
+  all: unset;
   position: absolute;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  line-height: 0;
+  touch-action: manipulation;
 }
 .cv-soldier canvas {
   display: block;
+  pointer-events: none;
+}
+.cv-soldier:focus-visible {
+  outline: 1px solid rgba(255, 216, 122, 0.85);
+  outline-offset: -30px;
 }
 .cv-active-marker {
   position: absolute;
@@ -2556,6 +2565,22 @@ html, body {
     rgba(255, 215, 122, 0.85) 0%,
     rgba(255, 215, 122, 0.45) 40%,
     rgba(255, 215, 122, 0) 75%);
+  pointer-events: none;
+}
+.cv-selected-marker {
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translateX(-50%);
+  width: 42px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 226, 160, 0.8);
+  background: radial-gradient(ellipse at center,
+    rgba(255, 226, 160, 0.42) 0%,
+    rgba(255, 226, 160, 0.18) 48%,
+    rgba(255, 226, 160, 0) 72%);
+  box-shadow: 0 0 14px rgba(255, 216, 122, 0.45);
   pointer-events: none;
 }
 .cv-hpbar {
@@ -2578,6 +2603,311 @@ html, body {
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+.cv-inspect-panel {
+  position: absolute;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(32, 35, 47, 0.96), rgba(16, 18, 25, 0.96)),
+    var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  pointer-events: auto;
+  animation: cv-inspect-in 110ms ease-out both;
+}
+@keyframes cv-inspect-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cv-inspect-team-A { border-top-color: rgba(74, 222, 128, 0.72); }
+.cv-inspect-team-B { border-top-color: rgba(248, 113, 113, 0.72); }
+.cv-inspect-close {
+  all: unset;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+.cv-inspect-close:hover,
+.cv-inspect-close:focus-visible {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+.cv-inspect-head {
+  min-width: 0;
+  padding: 0 24px 7px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.cv-inspect-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  color: #f4f5f7;
+}
+.cv-inspect-level {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(217, 150, 80, 0.13);
+  border: 1px solid rgba(217, 150, 80, 0.28);
+  color: #ffd899;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.cv-inspect-main {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.cv-inspect-vitals {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cv-life-rail {
+  position: relative;
+  width: 20px;
+  height: 138px;
+  flex: 0 0 20px;
+  overflow: hidden;
+  background: rgba(5, 8, 12, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.85);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.cv-life-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, #8df7aa 0%, #23c55e 58%, #0f7a39 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: height 120ms ease-out;
+}
+.cv-life-rail.is-low .cv-life-fill {
+  background: linear-gradient(180deg, #ffd06a 0%, #f97316 52%, #b91c1c 100%);
+}
+.cv-body-graph {
+  position: relative;
+  width: 68px;
+  height: 138px;
+  flex: 0 0 68px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)),
+    rgba(6, 8, 12, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+.cv-body-node {
+  position: absolute;
+  display: block;
+  background: #66717b;
+  border: 1px solid rgba(12, 14, 18, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.cv-body-node.hit-1 {
+  background: #fca5a5;
+  border-color: rgba(254, 202, 202, 0.68);
+  box-shadow: 0 0 8px rgba(252, 165, 165, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.cv-body-node.hit-2 {
+  background: #7f1d1d;
+  border-color: rgba(239, 68, 68, 0.84);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.cv-body-head {
+  left: 23px;
+  top: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px 7px 6px 6px;
+}
+.cv-body-torso {
+  left: 20px;
+  top: 34px;
+  width: 28px;
+  height: 44px;
+  border-radius: 5px 5px 4px 4px;
+}
+.cv-body-left-arm,
+.cv-body-right-arm {
+  top: 38px;
+  width: 12px;
+  height: 46px;
+  border-radius: 5px;
+}
+.cv-body-left-arm {
+  left: 8px;
+  transform: rotate(9deg);
+}
+.cv-body-right-arm {
+  right: 8px;
+  transform: rotate(-9deg);
+}
+.cv-body-left-leg,
+.cv-body-right-leg {
+  top: 79px;
+  width: 13px;
+  height: 50px;
+  border-radius: 4px 4px 6px 6px;
+}
+.cv-body-left-leg {
+  left: 22px;
+  transform: rotate(3deg);
+}
+.cv-body-right-leg {
+  right: 22px;
+  transform: rotate(-3deg);
+}
+.cv-inspect-loadout {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cv-inspect-weapon {
+  min-width: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.cv-inspect-weapon-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+.cv-inspect-weapon-head .game-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+}
+.cv-inspect-weapon-head .weapon-game-icon,
+.cv-inspect-skill .weapon-game-icon {
+  margin: 0;
+}
+.cv-inspect-weapon-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.cv-weapon-placeholder {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.35);
+}
+.cv-ammo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  min-height: 15px;
+  margin-top: 4px;
+}
+.cv-ammo-row-small {
+  gap: 2px;
+  min-height: 9px;
+  opacity: 0.88;
+}
+.cv-ammo-bullet {
+  position: relative;
+  width: 6px;
+  height: 13px;
+  flex: 0 0 6px;
+  border-radius: 4px 4px 2px 2px;
+  border: 1px solid rgba(255, 217, 97, 0.3);
+  background: rgba(0, 0, 0, 0.28);
+}
+.cv-ammo-bullet::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.28);
+}
+.cv-ammo-bullet.is-full {
+  background: linear-gradient(180deg, #fff4a8 0%, #ffd338 44%, #d79a16 100%);
+  border-color: rgba(255, 237, 148, 0.88);
+  box-shadow: 0 0 5px rgba(255, 211, 56, 0.28);
+}
+.cv-ammo-bullet.is-empty {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(8, 10, 14, 0.72);
+}
+.cv-ammo-row-small .cv-ammo-bullet {
+  width: 4px;
+  height: 8px;
+  flex-basis: 4px;
+  border-radius: 3px 3px 1px 1px;
+}
+.cv-inspect-skills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+}
+.cv-inspect-skill {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid rgba(217, 150, 80, 0.34);
+  background: rgba(217, 150, 80, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(217, 150, 80, 0.08);
+}
+.cv-inspect-skill .game-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+}
+.cv-inspect-hp {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 .cv-hud {
   display: flex;

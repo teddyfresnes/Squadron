@@ -12,6 +12,15 @@
   const GROUND_Y_RATIO = 0.78;          // where the ground line sits inside the arena
   const BULLET_TRAIL_MS = 220;          // turn-based pacing → trails linger longer
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
+  const DEFAULT_MAGAZINE_SIZE = 8;
+  const BODY_PART_META = [
+    { key: 'head', className: 'head', label: 'Tete' },
+    { key: 'torso', className: 'torso', label: 'Torse' },
+    { key: 'leftArm', className: 'left-arm', label: 'Bras gauche' },
+    { key: 'rightArm', className: 'right-arm', label: 'Bras droit' },
+    { key: 'leftLeg', className: 'left-leg', label: 'Jambe gauche' },
+    { key: 'rightLeg', className: 'right-leg', label: 'Jambe droite' }
+  ];
 
   function frameForState(state, stateT) {
     const anim = window.Anims[state] || window.Anims.idle;
@@ -20,22 +29,76 @@
     return Math.floor(idx) % anim.frames;
   }
 
-  // ── Soldier sprite, absolutely positioned on the arena ────────────────────
-  function ArenaSoldier({ s, arenaH, pxPerTile, spriteScale, xOffset, isActive }) {
-    const SpriteCanvas = UI.SpriteCanvas;
-    const frame = frameForState(s.state, s.stateT);
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : (v > hi ? hi : v);
+  }
+
+  function getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset) {
     const stageW = STAGE_W * spriteScale;
     const stageH = STAGE_H * spriteScale;
     const cx = xOffset + s.x * pxPerTile;
-    // Lane offsets are authored at TILE=24; scale them with the live tile size.
     const laneScale = pxPerTile / BASE_TILE_PX;
     const groundY = arenaH * GROUND_Y_RATIO + s.laneOffsetPx * laneScale;
-    const left = Math.round(cx - stageW / 2);
-    const top = Math.round(groundY - stageH);
+    return {
+      stageW,
+      stageH,
+      cx,
+      groundY,
+      left: Math.round(cx - stageW / 2),
+      top: Math.round(groundY - stageH)
+    };
+  }
+
+  function hpPct(s) {
+    return clamp(100 * (s.hp || 0) / Math.max(1, s.hpMax || 1), 0, 100);
+  }
+
+  function getWeaponByName(name) {
+    if (!name) return null;
+    const G = window.SquadronGame && window.SquadronGame.helpers;
+    if (G && typeof G.getWeaponByName === 'function') {
+      const w = G.getWeaponByName(name);
+      if (w) return w;
+    }
+    const list = window.Weapons && window.Weapons.list || [];
+    return list.find(w => w.name === name) || null;
+  }
+
+  function uniqueWeaponNames(s) {
+    const seen = new Set();
+    return [s.weaponName, s.preferredWeapon, s.skill1Name, s.skill2Name]
+      .filter(Boolean)
+      .filter(name => {
+        if (seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      });
+  }
+
+  function magazineSizeFor(s) {
+    const stats = s.weapon || (window.CombatSim && window.CombatSim.getWeaponStats(s.weaponName));
+    return Math.max(1, Math.round((stats && stats.magazineSize) || DEFAULT_MAGAZINE_SIZE));
+  }
+
+  // ── Soldier sprite, absolutely positioned on the arena ────────────────────
+  function ArenaSoldier({ s, arenaH, pxPerTile, spriteScale, xOffset, isActive, isSelected, onSelect }) {
+    const SpriteCanvas = UI.SpriteCanvas;
+    const frame = frameForState(s.state, s.stateT);
+    const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
+    const life = hpPct(s);
+
+    function handleClick(ev) {
+      ev.stopPropagation();
+      if (onSelect) onSelect(s.id);
+    }
 
     return (
-      <div className={'cv-soldier' + (isActive ? ' is-active' : '')}
-           style={{ left, top, width: stageW, height: stageH }}>
+      <button type="button"
+              className={'cv-soldier' + (isActive ? ' is-active' : '') + (isSelected ? ' is-selected' : '')}
+              style={{ left: layout.left, top: layout.top, width: layout.stageW, height: layout.stageH }}
+              onClick={handleClick}
+              aria-label={(s.name || 'Soldat') + ', niveau ' + (s.level || 1)}
+              aria-pressed={isSelected}>
         <SpriteCanvas
           cfg={s.cfg}
           animKey={s.state}
@@ -45,10 +108,106 @@
         />
         {s.hp > 0 && (
           <div className="cv-hpbar">
-            <div className="cv-hpbar-fill" style={{ width: (100 * s.hp / s.hpMax) + '%' }} />
+            <div className="cv-hpbar-fill" style={{ width: life + '%' }} />
           </div>
         )}
         {isActive && s.hp > 0 && <div className="cv-active-marker" />}
+        {isSelected && <div className="cv-selected-marker" />}
+      </button>
+    );
+  }
+
+  function BodyGraph({ s }) {
+    const hits = s.bodyHits || {};
+    return (
+      <div className="cv-body-graph" role="img" aria-label="Etat du corps">
+        {BODY_PART_META.map(part => {
+          const hitLevel = clamp(hits[part.key] || 0, 0, 2);
+          return (
+            <span key={part.key}
+                  className={'cv-body-node cv-body-' + part.className + ' hit-' + hitLevel}
+                  title={part.label + ' : ' + hitLevel} />
+          );
+        })}
+      </div>
+    );
+  }
+
+  function AmmoRow({ total, filled, small }) {
+    const count = Math.max(1, Math.round(total || DEFAULT_MAGAZINE_SIZE));
+    const full = clamp(filled == null ? count : Math.round(filled), 0, count);
+    const bullets = [];
+    for (let i = 0; i < count; i++) bullets.push(i);
+    return (
+      <div className={'cv-ammo-row' + (small ? ' cv-ammo-row-small' : '')} aria-hidden="true">
+        {bullets.map(i => (
+          <span key={i} className={'cv-ammo-bullet' + (i < full ? ' is-full' : ' is-empty')} />
+        ))}
+      </div>
+    );
+  }
+
+  function SoldierInspectMenu({ s, arenaW, arenaH, pxPerTile, spriteScale, xOffset, onClose }) {
+    const G = window.SquadronGame && window.SquadronGame.helpers;
+    const SkillTooltip = G && G.SkillTooltip;
+    const WeaponGameIcon = UI.WeaponGameIcon;
+    const activeWeapon = getWeaponByName(s.weaponName);
+    const skillWeapons = uniqueWeaponNames(s).map(getWeaponByName).filter(Boolean);
+    const magSize = magazineSizeFor(s);
+    const life = hpPct(s);
+    const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
+    const panelW = Math.max(252, Math.min(332, arenaW - 16));
+    const panelH = 278;
+    const rawLeft = s.team === 'A'
+      ? layout.left + layout.stageW - 18
+      : layout.left - panelW + 18;
+    const left = clamp(rawLeft, 8, Math.max(8, arenaW - panelW - 8));
+    const top = clamp(layout.top + Math.min(18, layout.stageH * 0.18), 8, Math.max(8, arenaH - panelH - 8));
+
+    function stop(ev) {
+      ev.stopPropagation();
+    }
+
+    return (
+      <div className={'cv-inspect-panel cv-inspect-team-' + s.team}
+           style={{ left, top, width: panelW }}
+           onClick={stop}>
+        <button type="button" className="cv-inspect-close" onClick={onClose} aria-label="Fermer">×</button>
+        <div className="cv-inspect-head">
+          <div className="cv-inspect-name">{s.name || 'Soldat'}</div>
+          <div className="cv-inspect-level">NIV {s.level || 1}</div>
+        </div>
+        <div className="cv-inspect-main">
+          <div className="cv-inspect-vitals">
+            <div className={'cv-life-rail' + (life <= 35 ? ' is-low' : '')} aria-hidden="true">
+              <div className="cv-life-fill" style={{ height: life + '%' }} />
+            </div>
+            <BodyGraph s={s} />
+          </div>
+          <div className="cv-inspect-loadout">
+            <div className="cv-inspect-weapon">
+              <div className="cv-inspect-weapon-head">
+                {activeWeapon && WeaponGameIcon ? <WeaponGameIcon weapon={activeWeapon} /> : <span className="cv-weapon-placeholder" />}
+                <div className="cv-inspect-weapon-name">{s.weaponName || 'Arme'}</div>
+              </div>
+              <AmmoRow total={magSize} filled={magSize} />
+              <AmmoRow total={magSize} filled={magSize} small />
+            </div>
+            <div className="cv-inspect-skills">
+              {skillWeapons.map(w => {
+                const icon = (
+                  <span className="cv-inspect-skill">
+                    {WeaponGameIcon ? <WeaponGameIcon weapon={w} /> : null}
+                  </span>
+                );
+                return SkillTooltip
+                  ? <SkillTooltip key={w.name} weapon={w} tipDir="below">{icon}</SkillTooltip>
+                  : React.cloneElement(icon, { key: w.name });
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="cv-inspect-hp">{Math.ceil(s.hp)}/{s.hpMax}</div>
       </div>
     );
   }
@@ -109,6 +268,7 @@
     const [, setTick] = useState(0);
     const [trails, setTrails] = useState([]);
     const [resultShown, setResultShown] = useState(false);
+    const [selectedSoldierId, setSelectedSoldierId] = useState(null);
 
     // Build the battle once stats are loaded.
     const [battle, setBattle] = useState(null);
@@ -122,6 +282,7 @@
           teamB: oppSquad,
           seed
         });
+        setSelectedSoldierId(null);
         setBattle(b);
       });
       return () => { alive = false; };
@@ -232,22 +393,37 @@
     const usableW = Math.max(200, arenaSize.w - 2 * sidePad);
     const pxPerTile = usableW / ARENA_TILES;
     const xOffset = sidePad;
+    const selectedSoldier = battle.all.find(s => s.id === selectedSoldierId) || null;
 
     return (
       <div className="cv-screen" ref={containerRef}>
         <div className="cv-arena"
-             style={{ width: arenaSize.w, height: arenaSize.h }}>
+             style={{ width: arenaSize.w, height: arenaSize.h }}
+             onClick={() => setSelectedSoldierId(null)}>
           <div className="cv-bg" />
           {/* Soldiers, sorted so the one at the back lane renders first */}
           {battle.all.slice().sort((a, b) => a.laneOffsetPx - b.laneOffsetPx).map(s => (
             <ArenaSoldier key={s.id} s={s} arenaH={arenaSize.h}
                           pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
-                          isActive={(battle.activeActions || []).some(a => a.actorId === s.id)} />
+                          isActive={(battle.activeActions || []).some(a => a.actorId === s.id)}
+                          isSelected={selectedSoldierId === s.id}
+                          onSelect={(id) => setSelectedSoldierId(prev => prev === id ? null : id)} />
           ))}
           <TrailsLayer trails={trails}
                        arenaW={arenaSize.w} arenaH={arenaSize.h}
                        pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
                        nowMs={nowMs} />
+          {selectedSoldier && (
+            <SoldierInspectMenu
+              s={selectedSoldier}
+              arenaW={arenaSize.w}
+              arenaH={arenaSize.h}
+              pxPerTile={pxPerTile}
+              spriteScale={spriteScale}
+              xOffset={xOffset}
+              onClose={() => setSelectedSoldierId(null)}
+            />
+          )}
         </div>
         <div className="cv-hud">
           <div className="cv-team cv-team-a">
