@@ -32,6 +32,9 @@
   // Per-soldier Y spread within a lane so soldiers don't stack on one line.
   const LANE_Y_SPREAD = [0, 12, -12, 22, -22, 6, -6];
   const ENTRY_DIST = 4;               // tiles each soldier runs from off-screen to their spawn
+  const SPAWN_EDGE_GUTTER = 0.1;       // nearest spawn stays right next to the side
+  const SPAWN_SPACING_TILES = 0.9;     // horizontal spacing between spawn slots
+  const SOLO_SPAWN_FROM_EDGE = 2.2;    // a lone soldier is centered in its small side area
 
   // ── Weapon stats loader ───────────────────────────────────────────────────
   const statsByName = {};
@@ -62,6 +65,14 @@
   function sign(v) { return v > 0 ? 1 : (v < 0 ? -1 : 0); }
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
+  function spawnXFor(team, idxInTeam, teamSize) {
+    const n = Math.max(1, teamSize || 1);
+    const fromEdge = n === 1
+      ? SOLO_SPAWN_FROM_EDGE
+      : SPAWN_EDGE_GUTTER + idxInTeam * SPAWN_SPACING_TILES;
+    return team === 'A' ? fromEdge : ARENA_TILES - fromEdge;
+  }
+
   // ── RNG ───────────────────────────────────────────────────────────────────
   function mulberry32(a) {
     return function () {
@@ -90,17 +101,15 @@
     };
   }
 
-  function buildCombatant(soldier, team, idxInTeam) {
+  function buildCombatant(soldier, team, idxInTeam, teamSize) {
     const level = soldier.level || 1;
     const hpMax = 10 + 2 * (level - 1);
     const weaponName = soldier.preferredWeapon || soldier.skill1Name || 'Glock 17';
     const stats = getWeaponStats(weaponName) || defaultStats();
     const lane = laneForCategory(stats.category);
-    // Spawn positions close to the edges; each soldier runs the same ENTRY_DIST
-    // so both teams arrive simultaneously without overlapping.
-    const xSpawn = team === 'A'
-      ? 0.1 + idxInTeam * 0.5
-      : (ARENA_TILES - 0.1) - idxInTeam * 0.5;
+    // Keep the nearest spawn at the side, then fan larger squads toward center
+    // so the entry reads as a formation instead of a single column.
+    const xSpawn = spawnXFor(team, idxInTeam, teamSize);
     const xEntry = team === 'A' ? -ENTRY_DIST : ARENA_TILES + ENTRY_DIST;
     // Per-soldier Y offset within the lane so many soldiers in the same lane
     // don't all share one ground line.
@@ -135,8 +144,10 @@
     const seedStr = opts.seed || ('battle-' + Date.now());
     const rng = mulberry32(hashStr(seedStr));
 
-    const A = (opts.teamA && opts.teamA.soldiers || []).map((s, i) => buildCombatant(s, 'A', i));
-    const B = (opts.teamB && opts.teamB.soldiers || []).map((s, i) => buildCombatant(s, 'B', i));
+    const teamASoldiers = (opts.teamA && opts.teamA.soldiers || []);
+    const teamBSoldiers = (opts.teamB && opts.teamB.soldiers || []);
+    const A = teamASoldiers.map((s, i) => buildCombatant(s, 'A', i, teamASoldiers.length));
+    const B = teamBSoldiers.map((s, i) => buildCombatant(s, 'B', i, teamBSoldiers.length));
     const all = A.concat(B);
 
     // Interleave initial turn order so neither team grabs the whole opening
