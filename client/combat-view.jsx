@@ -223,11 +223,12 @@
     }
 
     const nowMs = performance.now();
-    // Fit the whole battlefield (50 tiles) horizontally, leaving padding for
-    // sprite half-widths so wide weapons (AWP, Stinger) don't clip the edges.
+    // Fit the battlefield horizontally. Keep only a small gutter: SpriteCanvas
+    // has a lot of transparent width, so half-canvas padding makes edge spawns
+    // look far inside the arena.
     const ARENA_TILES = window.CombatSim.ARENA_TILES;
     const spriteScale = Math.min(1.0, arenaSize.w / 1200);
-    const sidePad = Math.round(STAGE_W * spriteScale * 0.5);
+    const sidePad = Math.round(42 * spriteScale);
     const usableW = Math.max(200, arenaSize.w - 2 * sidePad);
     const pxPerTile = usableW / ARENA_TILES;
     const xOffset = sidePad;
