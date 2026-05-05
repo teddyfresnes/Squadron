@@ -36,8 +36,9 @@
   const SPAWN_Y_CENTER = (SPAWN_Y_MIN + SPAWN_Y_MAX) / 2;
   const FORMATION_FULL_SIZE = 8;
   const FORMATION_Y_JITTER = 7;
-  const ENTRY_DELAY_MAX = 0.18;
-  const ENTRY_DELAY_RANDOM = 0.07;
+  const ENTRY_DELAY_MAX = 0.72;
+  const ENTRY_DELAY_STEP = 0.08;
+  const ENTRY_DELAY_RANDOM = 0.18;
   const ENTRY_CLOSE_LINE_PX = 34;
   const ENTRY_DIST = 4;               // tiles each soldier runs from off-screen to their spawn
   const SPAWN_EDGE_GUTTER = 0.1;       // nearest spawn stays right next to the side
@@ -139,14 +140,21 @@
     }
 
     const byLine = team.slice().sort((a, b) => a.laneOffsetPx - b.laneOffsetPx);
+    const lineGroups = new Map();
     for (let i = 0; i < byLine.length; i++) {
       let closeBefore = 0;
       for (let j = i - 1; j >= 0; j--) {
         if (byLine[i].laneOffsetPx - byLine[j].laneOffsetPx > ENTRY_CLOSE_LINE_PX) break;
         closeBefore++;
       }
-      const lineDelay = Math.min(ENTRY_DELAY_MAX, closeBefore * 0.04);
-      byLine[i].entryDelay = Math.min(ENTRY_DELAY_MAX, lineDelay + rng() * ENTRY_DELAY_RANDOM);
+      lineGroups.set(byLine[i].id, closeBefore);
+    }
+
+    const byEntry = team.slice().sort((a, b) => a.entryRoll - b.entryRoll);
+    for (let i = 0; i < byEntry.length; i++) {
+      const waveDelay = i * ENTRY_DELAY_STEP;
+      const lineDelay = (lineGroups.get(byEntry[i].id) || 0) * 0.04;
+      byEntry[i].entryDelay = Math.min(ENTRY_DELAY_MAX, waveDelay + lineDelay + rng() * ENTRY_DELAY_RANDOM);
     }
   }
 
@@ -185,6 +193,7 @@
       aimed: false,
       lastTargetId: null,
       formationRoll: rng ? rng() : 0,
+      entryRoll: rng ? rng() : 0,
       entryDelay: 0,
       orderIdx: 0             // assigned below for stable tiebreak
     };

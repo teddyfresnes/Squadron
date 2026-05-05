@@ -88,8 +88,9 @@ SPAWN_Y_MIN/MAX = -202/22  // limites verticales conservées depuis les ancienne
 SPAWN_Y_CENTER = -90       // soldat seul centré verticalement dans l'herbe
 FORMATION_FULL_SIZE = 8    // une équipe de 8 utilise toute l'enveloppe verticale
 FORMATION_Y_JITTER = 7     // petite variation Y pseudo-aléatoire, clampée aux limites
-ENTRY_DELAY_MAX = 0.18     // retard d'entrée pour lignes proches
-ENTRY_DELAY_RANDOM = 0.07  // micro-retard aléatoire additionnel
+ENTRY_DELAY_MAX = 0.72     // retard d'entrée maximal dans une vague d'équipe
+ENTRY_DELAY_STEP = 0.08    // décalage de base entre soldats d'une même équipe
+ENTRY_DELAY_RANDOM = 0.18  // micro-retard aléatoire additionnel
 ENTRY_CLOSE_LINE_PX = 34   // seuil de ligne presque identique
 ```
 
