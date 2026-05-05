@@ -517,21 +517,23 @@ function OpponentCard({ opp, myPower, onAttack }) {
   const diffClass = ratio <= 0.75 ? 'easy' : ratio <= 1.15 ? 'even' : ratio <= 1.6 ? 'hard' : 'epic';
   return (
     <div className={'hq-opp-card hq-opp-' + diffClass}>
+      <div className="hq-opp-head">
+        <div className="hq-opp-name">{opp.name}</div>
+        <div className="hq-opp-power">
+          <span>POWER</span>
+          <strong>{opp.power}</strong>
+        </div>
+      </div>
       <div className="hq-opp-roster">
         {opp.soldiers.slice(0, 8).map(s => (
           <div key={s.id} className="hq-opp-roster-cell">
+            <div className="hq-opp-soldier-level">{s.level || 1}</div>
             <AnimPreview cfg={s.config} animKey="idle" scale={0.58} facing={1} running={true} />
           </div>
         ))}
       </div>
-      <div className="hq-opp-name">{opp.name}</div>
-      <div className="hq-opp-meta">
-        <span>NIV. {opp.level}</span>
-        <span>{opp.soldiers.length} SOLDATS</span>
-        <span>{opp.power} ⚡</span>
-      </div>
       <button type="button" className="sq-btn hq-opp-attack" onClick={onAttack}>
-        GO!
+        ATTAQUER
       </button>
     </div>
   );

@@ -1925,7 +1925,9 @@ html, body {
   margin: 0 0 clamp(0.8rem, 1.2vw, 1.2rem);
 }
 .hq-opp-card {
-  background: rgba(28, 31, 42, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
+    rgba(24, 27, 36, 0.95);
   border: 1px solid var(--border-2);
   border-radius: 8px;
   padding: clamp(0.75rem, 1vw, 1rem);
@@ -1940,15 +1942,17 @@ html, body {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
   border-color: var(--accent);
 }
-.hq-opp-easy { border-top: 3px solid oklch(0.7 0.18 145); }
-.hq-opp-even { border-top: 3px solid oklch(0.7 0.14 220); }
-.hq-opp-hard { border-top: 3px solid oklch(0.72 0.18 60); }
-.hq-opp-epic { border-top: 3px solid oklch(0.65 0.2 25); }
+.hq-opp-easy,
+.hq-opp-even,
+.hq-opp-hard,
+.hq-opp-epic {
+  border-top-color: var(--border-2);
+}
 .hq-opp-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 .hq-opp-name {
   font-size: clamp(1rem, 1.35vw, 1.6rem);
@@ -1958,8 +1962,32 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: center;
+  text-align: left;
   text-transform: uppercase;
+}
+.hq-opp-power {
+  min-width: 5.3rem;
+  padding: 0.45rem 0.6rem;
+  background: rgba(8, 9, 12, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.hq-opp-power span {
+  display: block;
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: var(--text-dimmer);
+  letter-spacing: 0.12em;
+}
+.hq-opp-power strong {
+  display: block;
+  margin-top: 0.05rem;
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 0.9;
+  font-weight: 900;
+  color: var(--accent);
 }
 .hq-opp-diff {
   font-size: 9px;
@@ -2000,34 +2028,46 @@ html, body {
   font-weight: 800;
 }
 .hq-opp-roster {
-  display: flex;
-  gap: clamp(0.15rem, 0.35vw, 0.45rem);
-  padding: clamp(0.5rem, 0.8vw, 0.8rem);
-  background:
-    radial-gradient(80% 80% at 50% 30%, rgba(255, 240, 220, 0.10), transparent 70%),
-    rgba(20, 22, 30, 0.7);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  justify-content: center;
-  min-height: clamp(5.4rem, 12vh, 8rem);
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(0.35rem, 0.6vw, 0.55rem);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  min-height: 0;
 }
 .hq-opp-roster-cell {
-  width: clamp(2.15rem, 3.3vw, 3.4rem);
-  height: clamp(3.3rem, 5vw, 5rem);
+  position: relative;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: clamp(3.8rem, 6vw, 5.2rem);
   display: flex;
   align-items: center;
   justify-content: center;
+  background:
+    radial-gradient(60% 70% at 50% 45%, rgba(255, 240, 220, 0.18), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.05)),
+    #2a2d3e;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
   line-height: 0;
 }
-.hq-opp-meta {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  font-size: clamp(0.72rem, 0.85vw, 0.9rem);
+.hq-opp-soldier-level {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.28rem;
+  z-index: 2;
+  font-size: 10px;
+  line-height: 1.25;
   font-weight: 800;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0;
 }
 .hq-opp-attack {
   width: 100%;
