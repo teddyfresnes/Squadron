@@ -399,7 +399,7 @@ function SkillTooltip({ weapon, text, tipDir = 'above', children }) {
 
 // ── RandomSoldierCard ────────────────────────────────────────────────────────
 function RandomSoldierCard({ soldier, selected, onSelect }) {
-  const { AnimPreview, WeaponIcon } = window.SquadronUI;
+  const { AnimPreview, WeaponGameIcon } = window.SquadronUI;
   const skill1 = getWeaponByName(soldier.skill1Name);
   const skill2 = getWeaponByName(soldier.skill2Name);
   return (
@@ -418,10 +418,10 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       <div className="sq-soldier-name">{soldier.name}</div>
       <div className="sq-skills-row">
         {skill1
-          ? <SkillTooltip weapon={skill1} tipDir="below"><span className="sq-skill-weapon-2d"><WeaponIcon weapon={skill1} scale={0.45} /></span></SkillTooltip>
+          ? <SkillTooltip weapon={skill1} tipDir="below"><WeaponGameIcon weapon={skill1} /></SkillTooltip>
           : <span className="sq-skill-fallback" />}
         {skill2
-          ? <SkillTooltip weapon={skill2} tipDir="below"><span className="sq-skill-weapon-2d"><WeaponIcon weapon={skill2} scale={0.45} /></span></SkillTooltip>
+          ? <SkillTooltip weapon={skill2} tipDir="below"><WeaponGameIcon weapon={skill2} /></SkillTooltip>
           : <span className="sq-skill-fallback" />}
       </div>
     </button>

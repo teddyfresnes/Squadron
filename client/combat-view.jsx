@@ -72,21 +72,15 @@
     return list.find(w => w.name === name) || null;
   }
 
-  function inventoryWeaponNames(s) {
+  function uniqueWeaponNames(s) {
     const seen = new Set();
-    const names = [];
-    function add(name) {
-      if (!name || seen.has(name)) return;
-      seen.add(name);
-      names.push(name);
-    }
-    add(s.weaponName);
-    const unlocked = Array.isArray(s.unlockedWeapons) ? s.unlockedWeapons : [];
-    unlocked.forEach(add);
-    add(s.preferredWeapon);
-    add(s.skill1Name);
-    add(s.skill2Name);
-    return names;
+    return [s.weaponName, s.preferredWeapon, s.skill1Name, s.skill2Name]
+      .filter(Boolean)
+      .filter(name => {
+        if (seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      });
   }
 
   function magazineSizeFor(s) {
@@ -174,9 +168,9 @@
   function SoldierInspectMenu({ s, arenaW, arenaH, pxPerTile, spriteScale, xOffset, onClose }) {
     const G = window.SquadronGame && window.SquadronGame.helpers;
     const SkillTooltip = G && G.SkillTooltip;
-    const WeaponIcon = UI.WeaponIcon;
+    const WeaponGameIcon = UI.WeaponGameIcon;
     const activeWeapon = getWeaponByName(s.weaponName);
-    const inventoryWeapons = inventoryWeaponNames(s).map(getWeaponByName).filter(Boolean);
+    const skillWeapons = uniqueWeaponNames(s).map(getWeaponByName).filter(Boolean);
     const magSize = magazineSizeFor(s);
     const life = hpPct(s);
     const hpLabel = hpText(s);
@@ -215,20 +209,17 @@
           <div className="cv-inspect-loadout">
             <div className="cv-inspect-weapon">
               <div className="cv-inspect-weapon-head">
-                {activeWeapon && WeaponIcon
-                  ? <span className="cv-weapon-2d"><WeaponIcon weapon={activeWeapon} scale={0.62} /></span>
-                  : <span className="cv-weapon-placeholder" />}
+                {activeWeapon && WeaponGameIcon ? <WeaponGameIcon weapon={activeWeapon} /> : <span className="cv-weapon-placeholder" />}
                 <div className="cv-inspect-weapon-name">{s.weaponName || 'Arme'}</div>
               </div>
               <AmmoRow total={magSize} filled={magSize} />
               <AmmoRow total={magSize} filled={magSize} small />
             </div>
-            <div className="cv-inspect-inventory" aria-label="Inventaire armes">
-              {inventoryWeapons.map(w => {
-                const preferred = w.name === s.weaponName || w.name === s.preferredWeapon;
+            <div className="cv-inspect-skills">
+              {skillWeapons.map(w => {
                 const icon = (
-                  <span className={'cv-inspect-inventory-weapon' + (preferred ? ' is-equipped' : '')} title={w.name}>
-                    {WeaponIcon ? <WeaponIcon weapon={w} scale={0.48} /> : null}
+                  <span className="cv-inspect-skill">
+                    {WeaponGameIcon ? <WeaponGameIcon weapon={w} /> : null}
                   </span>
                 );
                 return SkillTooltip

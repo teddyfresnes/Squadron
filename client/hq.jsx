@@ -540,7 +540,7 @@ function HQRecruit({ pool, tokens, onPick, onBack, onReroll, canAffordReroll }) 
 }
 
 function RecruitCard({ soldier, tokens, cost, onPick }) {
-  const { AnimPreview, WeaponIcon } = UI;
+  const { AnimPreview, WeaponGameIcon } = UI;
   const skill1 = G.getWeaponByName(soldier.skill1Name);
   const skill2 = G.getWeaponByName(soldier.skill2Name);
   const SkillTooltip = G.SkillTooltip;
@@ -556,10 +556,10 @@ function RecruitCard({ soldier, tokens, cost, onPick }) {
       <div className="hq-recruit-name">{soldier.name}</div>
       <div className="hq-recruit-skills">
         {skill1 && (
-          <SkillTooltip weapon={skill1} tipDir="below"><span className="hq-recruit-weapon-2d"><WeaponIcon weapon={skill1} scale={0.48} /></span></SkillTooltip>
+          <SkillTooltip weapon={skill1} tipDir="below"><WeaponGameIcon weapon={skill1} /></SkillTooltip>
         )}
         {skill2 && (
-          <SkillTooltip weapon={skill2} tipDir="below"><span className="hq-recruit-weapon-2d"><WeaponIcon weapon={skill2} scale={0.48} /></span></SkillTooltip>
+          <SkillTooltip weapon={skill2} tipDir="below"><WeaponGameIcon weapon={skill2} /></SkillTooltip>
         )}
       </div>
       <button
@@ -576,24 +576,22 @@ function RecruitCard({ soldier, tokens, cost, onPick }) {
 
 // ── HQSoldierDetail ─────────────────────────────────────────────────────────
 function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename }) {
-  const { AnimPreview, WeaponIcon } = UI;
+  const { AnimPreview, WeaponGameIcon } = UI;
   const SkillTooltip = G.SkillTooltip;
   const allWeapons = (window.Weapons && window.Weapons.list) || [];
   const upgradeCost = calcUpgradeCost(soldier);
   const canUpgrade = tokens >= upgradeCost;
   const unlockedSet = new Set(soldier.unlockedWeapons || []);
-  if (soldier.preferredWeapon) unlockedSet.add(soldier.preferredWeapon);
-  if (soldier.skill1Name) unlockedSet.add(soldier.skill1Name);
-  if (soldier.skill2Name) unlockedSet.add(soldier.skill2Name);
-  const cfgWeapon = soldier.config && allWeapons[soldier.config.weaponIdx];
-  if (cfgWeapon) unlockedSet.add(cfgWeapon.name);
   const preferredWeapon = soldier.preferredWeapon ? G.getWeaponByName(soldier.preferredWeapon) : null;
 
-  // Group only weapons present in the soldier inventory.
-  const grouped = { smg: [], rifle: [], heavy: [], shotgun: [], sniper: [], pistol: [] };
-  for (const w of allWeapons) {
-    if (grouped[w.type] && unlockedSet.has(w.name)) grouped[w.type].push(w);
-  }
+  // Group weapons by type
+  const grouped = useMemo(() => {
+    const g = { smg: [], rifle: [], heavy: [], shotgun: [], sniper: [], pistol: [] };
+    for (const w of allWeapons) {
+      if (g[w.type]) g[w.type].push(w);
+    }
+    return g;
+  }, [allWeapons.length]);
 
   const types = [
     { key: 'pistol',  label: 'Pistolets' },
@@ -611,20 +609,23 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
           <div className="hq-sd-skills-groups">
             {types.map(({ key, label }) => grouped[key] && grouped[key].length > 0 && (
               <div key={key} className="hq-sd-skill-group">
-                <div className="hq-sd-skill-group-title">{label} <span>{grouped[key].length}</span></div>
-                <div className="hq-sd-weapon-grid">
+                <div className="hq-sd-skill-group-title">{label}</div>
+                <div className="hq-sd-skill-grid">
                   {grouped[key].map(w => {
+                    const unlocked = unlockedSet.has(w.name);
                     const preferred = soldier.preferredWeapon === w.name;
                     return (
                       <SkillTooltip key={w.name} weapon={w} tipDir="below">
                         <button
                           type="button"
-                          className={'hq-sd-weapon' + (preferred ? ' preferred' : '')}
-                          onClick={() => onSetPreferred(w.name)}
-                          title={preferred ? 'Arme preferee' : 'Definir comme arme preferee'}
+                          className={'hq-sd-skill' + (unlocked ? ' unlocked' : ' locked') + (preferred ? ' preferred' : '')}
+                          disabled={!unlocked}
+                          onClick={() => unlocked && onSetPreferred(w.name)}
+                          title={unlocked ? (preferred ? 'Arme préférée' : 'Définir comme arme préférée') : 'Non débloquée'}
                         >
-                          <span className="hq-sd-weapon-art"><WeaponIcon weapon={w} scale={0.64} /></span>
-                          {preferred && <div className="hq-sd-skill-star">EQUIPEE</div>}
+                          <WeaponGameIcon weapon={w} />
+                          {!unlocked && <div className="hq-sd-skill-lock">🔒</div>}
+                          {preferred && <div className="hq-sd-skill-star">★</div>}
                         </button>
                       </SkillTooltip>
                     );
@@ -642,7 +643,7 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
               {preferredWeapon
                 ? (
                   <>
-                    <span className="hq-sd-param-weapon-art"><WeaponIcon weapon={preferredWeapon} scale={0.52} /></span>
+                    <WeaponGameIcon weapon={preferredWeapon} />
                     <span>{preferredWeapon.name}</span>
                   </>
                 )
