@@ -9,7 +9,7 @@ Prototype web de création et gestion de soldats 2D façon MiniTroopers, avec se
 ```
 Squadron/
 ├── client/               — Application web (HTML + JS + assets)
-│   ├── Sprite Forge.html — Point d'entrée
+│   ├── Squadron.html — Point d'entrée
 │   ├── app.jsx           — UI éditeur (mode dev)
 │   ├── game.jsx          — UI jeu / squads (mode prod) ← SERVER_URL ici
 │   ├── root.jsx          — Switcher dev/prod
@@ -54,7 +54,7 @@ cd client
 python -m http.server 8080
 ```
 
-Ouvrir : **http://localhost:8080/Sprite%20Forge.html**
+Ouvrir : **http://localhost:8080/Squadron.html**
 
 > Le client cherche automatiquement le serveur au démarrage.  
 > S'il ne répond pas en 10 s, il propose le **mode hors ligne** (données en localStorage).

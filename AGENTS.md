@@ -14,14 +14,14 @@ docs/    — Sous-docs agents (client, server, combat)
 ```
 
 Démarrage :
-- **Client** : `cd client && python -m http.server 8080` → http://localhost:8080/Sprite%20Forge.html
+- **Client** : `cd client && python -m http.server 8080` → http://localhost:8080/Squadron.html
 - **Serveur** : `cd server && npm start` → port 3001
 
 ---
 
 ## Globals window (ordre de chargement)
 
-Tous les scripts sont chargés dans `Sprite Forge.html` dans cet ordre **exact** :
+Tous les scripts sont chargés dans `Squadron.html` dans cet ordre **exact** :
 
 | Ordre | Fichier | Expose |
 |---|---|---|

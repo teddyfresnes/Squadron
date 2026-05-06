@@ -8,7 +8,7 @@
 
 | Fichier | Rôle | Global exposé |
 |---|---|---|
-| `Sprite Forge.html` | Point d'entrée, ordre de chargement | — |
+| `Squadron.html` | Point d'entrée, ordre de chargement | — |
 | `palette.js` | Palettes couleurs | `Palette` |
 | `sprite-engine.js` | Helpers canvas bas niveau (px, rect, stamp, outlineRegion) | `Engine` |
 | `parts.js` | Dessin pixel-art de chaque membre du soldat | `Parts` |

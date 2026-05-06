@@ -6,7 +6,7 @@
 
 ```bash
 cd server && npm start                   # serveur → port 3001
-cd client && python -m http.server 8080  # client  → http://localhost:8080/Sprite%20Forge.html
+cd client && python -m http.server 8080  # client  → http://localhost:8080/Squadron.html
 ```
 
 ## Règle fondamentale
