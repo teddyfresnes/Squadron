@@ -10,7 +10,7 @@
   const STAGE_W = (UI && UI.STAGE_W) || 256;
   const STAGE_H = (UI && UI.STAGE_H) || 112;
   const GROUND_Y_RATIO = 0.78;          // where the ground line sits inside the arena
-  const BULLET_TRAIL_MS = 220;          // turn-based pacing → trails linger longer
+  const BULLET_TRAIL_MS = 300;          // turn-based pacing → trails linger longer
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
@@ -86,6 +86,42 @@
   function magazineSizeFor(s) {
     const stats = s.weapon || (window.CombatSim && window.CombatSim.getWeaponStats(s.weaponName));
     return Math.max(1, Math.round((stats && stats.magazineSize) || DEFAULT_MAGAZINE_SIZE));
+  }
+
+  const TRAIL_BODY_POINTS = {
+    head: { x: 0, y: 0.74 },
+    chestLeft: { x: -5, y: 0.58 },
+    chestRight: { x: 5, y: 0.58 },
+    abdomen: { x: 0, y: 0.47 },
+    leftArm: { x: -13, y: 0.52 },
+    rightArm: { x: 13, y: 0.52 },
+    leftLeg: { x: -5, y: 0.3 },
+    rightLeg: { x: 5, y: 0.3 },
+    torso: { x: 0, y: 0.55 },
+    feet: { x: 0, y: 0.16 }
+  };
+
+  const TRAIL_AIM_PARTS = ['head', 'chestLeft', 'chestRight', 'abdomen', 'leftLeg', 'rightLeg', 'feet'];
+
+  function randomTrailPart(rng) {
+    return TRAIL_AIM_PARTS[Math.floor(rng() * TRAIL_AIM_PARTS.length)] || 'torso';
+  }
+
+  function trailMissOffset(rng, ax, tx) {
+    const dir = tx >= ax ? 1 : -1;
+    const r = rng();
+    if (r < 0.25) return { x: (rng() - 0.5) * 20, y: -(12 + rng() * 26) };
+    if (r < 0.5) return { x: dir * (22 + rng() * 44), y: (rng() - 0.5) * 18 };
+    if (r < 0.75) return { x: (rng() - 0.5) * 24, y: 10 + rng() * 24 };
+    return { x: (rng() < 0.5 ? -1 : 1) * (14 + rng() * 32), y: (rng() - 0.5) * 24 };
+  }
+
+  function bodyTrailPoint(part, spriteScale) {
+    const p = TRAIL_BODY_POINTS[part] || TRAIL_BODY_POINTS.torso;
+    return {
+      x: p.x * spriteScale,
+      y: STAGE_H * spriteScale * p.y
+    };
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
@@ -246,17 +282,19 @@
           const k = Math.max(0, 1 - age / BULLET_TRAIL_MS);
           if (k <= 0) return null;
           const groundY = arenaH * GROUND_Y_RATIO;
-          const chestY = STAGE_H * spriteScale * 0.55;
-          const x1 = xOffset + tr.ax * pxPerTile;
-          const y1 = groundY + tr.ay * laneScale - chestY;
-          const x2 = xOffset + tr.tx * pxPerTile + (tr.hit ? 0 : tr.missDx);
-          const y2 = groundY + tr.ty * laneScale - chestY + (tr.hit ? 0 : tr.missDy);
+          const dir = tr.tx >= tr.ax ? 1 : -1;
+          const muzzle = bodyTrailPoint('torso', spriteScale);
+          const target = bodyTrailPoint(tr.aimPart || tr.bodyPart || 'torso', spriteScale);
+          const x1 = xOffset + tr.ax * pxPerTile + dir * 14 * spriteScale;
+          const y1 = groundY + tr.ay * laneScale - muzzle.y + 1 * spriteScale;
+          const x2 = xOffset + tr.tx * pxPerTile + target.x + (tr.hit ? tr.impactDx : tr.missDx);
+          const y2 = groundY + tr.ty * laneScale - target.y + (tr.hit ? tr.impactDy : tr.missDy);
           const heavyTrail = tr.weaponCategory === 'sniper' || tr.weaponCategory === 'heavy';
           return (
             <line key={tr.key}
                   x1={x1} y1={y1} x2={x2} y2={y2}
                   stroke={tr.hit ? '#ffd87a' : '#ffe9a8'}
-                  strokeOpacity={tr.visualOnly ? k * 0.55 : k}
+                  strokeOpacity={k}
                   strokeWidth={heavyTrail ? 2 : 1.4} />
           );
         })}
@@ -385,15 +423,20 @@
           for (let i = lastEventIdx; i < battle.events.length; i++) {
             const ev = battle.events[i];
             if (ev.type === 'shoot') {
+              const aimPart = ev.bodyPart || randomTrailPart(trailRng);
+              const miss = ev.hit ? { x: 0, y: 0 } : trailMissOffset(trailRng, ev.ax, ev.tx);
               newOnes.push({
                 key: 'tr' + i,
                 ax: ev.ax, ay: ev.ay,
                 tx: ev.tx, ty: ev.ty,
                 hit: ev.hit,
-                visualOnly: ev.visualOnly,
                 weaponCategory: ev.weaponCategory,
-                missDx: (trailRng() - 0.5) * 24,
-                missDy: (trailRng() - 0.5) * 14,
+                bodyPart: ev.bodyPart,
+                aimPart,
+                impactDx: (trailRng() - 0.5) * 5,
+                impactDy: (trailRng() - 0.5) * 5,
+                missDx: miss.x,
+                missDy: miss.y,
                 bornMs: now
               });
             }

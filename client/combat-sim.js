@@ -115,39 +115,8 @@
     return min + Math.floor((rng ? rng() : Math.random()) * (max - min + 1));
   }
 
-  function visualBurstCount(stats) {
-    const configured = Math.max(1, Math.round(stats && stats.burst || 1));
-    if (configured > 1) return configured;
-    if (!stats || stats.weaponType !== 'automatic') return configured;
-    if (stats.category === 'heavy') return stats.id === 'HEAVY-13' ? 6 : 4;
-    if (stats.category === 'rifle' || stats.category === 'smg') return 3;
-    return configured;
-  }
-
-  function usesSimulatedAutoBurst(stats, burst) {
-    const configured = Math.max(1, Math.round(stats && stats.burst || 1));
-    return !!stats && stats.weaponType === 'automatic' && configured === 1 && burst > 1;
-  }
-
-  function burstHitChance(stats, burst, simulatedAutoBurst) {
-    const accuracy = stats && stats.accuracy != null ? stats.accuracy : 0.5;
-    if (!simulatedAutoBurst || burst <= 1) return accuracy;
-    return 1 - Math.pow(1 - accuracy, 1 / burst);
-  }
-
-  function splitDamage(total, count) {
-    if (count <= 0) return [];
-    if (count === 1) return [total];
-    const out = [];
-    let left = total;
-    for (let i = 0; i < count; i++) {
-      const damage = i === count - 1
-        ? left
-        : Math.max(0.1, Math.round((left / (count - i)) * 10) / 10);
-      out.push(Math.round(damage * 10) / 10);
-      left = Math.round((left - damage) * 10) / 10;
-    }
-    return out;
+  function burstCount(stats) {
+    return Math.max(1, Math.round(stats && stats.burst || 1));
   }
 
   function shotInterval(stats, count) {
@@ -425,9 +394,8 @@
       }
 
       // â”€â”€ SHOOT turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      const burst = visualBurstCount(w);
-      const simulatedAutoBurst = usesSimulatedAutoBurst(w, burst);
-      const hitChance = burstHitChance(w, burst, simulatedAutoBurst);
+      const burst = burstCount(w);
+      const hitChance = w.accuracy != null ? w.accuracy : 0.5;
       const aimDur = actor.aimed ? 0 : animDur('aim');
       const shotAnim = animDur('shoot');
       const unAimDur = animDur('unaim');
@@ -442,16 +410,10 @@
         shots.push({
           atT: aimDur + i * interval,        // local time within the turn
           index: i,
-          visualOnly: false,
           hit,
           part: hit ? rollHitPart(rng) : null,
-          damage: hit && !simulatedAutoBurst ? rollDamage(w, rng) : 0
+          damage: hit ? rollDamage(w, rng) : 0
         });
-      }
-      if (simulatedAutoBurst) {
-        const hits = shots.filter(shot => shot.hit);
-        const damageParts = splitDamage(hits.length ? rollDamage(w, rng) : 0, hits.length);
-        for (let i = 0; i < hits.length; i++) hits[i].damage = damageParts[i];
       }
       const lastShotT = shots[shots.length - 1].atT;
       const unaimStartT = lastShotT + recovery;
@@ -595,7 +557,6 @@
               actorId: a.actorId, targetId: a.targetId,
               ax: actor.x, ay: actor.laneOffsetPx,
               tx: target.x, ty: target.laneOffsetPx,
-              visualOnly: shot.visualOnly,
               shotIndex: shot.index,
               shotCount: a.shots.length,
               weaponCategory: a.weaponCategory,

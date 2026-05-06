@@ -119,7 +119,7 @@ smg, heavy, shotgun → 'front'
 
 ```js
 { t, type: 'turn',  actorId, action: 'move'|'shoot'|'idle' }
-{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, visualOnly?: bool, shotIndex?: number, shotCount?: number, weaponCategory?: string, weaponType?: string, bodyPart?: 'head'|'chestLeft'|'chestRight'|'abdomen'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg', damage }
+{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, shotIndex?: number, shotCount?: number, weaponCategory?: string, weaponType?: string, bodyPart?: 'head'|'chestLeft'|'chestRight'|'abdomen'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg', damage }
 { t, type: 'hit',   targetId, hp, bodyPart, damage, bodyHits }
 { t, type: 'die',   targetId, bodyPart, damage }
 { t, type: 'end',   winner: 'A'|'B'|'draw' }
@@ -141,7 +141,7 @@ smg, heavy, shotgun → 'front'
 
 `stateT` = temps écoulé dans l'état courant (en secondes), passé à `frameForState()` dans combat-view.
 
-Les armes automatiques avec `burst:1` produisent une rafale réelle courte en combat. Pour préserver l'équilibrage, le simulateur garde le budget de dégâts de l'arme et le répartit entre les balles de la rafale qui touchent. Les armes qui ont `burst > 1` dans `weapon-config.json` gardent leurs tirs réels multiples avec les dégâts par balle de la config.
+`burst` dans `weapon-config.json` est la source de vérité du nombre de coups dans une action de tir. Chaque coup a son propre jet d'accuracy, sa propre zone visée/touchée, ses dégâts, son trail et peut relancer l'animation `hurt` de la cible.
 
 ---
 
@@ -159,7 +159,7 @@ Les armes automatiques avec `burst:1` produisent une rafale réelle courte en co
 - Loop `requestAnimationFrame` : accumulator fixe-step (`DT`), max 6 pas par frame
 - `ArenaSoldier` : `<button>` positionné absolument avec `<SpriteCanvas>` + ombre au sol ; la barre de vie au-dessus du soldat n'apparait que brièvement après un hit
 - `SoldierInspectMenu` : panneau contextuel (nom, niveau, corps touché, vie verticale, munitions, inventaire armes en vignettes 2D avec tooltip)
-- `TrailsLayer` : SVG overlay, trails disparaissent en 220 ms
+- `TrailsLayer` : SVG overlay, trails disparaissent en 300 ms
 - `ResultOverlay` : affiché quand `battle.done && battle.endHoldT >= 1.2`
 
 ---

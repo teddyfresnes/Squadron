@@ -199,7 +199,7 @@
   Anims.aim = {
     name: 'Aim',
     frames: 8,
-    fps: 16,
+    fps: 18,
     loop: false,
     get: function (i) {
       const d = mark(defaults(), 'aim', i);
@@ -278,7 +278,7 @@
   Anims.unaim = {
     name: 'Lower Weapon',
     frames: 8,
-    fps: 16,
+    fps: 18,
     loop: false,
     get: function (i) {
       const d = mark(defaults(), 'unaim', i);
