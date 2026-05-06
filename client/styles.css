@@ -1495,19 +1495,21 @@ html, body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 900;
+  flex: 0 0 1.35rem;
 }
-.hq-stat-tokens .hq-stat-icon {
-  background: linear-gradient(135deg, oklch(0.78 0.16 85), oklch(0.62 0.18 60));
-  color: #2a1a06;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+.hq-resource-icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  image-rendering: auto;
 }
-.hq-stat-power .hq-stat-icon {
-  background: linear-gradient(135deg, oklch(0.8 0.14 220), oklch(0.62 0.16 250));
-  color: #06182a;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+.hq-resource-icon-inline {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.14em;
+  margin-left: 0.08em;
 }
 .hq-stat-key {
   font-size: clamp(0.5rem, 0.65vw, 0.62rem);
@@ -2032,26 +2034,28 @@ html, body {
   text-transform: uppercase;
 }
 .hq-opp-power {
-  min-width: 5.3rem;
-  padding: 0.45rem 0.6rem;
-  background: rgba(8, 9, 12, 0.48);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  text-align: right;
+  min-width: 0;
+  padding: 0.32rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025)),
+    rgba(8, 9, 12, 0.54);
+  border: 1px solid rgba(217, 150, 80, 0.28);
+  border-radius: 999px;
   flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
-.hq-opp-power span {
-  display: block;
-  font-size: 0.55rem;
-  font-weight: 800;
-  color: var(--text-dimmer);
-  letter-spacing: 0.12em;
+.hq-opp-power-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 1.35rem;
 }
 .hq-opp-power strong {
   display: block;
-  margin-top: 0.05rem;
-  font-size: clamp(1.35rem, 2vw, 2rem);
-  line-height: 0.9;
+  font-size: clamp(1rem, 1.35vw, 1.32rem);
+  line-height: 1;
   font-weight: 900;
   color: var(--accent);
 }
@@ -2227,6 +2231,9 @@ html, body {
 .hq-recruit-cost {
   color: oklch(0.85 0.14 85);
   font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18em;
 }
 
 /* ── Soldier detail ────────────────────────────────────────────────────── */
@@ -2416,7 +2423,15 @@ html, body {
   letter-spacing: 0;
 }
 .hq-sd-upgrade-title { font-size: 13px; font-weight: 800; }
-.hq-sd-upgrade-cost { font-size: 16px; font-weight: 800; color: oklch(0.85 0.14 85); letter-spacing: 0; }
+.hq-sd-upgrade-cost {
+  font-size: 16px;
+  font-weight: 800;
+  color: oklch(0.85 0.14 85);
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18em;
+}
 .hq-sd-upgrade-sub,
 .hq-sd-upgrade-hint { display: none; }
 

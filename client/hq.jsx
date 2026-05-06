@@ -18,6 +18,8 @@ const RECRUIT_COST_BASE = 100;
 const UPGRADE_COST_BASE = 80;
 const STARTING_TOKENS   = 250;
 const OPPONENT_COUNT    = 8;
+const TOKEN_ICON_SRC    = 'assets/images/icons/coin.png';
+const POWER_ICON_SRC    = 'assets/images/icons/power.png';
 
 const FAKE_SQUAD_NAMES = [
   'Wolves','Cobra','Phantom','Iron','Viper','Sentinels','Black Hawks','Falcons',
@@ -27,6 +29,14 @@ const FAKE_SQUAD_NAMES = [
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function todayKey() { return new Date().toISOString().slice(0, 10); }
+
+function TokenIcon({ className = '' }) {
+  return <img className={'hq-resource-icon hq-token-icon' + (className ? ' ' + className : '')} src={TOKEN_ICON_SRC} alt="" aria-hidden="true" />;
+}
+
+function PowerIcon({ className = '' }) {
+  return <img className={'hq-resource-icon hq-power-icon' + (className ? ' ' + className : '')} src={POWER_ICON_SRC} alt="" aria-hidden="true" />;
+}
 
 function loadHQ(sname) {
   try {
@@ -296,12 +306,12 @@ function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting, tokens
     <aside className="hq-sidebar">
       <div className="hq-sidebar-stats">
         <div className="hq-stat hq-stat-tokens" title="Tokens">
-          <span className="hq-stat-icon" aria-hidden="true">●</span>
+          <span className="hq-stat-icon" aria-hidden="true"><TokenIcon /></span>
           <span className="hq-stat-key">TOKENS</span>
           <span className="hq-stat-val">{tokens}</span>
         </div>
         <div className="hq-stat hq-stat-power" title="Power">
-          <span className="hq-stat-icon" aria-hidden="true">⚡</span>
+          <span className="hq-stat-icon" aria-hidden="true"><PowerIcon /></span>
           <span className="hq-stat-key">POWER</span>
           <span className="hq-stat-val">{power}</span>
         </div>
@@ -501,7 +511,7 @@ function OpponentCard({ opp, myPower, onAttack }) {
       <div className="hq-opp-head">
         <div className="hq-opp-name">{opp.name}</div>
         <div className="hq-opp-power">
-          <span>POWER</span>
+          <PowerIcon className="hq-opp-power-icon" />
           <strong>{opp.power}</strong>
         </div>
       </div>
@@ -528,7 +538,7 @@ function HQRecruit({ pool, tokens, onPick, onBack, onReroll, canAffordReroll }) 
 
       <div className="hq-section-eyebrow">RECRUTEMENT</div>
       <h2 className="hq-section-title">5 soldats disponibles aujourd'hui</h2>
-      <p className="hq-section-hint">La sélection change chaque jour. Coût : {RECRUIT_COST_BASE} tokens par soldat.</p>
+      <p className="hq-section-hint">La sélection change chaque jour. Coût : {RECRUIT_COST_BASE} <TokenIcon className="hq-resource-icon-inline" /> par soldat.</p>
 
       <div className="hq-recruit-grid">
         {pool.map((s, i) => (
@@ -568,7 +578,7 @@ function RecruitCard({ soldier, tokens, cost, onPick }) {
         disabled={!canAfford}
         onClick={onPick}
       >
-        RECRUTER · <span className="hq-recruit-cost">{cost} ●</span>
+        RECRUTER · <span className="hq-recruit-cost">{cost} <TokenIcon className="hq-resource-icon-inline" /></span>
       </button>
     </div>
   );
@@ -667,7 +677,7 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
               onClick={() => canUpgrade && onUpgrade()}
             >
               <span className="hq-sd-upgrade-title">AMÉLIORER</span>
-              <span className="hq-sd-upgrade-cost">{upgradeCost} ●</span>
+              <span className="hq-sd-upgrade-cost">{upgradeCost} <TokenIcon className="hq-resource-icon-inline" /></span>
             </button>
           </div>
         </div>
