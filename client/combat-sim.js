@@ -63,15 +63,15 @@
 
   // â”€â”€ Weapon stats loader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const statsByName = {};
-  let statsLoadPromise = null;
 
   function loadWeaponStats() {
-    if (statsLoadPromise) return statsLoadPromise;
-    statsLoadPromise = fetch('./weapon-config.json')
+    return fetch('./weapon-config.json?ts=' + Date.now(), { cache: 'no-store' })
       .then(r => r.json())
-      .then(data => { for (const w of data.weapons) statsByName[w.name] = w; })
+      .then(data => {
+        for (const key of Object.keys(statsByName)) delete statsByName[key];
+        for (const w of data.weapons) statsByName[w.name] = w;
+      })
       .catch(() => {});
-    return statsLoadPromise;
   }
   function getWeaponStats(name) { return statsByName[name] || null; }
 

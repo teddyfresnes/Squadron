@@ -218,7 +218,7 @@
     }
   };
 
-  // ---------- SHOOT (6 frames: pre, bang, smoke, settle, reset) ----------
+  // ---------- SHOOT (6 frames: bang, smoke, settle, reset) ----------
   Anims.shoot = {
     name: 'Shoot',
     frames: 6,
@@ -234,10 +234,6 @@
       d.barrelLocked = false;
       d.stance = 'wide';
       if (i === 0) {
-        d.weaponDX = 0;
-        d.weaponAngle = 0;
-        d.recoilStage = 'pre';
-      } else if (i === 1) {
         d.weaponDX = -p.recoil;
         d.weaponDY = p.lift;
         d.weaponAngle = p.angle - burstClimb;
@@ -247,7 +243,7 @@
         d.bodyDY = -p.bodyKick;
         d.headDY = -p.headKick;
         d.recoilStage = 'kick';
-      } else if (i === 2) {
+      } else if (i === 1) {
         d.weaponDX = -p.recoil * 0.55;
         d.weaponDY = p.lift * 0.45;
         d.weaponAngle = (p.angle - burstClimb) * 0.55;
@@ -255,12 +251,12 @@
         d.bodyDY = -p.bodyKick * 0.45;
         d.headDY = -p.headKick * 0.35;
         d.recoilStage = 'settle';
-      } else if (i === 3) {
+      } else if (i === 2) {
         d.weaponDX = -p.recoil * 0.2;
         d.weaponAngle = (p.angle - burstClimb) * 0.18;
         d.muzzleSmoke = p.smoke * 0.75;
         d.recoilStage = 'smoke';
-      } else if (i === 4) {
+      } else if (i === 3) {
         d.weaponDX = -p.recoil * 0.08;
         d.weaponAngle = 0;
         d.muzzleSmoke = p.smoke * 0.35;
