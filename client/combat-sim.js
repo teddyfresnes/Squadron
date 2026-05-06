@@ -115,6 +115,33 @@
     return min + Math.floor((rng ? rng() : Math.random()) * (max - min + 1));
   }
 
+  function visualBurstCount(stats) {
+    const configured = Math.max(1, Math.round(stats && stats.burst || 1));
+    if (configured > 1) return configured;
+    if (!stats || stats.weaponType !== 'automatic') return configured;
+    if (stats.category === 'heavy') return stats.id === 'HEAVY-13' ? 6 : 4;
+    if (stats.category === 'rifle' || stats.category === 'smg') return 3;
+    return configured;
+  }
+
+  function shotInterval(stats, count) {
+    if (count <= 1) return 0;
+    const bySpeed = stats && stats.shootSpeed > 0 ? 1 / stats.shootSpeed : null;
+    const byRecovery = stats && stats.recovery > 0 ? stats.recovery : 0.16;
+    return clamp(Math.min(bySpeed || byRecovery, byRecovery), 0.07, 0.85);
+  }
+
+  function shotProfileKey(stats) {
+    if (!stats) return 'pistol';
+    if (stats.category === 'sniper') return 'sniper';
+    if (stats.category === 'shotgun') return 'shotgun';
+    if (stats.category === 'heavy') return 'heavy';
+    if (stats.weaponType === 'automatic') return 'auto';
+    if (stats.weaponType === 'burst') return 'burst';
+    if (stats.category === 'pistol') return 'pistol';
+    return 'auto';
+  }
+
   function spawnXFor(team, idxInTeam, teamSize) {
     const n = Math.max(1, teamSize || 1);
     const fromEdge = n === 1
@@ -145,7 +172,7 @@
   // â”€â”€ Combatant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function defaultStats() {
     return {
-      name: 'Glock 17', category: 'pistol',
+      name: 'Glock 17', category: 'pistol', weaponType: 'semi_auto',
       damage: 2, damageMin: 1, damageMax: 2, accuracy: 0.5, shootSpeed: 2, burst: 1,
       recovery: 0.2, rangeMin: 1, rangeMax: 10
     };
@@ -234,6 +261,7 @@
       facing: team === 'A' ? 1 : -1,
       state: 'idle',
       stateT: 0,
+      animState: null,
       cooldown: 0,            // when this soldier next gets a turn
       initiative: 0,          // boost stat (V1: always 0; ready for skills)
       aimed: false,
@@ -371,29 +399,41 @@
       }
 
       // â”€â”€ SHOOT turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      const burst = Math.max(1, w.burst || 1);
+      const burst = visualBurstCount(w);
+      const damagingShots = Math.min(burst, Math.max(1, Math.round(w.burst || 1)));
       const aimDur = actor.aimed ? 0 : animDur('aim');
       const shotAnim = animDur('shoot');
-      const recovery = w.recovery || 0.1;
+      const unAimDur = animDur('unaim');
+      const interval = shotInterval(w, burst);
+      const recovery = Math.max(shotAnim, w.recovery || 0.1);
+      const shotProfile = shotProfileKey(w);
 
       // Pre-roll shots so the action is a self-contained, deterministic plan.
       const shots = [];
       for (let i = 0; i < burst; i++) {
+        const visualOnly = i >= damagingShots;
         shots.push({
-          atT: aimDur + i * recovery,        // local time within the turn
-          hit: rng() < (w.accuracy != null ? w.accuracy : 0.5),
-          part: rollHitPart(rng),
-          damage: rollDamage(w, rng)
+          atT: aimDur + i * interval,        // local time within the turn
+          index: i,
+          visualOnly,
+          hit: !visualOnly && rng() < (w.accuracy != null ? w.accuracy : 0.5),
+          part: visualOnly ? null : rollHitPart(rng),
+          damage: visualOnly ? 0 : rollDamage(w, rng)
         });
       }
       const lastShotT = shots[shots.length - 1].atT;
-      const duration = lastShotT + shotAnim;
+      const unaimStartT = lastShotT + recovery;
+      const duration = unaimStartT + unAimDur;
 
       const action = {
         actorId: actor.id, targetId: target.id,
         type: 'shoot',
         startT: worldT, duration,
         aimDur, shots, shotsFired: 0,
+        shotProfile,
+        weaponCategory: w.category,
+        weaponType: w.weaponType,
+        unaimStartT,
         facing: actor.facing,
         ax: actor.x, ay: actor.laneOffsetPx,
         tx: target.x, ty: target.laneOffsetPx
@@ -459,13 +499,16 @@
 
       if (action.type === 'move') {
         actor.state = 'run'; actor.stateT = 0;
+        actor.animState = null;
         actor.facing = action.facing;
       } else if (action.type === 'shoot') {
         actor.facing = action.facing;
+        actor.animState = null;
         if (action.aimDur > 0) { actor.state = 'aim'; actor.stateT = 0; }
         else { actor.state = 'shoot'; actor.stateT = 0; }
       } else {
         actor.state = 'idle';
+        actor.animState = null;
       }
 
       activeActions.push(action);
@@ -506,6 +549,13 @@
         while (a.shotsFired < a.shots.length && a.elapsed >= a.shots[a.shotsFired].atT) {
           const shot = a.shots[a.shotsFired++];
           const target = all.find(s => s.id === a.targetId);
+          actor.animState = {
+            shotProfile: a.shotProfile,
+            weaponCategory: a.weaponCategory,
+            weaponType: a.weaponType,
+            shotIndex: shot.index,
+            shotCount: a.shots.length
+          };
           if (target && target.hp > 0) {
             const bodyPart = shot.part || 'torso';
             events.push({
@@ -513,6 +563,11 @@
               actorId: a.actorId, targetId: a.targetId,
               ax: actor.x, ay: actor.laneOffsetPx,
               tx: target.x, ty: target.laneOffsetPx,
+              visualOnly: shot.visualOnly,
+              shotIndex: shot.index,
+              shotCount: a.shots.length,
+              weaponCategory: a.weaponCategory,
+              weaponType: a.weaponType,
               hit: shot.hit,
               bodyPart: shot.hit ? bodyPart : null,
               damage: shot.hit ? shot.damage : 0
@@ -541,6 +596,14 @@
         if (a.elapsed < a.aimDur) {
           if (actor.state !== 'aim') { actor.state = 'aim'; actor.stateT = a.elapsed; }
           else actor.stateT = a.elapsed;
+        } else if (a.elapsed >= a.unaimStartT) {
+          actor.animState = {
+            shotProfile: a.shotProfile,
+            weaponCategory: a.weaponCategory,
+            weaponType: a.weaponType
+          };
+          actor.state = 'unaim';
+          actor.stateT = a.elapsed - a.unaimStartT;
         } else if (actor.state === 'aim') {
           actor.state = 'shoot'; actor.stateT = 0;
         } else if (actor.state === 'shoot') {
@@ -553,6 +616,10 @@
 
       if (a.elapsed >= a.duration) {
         if (typeof a.commit === 'function') a.commit();
+        if (a.type === 'shoot') {
+          actor.aimed = false;
+          actor.animState = null;
+        }
         completed.add(a);
       }
     }
@@ -567,7 +634,12 @@
           if (s.stateT >= animDur('hurt')) { s.state = 'idle'; s.stateT = 0; }
           continue;
         }
-        if (s.state !== 'idle') { s.state = 'idle'; s.stateT = 0; }
+        if (s.state === 'unaim') {
+          s.stateT += dt;
+          if (s.stateT >= animDur('unaim')) { s.state = 'idle'; s.stateT = 0; s.animState = null; }
+          continue;
+        }
+        if (s.state !== 'idle') { s.state = 'idle'; s.stateT = 0; s.animState = null; }
         else s.stateT += dt;
       }
     }

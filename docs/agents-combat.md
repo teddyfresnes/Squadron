@@ -65,7 +65,7 @@ battle.aliveCount('A')  // soldats vivants de l'équipe A
 | Type | Condition | Durée |
 |---|---|---|
 | `move` | Cible trop loin (> rangeMax) ou trop proche (< rangeMin) | dist / SPEED_TILES_PER_SEC |
-| `shoot` | Dans la portée | aimDur + shots × recovery |
+| `shoot` | Dans la portée | aimDur + rafale visuelle + recovery + unaim |
 | `idle` | Pas de cible vivante | 0.4 s |
 
 Après chaque action : `cooldown += duration + TURN_GAP (0.04s)`.
@@ -119,7 +119,7 @@ smg, heavy, shotgun → 'front'
 
 ```js
 { t, type: 'turn',  actorId, action: 'move'|'shoot'|'idle' }
-{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, bodyPart?: 'head'|'chestLeft'|'chestRight'|'abdomen'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg', damage }
+{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, visualOnly?: bool, shotIndex?: number, shotCount?: number, weaponCategory?: string, weaponType?: string, bodyPart?: 'head'|'chestLeft'|'chestRight'|'abdomen'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg', damage }
 { t, type: 'hit',   targetId, hp, bodyPart, damage, bodyHits }
 { t, type: 'die',   targetId, bodyPart, damage }
 { t, type: 'end',   winner: 'A'|'B'|'draw' }
@@ -135,10 +135,13 @@ smg, heavy, shotgun → 'front'
 | `'run'` | Tour de déplacement ou phase d'entrée |
 | `'aim'` | Début d'un tir (si pas encore aimed) |
 | `'shoot'` | Tir en cours |
+| `'unaim'` | Baisse l'arme après la fin d'une action de tir |
 | `'hurt'` | Vient d'être touché (dure `Anims.hurt.frames/fps`, puis → idle) |
 | `'dead'` | HP ≤ 0, animation finale |
 
 `stateT` = temps écoulé dans l'état courant (en secondes), passé à `frameForState()` dans combat-view.
+
+Les armes automatiques peuvent produire des `shoot` events `visualOnly:true` pour rendre une courte rafale (flash/trail/fumée) sans ajouter de dégâts supplémentaires. Les armes qui ont `burst > 1` dans `weapon-config.json` gardent des tirs réels multiples.
 
 ---
 

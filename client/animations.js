@@ -44,6 +44,8 @@
       frontArm: null, backArm: null,
       weaponAngle: 0, weaponDX: 0, weaponDY: 0,
       muzzleFlash: false,
+      muzzleFlashSize: 1,
+      muzzleSmoke: 0,
       eyesClosed: false,
       deathAngle: 0, rollAngle: 0,
       showWeapon: true, showBody: true,
@@ -74,6 +76,27 @@
 
   function easeInOutSine(t) {
     return 0.5 - Math.cos(Math.PI * t) * 0.5;
+  }
+
+  const SHOT_PROFILES = {
+    pistol: { recoil: 1.4, lift: -0.1, angle: -0.035, bodyKick: 0.45, headKick: 0.05, flash: 0.9, smoke: 0.55, climb: 0 },
+    auto: { recoil: 1.8, lift: -0.18, angle: -0.04, bodyKick: 0.35, headKick: 0.04, flash: 0.95, smoke: 0.75, climb: 0.018 },
+    burst: { recoil: 2.0, lift: -0.2, angle: -0.05, bodyKick: 0.45, headKick: 0.06, flash: 1.05, smoke: 0.85, climb: 0.022 },
+    shotgun: { recoil: 3.0, lift: -0.35, angle: -0.085, bodyKick: 1.0, headKick: 0.18, flash: 1.55, smoke: 1.8, climb: 0.01 },
+    sniper: { recoil: 3.8, lift: -0.45, angle: -0.13, bodyKick: 1.35, headKick: 0.28, flash: 1.25, smoke: 1.75, climb: 0 },
+    heavy: { recoil: 3.2, lift: -0.28, angle: -0.07, bodyKick: 0.95, headKick: 0.14, flash: 1.55, smoke: 2.1, climb: 0.014 }
+  };
+
+  function shotProfile(meta) {
+    meta = meta || {};
+    if (SHOT_PROFILES[meta.shotProfile]) return SHOT_PROFILES[meta.shotProfile];
+    if (meta.weaponCategory === 'sniper') return SHOT_PROFILES.sniper;
+    if (meta.weaponCategory === 'shotgun') return SHOT_PROFILES.shotgun;
+    if (meta.weaponCategory === 'heavy') return SHOT_PROFILES.heavy;
+    if (meta.weaponType === 'automatic') return SHOT_PROFILES.auto;
+    if (meta.weaponType === 'burst') return SHOT_PROFILES.burst;
+    if (meta.weaponCategory === 'pistol') return SHOT_PROFILES.pistol;
+    return SHOT_PROFILES.auto;
   }
 
   // ---------- IDLE (8 frames, soft breathing) ----------
@@ -199,36 +222,80 @@
     }
   };
 
-  // ---------- SHOOT (4 frames: pre, bang+recoil, recoil-hold, reset) ----------
+  // ---------- SHOOT (6 frames: pre, bang, smoke, settle, reset) ----------
   Anims.shoot = {
     name: 'Shoot',
-    frames: 4,
-    fps: 14,
-    get: function (i) {
+    frames: 6,
+    fps: 20,
+    loop: false,
+    get: function (i, meta) {
       const d = mark(defaults(), 'shoot', i);
+      const p = shotProfile(meta);
+      const shotIndex = meta && meta.shotIndex ? meta.shotIndex : 0;
+      const burstClimb = Math.min(0.06, shotIndex * (p.climb || 0));
       d.aimAngle = 0;
       d.barrelAngle = 0;
-      d.barrelLocked = true;
+      d.barrelLocked = false;
       d.stance = 'wide';
       if (i === 0) {
         d.weaponDX = 0;
         d.weaponAngle = 0;
         d.recoilStage = 'pre';
       } else if (i === 1) {
-        d.weaponDX = -2;
-        d.weaponAngle = 0;
+        d.weaponDX = -p.recoil;
+        d.weaponDY = p.lift;
+        d.weaponAngle = p.angle - burstClimb;
         d.muzzleFlash = true;
-        d.bodyDY = -1;
+        d.muzzleFlashSize = p.flash;
+        d.muzzleSmoke = p.smoke * 0.55;
+        d.bodyDY = -p.bodyKick;
+        d.headDY = -p.headKick;
         d.recoilStage = 'kick';
       } else if (i === 2) {
-        d.weaponDX = -1;
-        d.weaponAngle = 0;
+        d.weaponDX = -p.recoil * 0.55;
+        d.weaponDY = p.lift * 0.45;
+        d.weaponAngle = (p.angle - burstClimb) * 0.55;
+        d.muzzleSmoke = p.smoke;
+        d.bodyDY = -p.bodyKick * 0.45;
+        d.headDY = -p.headKick * 0.35;
         d.recoilStage = 'settle';
+      } else if (i === 3) {
+        d.weaponDX = -p.recoil * 0.2;
+        d.weaponAngle = (p.angle - burstClimb) * 0.18;
+        d.muzzleSmoke = p.smoke * 0.75;
+        d.recoilStage = 'smoke';
+      } else if (i === 4) {
+        d.weaponDX = -p.recoil * 0.08;
+        d.weaponAngle = 0;
+        d.muzzleSmoke = p.smoke * 0.35;
+        d.recoilStage = 'recover';
       } else {
         d.weaponDX = 0;
         d.weaponAngle = 0;
-        d.recoilStage = 'recover';
+        d.recoilStage = 'ready';
       }
+      return d;
+    }
+  };
+
+  // ---------- UNAIM (lower weapon after a completed shot action) ----------
+  Anims.unaim = {
+    name: 'Lower Weapon',
+    frames: 8,
+    fps: 16,
+    loop: false,
+    get: function (i) {
+      const d = mark(defaults(), 'unaim', i);
+      const t = easeInOutSine(i / 7);
+      d.lowCarryT = t;
+      d.aimAngle = 0;
+      d.barrelAngle = null;
+      d.stance = 'wide';
+      d.bodyDY = -0.12 * (1 - t);
+      d.gripOffset = {
+        x: -0.4 * (1 - t),
+        y: 0.6 * t
+      };
       return d;
     }
   };
@@ -389,5 +456,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'reload', 'hurt', 'dead', 'roll', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'reload', 'hurt', 'dead', 'roll', 'throw'];
 })();

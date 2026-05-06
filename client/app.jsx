@@ -144,7 +144,7 @@ function useSheetReady() {
   return version;
 }
 
-function SpriteCanvas({ cfg, animKey, frame, scale, facing, w = STAGE_W, h = STAGE_H }) {
+function SpriteCanvas({ cfg, animKey, frame, scale, facing, w = STAGE_W, h = STAGE_H, animState }) {
   const ref = useRef();
   const sheetVersion = useSheetReady();
   useEffect(() => {
@@ -164,9 +164,10 @@ function SpriteCanvas({ cfg, animKey, frame, scale, facing, w = STAGE_W, h = STA
     ctx.imageSmoothingQuality = 'high';
     window.CharacterRenderer.renderFrame(ctx, w, h, cfg, window.Anims[animKey], frame, facing || 1, {
       renderScale: scale * ratio,
-      smooth: true
+      smooth: true,
+      animState
     });
-  }, [cfg, animKey, frame, facing, w, h, scale, sheetVersion]);
+  }, [cfg, animKey, frame, facing, w, h, scale, sheetVersion, animState]);
 
   return (
     <canvas

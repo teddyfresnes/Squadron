@@ -353,6 +353,11 @@
     return { x: a.x + (b.x || 0), y: a.y + (b.y || 0) };
   }
 
+  function scaleOffset(v, t) {
+    if (!v || !t) return null;
+    return { x: (v.x || 0) * t, y: (v.y || 0) * t };
+  }
+
   function rotatePoint(p, angle) {
     const c = Math.cos(angle), s = Math.sin(angle);
     return {
@@ -410,6 +415,12 @@
     return motion === 'idle' || motion === 'walk' || motion === 'run';
   }
 
+  function lowCarryT(motion, frame) {
+    if (isLowCarryMotion(motion)) return 1;
+    if (motion === 'unaim') return clamp(frame.lowCarryT || 0, 0, 1);
+    return 0;
+  }
+
   function computeGrip(originX, originY, hold, frame, upperBodyDXLocal, bodyProfile) {
     const profile = bodyProfile || BODY_PROFILES.male;
     const motion = motionOf(frame);
@@ -423,7 +434,8 @@
     else if (motion === 'hurt') grip = add(grip, hold.hurtGrip);
     else if (motion === 'dead') grip = add(grip, hold.deadGrip);
 
-    if (isLowCarryMotion(motion)) grip = add(grip, hold.lowCarryGrip);
+    const carryT = lowCarryT(motion, frame);
+    if (carryT > 0) grip = add(grip, scaleOffset(hold.lowCarryGrip, carryT));
     grip = add(grip, frame.gripOffset);
 
     const recoil = Math.abs(frame.weaponDX || 0);
@@ -450,8 +462,9 @@
       (frame.aimAngle || 0) * (hold.aimWeight == null ? 1 : hold.aimWeight) +
       (frame.weaponAngle || 0) * (hold.recoilAngleScale == null ? 1 : hold.recoilAngleScale);
 
-    if (isLowCarryMotion(motion)) {
-      angle += hold.lowCarryAngle == null ? LOW_CARRY_ANGLE : hold.lowCarryAngle;
+    const carryT = lowCarryT(motion, frame);
+    if (carryT > 0) {
+      angle += (hold.lowCarryAngle == null ? LOW_CARRY_ANGLE : hold.lowCarryAngle) * carryT;
     } else if (motion === 'reload') angle += hold.reloadAngle || 0;
     else if (motion === 'hurt') angle += hold.hurtAngle || 0.08;
     else if (motion === 'dead') angle += hold.deadAngle || 0.18;
@@ -459,8 +472,8 @@
     return angle;
   }
 
-  function elbowOffset(hold, role, motion) {
-    if (isLowCarryMotion(motion)) {
+  function elbowOffset(hold, role, motion, frame) {
+    if (lowCarryT(motion, frame || {}) > 0.5) {
       const relaxed = role === 'support' ? hold.lowCarrySupportElbow : hold.lowCarryRearElbow;
       if (relaxed) return relaxed;
     }
@@ -564,17 +577,46 @@
     return { x: Math.round(x), y: Math.round(y) };
   }
 
-  function drawMuzzleFlash(ctx, weapon) {
+  function drawMuzzleFlash(ctx, weapon, frame) {
     const mx = (weapon.muzzleX - weapon.gripX);
     const my = (weapon.muzzleY - weapon.gripY);
+    const size = Math.max(1, Math.min(3, frame.muzzleFlashSize || 1));
+    const reach = Math.round(2 + size);
     ctx.fillStyle = '#ffe080';
-    ctx.fillRect(mx, my - 1, 3, 3);
+    ctx.fillRect(mx, my - 1, reach, 3);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(mx + 1, my, 1, 1);
     ctx.fillStyle = '#ff8020';
-    ctx.fillRect(mx + 3, my, 1, 1);
+    ctx.fillRect(mx + reach, my, 1, 1);
     ctx.fillRect(mx, my - 2, 1, 1);
     ctx.fillRect(mx, my + 2, 1, 1);
+    if (size > 1.2) {
+      ctx.fillStyle = '#ffb040';
+      ctx.fillRect(mx + 2, my - 2, 2, 1);
+      ctx.fillRect(mx + 2, my + 2, 2, 1);
+    }
+  }
+
+  function drawMuzzleSmoke(ctx, weapon, frame) {
+    const smoke = frame.muzzleSmoke || 0;
+    if (smoke <= 0) return;
+    const mx = (weapon.muzzleX - weapon.gripX);
+    const my = (weapon.muzzleY - weapon.gripY);
+    const puff = Math.max(1, Math.min(3, Math.round(smoke)));
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.58, 0.18 + smoke * 0.18);
+    ctx.fillStyle = '#c8cbc4';
+    ctx.fillRect(mx + 3, my - 1, 2 + puff, 2);
+    ctx.fillStyle = '#eef0df';
+    ctx.fillRect(mx + 5 + puff, my - 2, 2, 1);
+    ctx.fillStyle = '#8d918a';
+    ctx.fillRect(mx + 6 + puff, my + 1, 1 + puff, 1);
+    if (smoke > 1.3) {
+      ctx.fillStyle = '#b4b8b0';
+      ctx.fillRect(mx + 8, my - 4, 2, 2);
+      ctx.fillRect(mx + 10, my + 3, 2, 1);
+    }
+    ctx.restore();
   }
 
   function drawReloadRound(ctx, weapon, frame) {
@@ -646,7 +688,7 @@
   function renderFrame(ctx, stageW, stageH, cfg, anim, frameIdx, facing, options) {
     options = options || {};
     facing = facing || 1;
-    const frame = anim.get(frameIdx);
+    const frame = anim.get(frameIdx, options.animState || null);
     const renderScale = options.renderScale || 1;
     const smooth = options.smooth === true;
 
@@ -737,7 +779,7 @@
     const motion = motionOf(frame);
     const weaponGrip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal, bodyProfile);
     const aim = computeAngle(hold, frame);
-    const relaxedCarry = isLowCarryMotion(motion);
+    const relaxedCarry = lowCarryT(motion, frame) > 0.5;
 
     let supportHand = null;
     if (
@@ -766,7 +808,7 @@
     }
 
     if (supportHand && !frame.tuck) {
-      const armElbow = elbowOffset(hold, 'support', motion);
+      const armElbow = elbowOffset(hold, 'support', motion, frame);
       const elbow = resolveElbow(shoulderBack, {
         x: Math.round(shoulderBack.x + (armElbow ? armElbow.x : 12)),
         y: Math.round(shoulderBack.y + (armElbow ? armElbow.y : 3))
@@ -823,7 +865,8 @@
         ctx.scale(WEAPON_SCALE, WEAPON_SCALE);
         weapon.draw(ctx, 0, 0, false);
         drawReloadRound(ctx, weapon, frame);
-        if (frame.muzzleFlash) drawMuzzleFlash(ctx, weapon);
+        if (frame.muzzleSmoke) drawMuzzleSmoke(ctx, weapon, frame);
+        if (frame.muzzleFlash) drawMuzzleFlash(ctx, weapon, frame);
         ctx.restore();
       }
     }
@@ -837,7 +880,7 @@
       };
       drawBentArm(ctx, shoulderFront, elbow, throwHand, uniform, smooth, bodyProfile);
     } else if (!frame.tuck) {
-      const armElbow = elbowOffset(hold, 'rear', motion);
+      const armElbow = elbowOffset(hold, 'rear', motion, frame);
       const elbow = resolveElbow(shoulderFront, {
         x: Math.round(shoulderFront.x + (armElbow ? armElbow.x : 9)),
         y: Math.round(shoulderFront.y + (armElbow ? armElbow.y : 1))

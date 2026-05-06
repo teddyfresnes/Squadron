@@ -117,6 +117,7 @@
           frame={frame}
           scale={spriteScale}
           facing={s.facing}
+          animState={s.animState}
         />
         {showHpBar && (
           <div className="cv-hpbar" style={{ top: hpTop }} title={hpLabel} aria-label={hpLabel}>
@@ -250,12 +251,13 @@
           const y1 = groundY + tr.ay * laneScale - chestY;
           const x2 = xOffset + tr.tx * pxPerTile + (tr.hit ? 0 : tr.missDx);
           const y2 = groundY + tr.ty * laneScale - chestY + (tr.hit ? 0 : tr.missDy);
+          const heavyTrail = tr.weaponCategory === 'sniper' || tr.weaponCategory === 'heavy';
           return (
             <line key={tr.key}
                   x1={x1} y1={y1} x2={x2} y2={y2}
                   stroke={tr.hit ? '#ffd87a' : '#ffe9a8'}
-                  strokeOpacity={k}
-                  strokeWidth={1.4} />
+                  strokeOpacity={tr.visualOnly ? k * 0.55 : k}
+                  strokeWidth={heavyTrail ? 2 : 1.4} />
           );
         })}
       </svg>
@@ -388,6 +390,8 @@
                 ax: ev.ax, ay: ev.ay,
                 tx: ev.tx, ty: ev.ty,
                 hit: ev.hit,
+                visualOnly: ev.visualOnly,
+                weaponCategory: ev.weaponCategory,
                 missDx: (trailRng() - 0.5) * 24,
                 missDy: (trailRng() - 0.5) * 14,
                 bornMs: now
