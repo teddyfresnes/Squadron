@@ -463,6 +463,7 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
     });
     setCreating(false);
     if (!res.ok) { setCreateError(res.error); return; }
+    try { localStorage.setItem(LAST_SQUAD_KEY, trimmedName); setLastSquad(trimmedName); } catch (_) {}
     onCreate(trimmedName);
   };
 
