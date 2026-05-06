@@ -124,6 +124,32 @@
     return configured;
   }
 
+  function usesSimulatedAutoBurst(stats, burst) {
+    const configured = Math.max(1, Math.round(stats && stats.burst || 1));
+    return !!stats && stats.weaponType === 'automatic' && configured === 1 && burst > 1;
+  }
+
+  function burstHitChance(stats, burst, simulatedAutoBurst) {
+    const accuracy = stats && stats.accuracy != null ? stats.accuracy : 0.5;
+    if (!simulatedAutoBurst || burst <= 1) return accuracy;
+    return 1 - Math.pow(1 - accuracy, 1 / burst);
+  }
+
+  function splitDamage(total, count) {
+    if (count <= 0) return [];
+    if (count === 1) return [total];
+    const out = [];
+    let left = total;
+    for (let i = 0; i < count; i++) {
+      const damage = i === count - 1
+        ? left
+        : Math.max(0.1, Math.round((left / (count - i)) * 10) / 10);
+      out.push(Math.round(damage * 10) / 10);
+      left = Math.round((left - damage) * 10) / 10;
+    }
+    return out;
+  }
+
   function shotInterval(stats, count) {
     if (count <= 1) return 0;
     const bySpeed = stats && stats.shootSpeed > 0 ? 1 / stats.shootSpeed : null;
@@ -400,7 +426,8 @@
 
       // â”€â”€ SHOOT turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const burst = visualBurstCount(w);
-      const damagingShots = Math.min(burst, Math.max(1, Math.round(w.burst || 1)));
+      const simulatedAutoBurst = usesSimulatedAutoBurst(w, burst);
+      const hitChance = burstHitChance(w, burst, simulatedAutoBurst);
       const aimDur = actor.aimed ? 0 : animDur('aim');
       const shotAnim = animDur('shoot');
       const unAimDur = animDur('unaim');
@@ -411,15 +438,20 @@
       // Pre-roll shots so the action is a self-contained, deterministic plan.
       const shots = [];
       for (let i = 0; i < burst; i++) {
-        const visualOnly = i >= damagingShots;
+        const hit = rng() < hitChance;
         shots.push({
           atT: aimDur + i * interval,        // local time within the turn
           index: i,
-          visualOnly,
-          hit: !visualOnly && rng() < (w.accuracy != null ? w.accuracy : 0.5),
-          part: visualOnly ? null : rollHitPart(rng),
-          damage: visualOnly ? 0 : rollDamage(w, rng)
+          visualOnly: false,
+          hit,
+          part: hit ? rollHitPart(rng) : null,
+          damage: hit && !simulatedAutoBurst ? rollDamage(w, rng) : 0
         });
+      }
+      if (simulatedAutoBurst) {
+        const hits = shots.filter(shot => shot.hit);
+        const damageParts = splitDamage(hits.length ? rollDamage(w, rng) : 0, hits.length);
+        for (let i = 0; i < hits.length; i++) hits[i].damage = damageParts[i];
       }
       const lastShotT = shots[shots.length - 1].atT;
       const unaimStartT = lastShotT + recovery;

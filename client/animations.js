@@ -198,23 +198,19 @@
   // ---------- AIM (smooth shoulder raise, then hold) ----------
   Anims.aim = {
     name: 'Aim',
-    frames: 12,
-    fps: 18,
+    frames: 8,
+    fps: 16,
     loop: false,
     get: function (i) {
       const d = mark(defaults(), 'aim', i);
-      const t = i / 11;
-      const raise = easeOutCubic(t);
-      const settle = Math.sin(t * Math.PI);
-      d.bodyDY = -0.35 * raise - 0.18 * settle;
-      d.torsoStretch = 0.18 * raise;
-      d.headDY = -0.08 * raise;
+      const t = easeInOutSine(i / 7);
+      d.lowCarryT = 1 - t;
       d.aimAngle = 0;
-      d.barrelAngle = 0;
-      d.barrelLocked = true;
+      d.bodyDY = -0.12 * t;
+      d.headDY = -0.03 * t;
       d.gripOffset = {
-        x: -4 * (1 - raise),
-        y: 5 * (1 - raise)
+        x: -0.4 * t,
+        y: 0.6 * (1 - t)
       };
       d.legs = { front: 0, back: 0, frontBend: 0, backBend: 0 };
       d.stance = 'wide';  // legs spread

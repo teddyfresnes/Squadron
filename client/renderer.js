@@ -416,8 +416,8 @@
   }
 
   function lowCarryT(motion, frame) {
+    if (frame && typeof frame.lowCarryT === 'number') return clamp(frame.lowCarryT, 0, 1);
     if (isLowCarryMotion(motion)) return 1;
-    if (motion === 'unaim') return clamp(frame.lowCarryT || 0, 0, 1);
     return 0;
   }
 

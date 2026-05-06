@@ -141,7 +141,7 @@ smg, heavy, shotgun → 'front'
 
 `stateT` = temps écoulé dans l'état courant (en secondes), passé à `frameForState()` dans combat-view.
 
-Les armes automatiques peuvent produire des `shoot` events `visualOnly:true` pour rendre une courte rafale (flash/trail/fumée) sans ajouter de dégâts supplémentaires. Les armes qui ont `burst > 1` dans `weapon-config.json` gardent des tirs réels multiples.
+Les armes automatiques avec `burst:1` produisent une rafale réelle courte en combat. Pour préserver l'équilibrage, le simulateur garde le budget de dégâts de l'arme et le répartit entre les balles de la rafale qui touchent. Les armes qui ont `burst > 1` dans `weapon-config.json` gardent leurs tirs réels multiples avec les dégâts par balle de la config.
 
 ---
 
