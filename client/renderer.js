@@ -407,7 +407,7 @@
   }
 
   function isLowCarryMotion(motion) {
-    return motion === 'idle' || motion === 'walk';
+    return motion === 'idle' || motion === 'walk' || motion === 'run';
   }
 
   function computeGrip(originX, originY, hold, frame, upperBodyDXLocal, bodyProfile) {
@@ -418,8 +418,7 @@
       y: originY + hold.grip.y + (frame.bodyDY || 0) * profile.scale
     };
 
-    if (motion === 'run') grip = add(grip, hold.runGrip);
-    else if (motion === 'walk') grip = add(grip, hold.walkGrip);
+    if (motion === 'walk') grip = add(grip, hold.walkGrip);
     else if (motion === 'reload') grip = add(grip, hold.reloadGrip);
     else if (motion === 'hurt') grip = add(grip, hold.hurtGrip);
     else if (motion === 'dead') grip = add(grip, hold.deadGrip);
@@ -451,8 +450,7 @@
       (frame.aimAngle || 0) * (hold.aimWeight == null ? 1 : hold.aimWeight) +
       (frame.weaponAngle || 0) * (hold.recoilAngleScale == null ? 1 : hold.recoilAngleScale);
 
-    if (motion === 'run') angle += hold.runAngle || 0;
-    else if (isLowCarryMotion(motion)) {
+    if (isLowCarryMotion(motion)) {
       angle += hold.lowCarryAngle == null ? LOW_CARRY_ANGLE : hold.lowCarryAngle;
     } else if (motion === 'reload') angle += hold.reloadAngle || 0;
     else if (motion === 'hurt') angle += hold.hurtAngle || 0.08;
