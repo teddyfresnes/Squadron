@@ -12,7 +12,6 @@
   const GROUND_Y_RATIO = 0.78;          // where the ground line sits inside the arena
   const BULLET_TRAIL_MS = 260;          // default visual life for bullet streaks
   const BULLET_TRAIL_MAX_MS = 360;
-  const MUZZLE_FLASH_MS = 55;
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
@@ -105,13 +104,13 @@
 
   const TRAIL_AIM_PARTS = ['head', 'chestLeft', 'chestRight', 'abdomen', 'leftLeg', 'rightLeg', 'feet'];
   const SHOT_TRAIL_PROFILES = {
-    pistol:  { duration: 240, travel: 1.48, segment: 72,  width: 1.2,  flash: 0.82 },
-    smg:     { duration: 220, travel: 1.7,  segment: 88,  width: 1.08, flash: 0.72 },
-    rifle:   { duration: 260, travel: 1.45, segment: 118, width: 1.38, flash: 0.9 },
-    shotgun: { duration: 260, travel: 1.25, segment: 84,  width: 1.42, flash: 1,    spread: true },
-    sniper:  { duration: 330, travel: 1.12, segment: 164, width: 1.82, flash: 1.05 },
-    heavy:   { duration: 340, travel: 1.08, segment: 142, width: 2,    flash: 1.12 },
-    default: { duration: BULLET_TRAIL_MS, travel: 1.42, segment: 90, width: 1.25, flash: 0.85 }
+    pistol:  { duration: 240, travel: 1.48, segment: 72,  width: 1.2 },
+    smg:     { duration: 220, travel: 1.7,  segment: 88,  width: 1.08 },
+    rifle:   { duration: 260, travel: 1.45, segment: 118, width: 1.38 },
+    shotgun: { duration: 260, travel: 1.25, segment: 84,  width: 1.42, spread: true },
+    sniper:  { duration: 330, travel: 1.12, segment: 164, width: 1.82 },
+    heavy:   { duration: 340, travel: 1.08, segment: 142, width: 2 },
+    default: { duration: BULLET_TRAIL_MS, travel: 1.42, segment: 90, width: 1.25 }
   };
 
   function randomTrailPart(rng) {
@@ -141,28 +140,6 @@
       x: p.x * spriteScale,
       y: STAGE_H * spriteScale * p.y
     };
-  }
-
-  function frontFlashPoints(x, y, dir, spriteScale) {
-    const s = Math.max(0.75, spriteScale);
-    return pointsToString([
-      [x - dir * 34 * s, y - 17 * s],
-      [x - dir * 8 * s, y - 13 * s],
-      [x + dir * 5 * s, y - 5 * s],
-      [x + dir * 5 * s, y + 5 * s],
-      [x - dir * 24 * s, y + 15 * s],
-      [x - dir * 38 * s, y + 8 * s]
-    ]);
-  }
-
-  function muzzleFlashPoints(x, y, dir, spriteScale) {
-    const s = Math.max(0.75, spriteScale);
-    return pointsToString([
-      [x - dir * 2 * s, y],
-      [x + dir * 7 * s, y - 4 * s],
-      [x + dir * 22 * s, y],
-      [x + dir * 7 * s, y + 4 * s]
-    ]);
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
@@ -323,8 +300,7 @@
           const profile = shotTrailProfile(tr.weaponCategory);
           const duration = profile.duration || BULLET_TRAIL_MS;
           const k = Math.max(0, 1 - age / duration);
-          const flashK = Math.max(0, 1 - age / MUZZLE_FLASH_MS);
-          if (k <= 0 && flashK <= 0) return null;
+          if (k <= 0) return null;
           const groundY = arenaH * GROUND_Y_RATIO;
           const dir = tr.tx >= tr.ax ? 1 : -1;
           const muzzle = bodyTrailPoint('torso', spriteScale);
@@ -359,17 +335,8 @@
           const showImpact = headT > 0.9;
           const impactK = showImpact ? Math.max(0, 1 - (headT - 0.9) / 0.1) : 0;
           const width = profile.width || 1.25;
-          const faceFlashOpacity = Math.min(0.95, flashK * (profile.flash || 0.85));
           return (
             <g key={tr.key} className={'cv-bullet-fx cv-bullet-' + (tr.hit ? 'hit' : tr.missKind) + ' cv-bullet-cat-' + (tr.weaponCategory || 'default')}>
-              {flashK > 0 && (
-                <g className="cv-muzzle-front-flash" opacity={faceFlashOpacity}>
-                  <polygon className="cv-muzzle-face-light"
-                           points={frontFlashPoints(x1, y1, dir, spriteScale)} />
-                  <polygon className="cv-muzzle-pop"
-                           points={muzzleFlashPoints(x1, y1, dir, spriteScale)} />
-                </g>
-              )}
               {profile.spread && (
                 <g className="cv-bullet-spread">
                   <line className="cv-bullet-pellet"

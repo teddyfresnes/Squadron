@@ -2725,18 +2725,6 @@ html, body {
   vector-effect: non-scaling-stroke;
   stroke-linecap: round;
 }
-.cv-muzzle-face-light {
-  fill: rgba(255, 255, 255, 0.7);
-  mix-blend-mode: screen;
-}
-.cv-muzzle-pop {
-  fill: rgba(255, 255, 255, 0.96);
-  stroke: rgba(255, 242, 206, 0.85);
-  stroke-width: 0.8;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-  mix-blend-mode: screen;
-}
 .cv-bullet-glint {
   stroke: #ffffff;
   filter: blur(0.35px);

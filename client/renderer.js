@@ -907,6 +907,19 @@
       ctx.restore();
     }
 
+    if (frame.muzzleFlash) {
+      const halfX = Math.round(stageW / 2);
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      if (facing === -1) {
+        ctx.fillRect(0, 0, halfX, stageH);
+      } else {
+        ctx.fillRect(halfX, 0, stageW - halfX, stageH);
+      }
+      ctx.restore();
+    }
+
     ctx.globalAlpha = 1;
     ctx.restore();
   }
