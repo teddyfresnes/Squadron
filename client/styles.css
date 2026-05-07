@@ -2714,7 +2714,50 @@ html, body {
 .cv-trails {
   position: absolute;
   inset: 0;
+  z-index: 7;
   pointer-events: none;
+}
+.cv-bullet-glint,
+.cv-bullet-line,
+.cv-bullet-tip,
+.cv-bullet-pellet,
+.cv-bullet-chip {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+.cv-muzzle-face-light {
+  fill: rgba(255, 255, 255, 0.7);
+  mix-blend-mode: screen;
+}
+.cv-muzzle-pop {
+  fill: rgba(255, 255, 255, 0.96);
+  stroke: rgba(255, 242, 206, 0.85);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  mix-blend-mode: screen;
+}
+.cv-bullet-glint {
+  stroke: #ffffff;
+  filter: blur(0.35px);
+}
+.cv-bullet-line {
+  stroke: #efe8d5;
+}
+.cv-bullet-tip {
+  stroke: #ffffff;
+}
+.cv-bullet-pellet {
+  stroke: rgba(255, 255, 255, 0.78);
+}
+.cv-bullet-dust {
+  fill: rgba(222, 206, 176, 0.58);
+  stroke: rgba(255, 255, 255, 0.32);
+  stroke-width: 1;
+}
+.cv-bullet-chip {
+  stroke: rgba(255, 248, 216, 0.82);
+  stroke-width: 1.1;
 }
 .cv-arena.is-paused .cv-bg,
 .cv-arena.is-paused .cv-soldier,

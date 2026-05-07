@@ -10,7 +10,9 @@
   const STAGE_W = (UI && UI.STAGE_W) || 256;
   const STAGE_H = (UI && UI.STAGE_H) || 112;
   const GROUND_Y_RATIO = 0.78;          // where the ground line sits inside the arena
-  const BULLET_TRAIL_MS = 300;          // turn-based pacing → trails linger longer
+  const BULLET_TRAIL_MS = 260;          // default visual life for bullet streaks
+  const BULLET_TRAIL_MAX_MS = 360;
+  const MUZZLE_FLASH_MS = 55;
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
@@ -102,18 +104,35 @@
   };
 
   const TRAIL_AIM_PARTS = ['head', 'chestLeft', 'chestRight', 'abdomen', 'leftLeg', 'rightLeg', 'feet'];
+  const SHOT_TRAIL_PROFILES = {
+    pistol:  { duration: 240, travel: 1.48, segment: 72,  width: 1.2,  flash: 0.82 },
+    smg:     { duration: 220, travel: 1.7,  segment: 88,  width: 1.08, flash: 0.72 },
+    rifle:   { duration: 260, travel: 1.45, segment: 118, width: 1.38, flash: 0.9 },
+    shotgun: { duration: 260, travel: 1.25, segment: 84,  width: 1.42, flash: 1,    spread: true },
+    sniper:  { duration: 330, travel: 1.12, segment: 164, width: 1.82, flash: 1.05 },
+    heavy:   { duration: 340, travel: 1.08, segment: 142, width: 2,    flash: 1.12 },
+    default: { duration: BULLET_TRAIL_MS, travel: 1.42, segment: 90, width: 1.25, flash: 0.85 }
+  };
 
   function randomTrailPart(rng) {
     return TRAIL_AIM_PARTS[Math.floor(rng() * TRAIL_AIM_PARTS.length)] || 'torso';
   }
 
+  function shotTrailProfile(category) {
+    return SHOT_TRAIL_PROFILES[category] || SHOT_TRAIL_PROFILES.default;
+  }
+
+  function pointsToString(points) {
+    return points.map(p => p[0] + ',' + p[1]).join(' ');
+  }
+
   function trailMissOffset(rng, ax, tx) {
     const dir = tx >= ax ? 1 : -1;
     const r = rng();
-    if (r < 0.25) return { x: (rng() - 0.5) * 20, y: -(12 + rng() * 26) };
-    if (r < 0.5) return { x: dir * (22 + rng() * 44), y: (rng() - 0.5) * 18 };
-    if (r < 0.75) return { x: (rng() - 0.5) * 24, y: 10 + rng() * 24 };
-    return { x: (rng() < 0.5 ? -1 : 1) * (14 + rng() * 32), y: (rng() - 0.5) * 24 };
+    if (r < 0.26) return { kind: 'over', x: (rng() - 0.5) * 24, y: -(24 + rng() * 42) };
+    if (r < 0.55) return { kind: 'behind', x: dir * (78 + rng() * 120), y: (rng() - 0.5) * 28 };
+    if (r < 0.8) return { kind: 'ground', x: (rng() - 0.5) * 34, y: rng() * 8 };
+    return { kind: 'wide', x: (rng() < 0.5 ? -1 : 1) * (30 + rng() * 58), y: (rng() - 0.5) * 36 };
   }
 
   function bodyTrailPoint(part, spriteScale) {
@@ -122,6 +141,28 @@
       x: p.x * spriteScale,
       y: STAGE_H * spriteScale * p.y
     };
+  }
+
+  function frontFlashPoints(x, y, dir, spriteScale) {
+    const s = Math.max(0.75, spriteScale);
+    return pointsToString([
+      [x - dir * 34 * s, y - 17 * s],
+      [x - dir * 8 * s, y - 13 * s],
+      [x + dir * 5 * s, y - 5 * s],
+      [x + dir * 5 * s, y + 5 * s],
+      [x - dir * 24 * s, y + 15 * s],
+      [x - dir * 38 * s, y + 8 * s]
+    ]);
+  }
+
+  function muzzleFlashPoints(x, y, dir, spriteScale) {
+    const s = Math.max(0.75, spriteScale);
+    return pointsToString([
+      [x - dir * 2 * s, y],
+      [x + dir * 7 * s, y - 4 * s],
+      [x + dir * 22 * s, y],
+      [x + dir * 7 * s, y + 4 * s]
+    ]);
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
@@ -279,23 +320,98 @@
            viewBox={`0 0 ${arenaW} ${arenaH}`} preserveAspectRatio="none">
         {trails.map(tr => {
           const age = nowMs - tr.bornMs;
-          const k = Math.max(0, 1 - age / BULLET_TRAIL_MS);
-          if (k <= 0) return null;
+          const profile = shotTrailProfile(tr.weaponCategory);
+          const duration = profile.duration || BULLET_TRAIL_MS;
+          const k = Math.max(0, 1 - age / duration);
+          const flashK = Math.max(0, 1 - age / MUZZLE_FLASH_MS);
+          if (k <= 0 && flashK <= 0) return null;
           const groundY = arenaH * GROUND_Y_RATIO;
           const dir = tr.tx >= tr.ax ? 1 : -1;
           const muzzle = bodyTrailPoint('torso', spriteScale);
           const target = bodyTrailPoint(tr.aimPart || tr.bodyPart || 'torso', spriteScale);
           const x1 = xOffset + tr.ax * pxPerTile + dir * 14 * spriteScale;
           const y1 = groundY + tr.ay * laneScale - muzzle.y + 1 * spriteScale;
-          const x2 = xOffset + tr.tx * pxPerTile + target.x + (tr.hit ? tr.impactDx : tr.missDx);
-          const y2 = groundY + tr.ty * laneScale - target.y + (tr.hit ? tr.impactDy : tr.missDy);
-          const heavyTrail = tr.weaponCategory === 'sniper' || tr.weaponCategory === 'heavy';
+          let x2 = xOffset + tr.tx * pxPerTile + target.x + (tr.hit ? tr.impactDx : tr.missDx);
+          let y2 = groundY + tr.ty * laneScale - target.y + (tr.hit ? tr.impactDy : tr.missDy);
+          if (!tr.hit && tr.missKind === 'ground') {
+            x2 = xOffset + tr.tx * pxPerTile + tr.missDx;
+            y2 = groundY + tr.ty * laneScale - 3 * spriteScale + tr.missDy;
+          }
+          if (!tr.hit && tr.missKind === 'behind') {
+            x2 = clamp(x2, -80, arenaW + 80);
+          }
+          y2 = clamp(y2, -60, arenaH + 30);
+          const dx = x2 - x1;
+          const dy = y2 - y1;
+          const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+          const ux = dx / len;
+          const uy = dy / len;
+          const nx = -uy;
+          const ny = ux;
+          const headT = clamp(age / duration * profile.travel, 0, 1);
+          const segmentPx = (profile.segment || 90) * Math.max(0.8, spriteScale);
+          const segmentT = clamp(segmentPx / len, 0.1, 0.68);
+          const tailT = clamp(headT - segmentT, 0, 1);
+          const sx = x1 + dx * tailT;
+          const sy = y1 + dy * tailT;
+          const ex = x1 + dx * headT;
+          const ey = y1 + dy * headT;
+          const showImpact = headT > 0.9;
+          const impactK = showImpact ? Math.max(0, 1 - (headT - 0.9) / 0.1) : 0;
+          const width = profile.width || 1.25;
+          const faceFlashOpacity = Math.min(0.95, flashK * (profile.flash || 0.85));
           return (
-            <line key={tr.key}
-                  x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke={tr.hit ? '#ffd87a' : '#ffe9a8'}
-                  strokeOpacity={k}
-                  strokeWidth={heavyTrail ? 2 : 1.4} />
+            <g key={tr.key} className={'cv-bullet-fx cv-bullet-' + (tr.hit ? 'hit' : tr.missKind) + ' cv-bullet-cat-' + (tr.weaponCategory || 'default')}>
+              {flashK > 0 && (
+                <g className="cv-muzzle-front-flash" opacity={faceFlashOpacity}>
+                  <polygon className="cv-muzzle-face-light"
+                           points={frontFlashPoints(x1, y1, dir, spriteScale)} />
+                  <polygon className="cv-muzzle-pop"
+                           points={muzzleFlashPoints(x1, y1, dir, spriteScale)} />
+                </g>
+              )}
+              {profile.spread && (
+                <g className="cv-bullet-spread">
+                  <line className="cv-bullet-pellet"
+                        x1={sx + nx * 3 * spriteScale}
+                        y1={sy + ny * 3 * spriteScale}
+                        x2={ex + nx * 9 * spriteScale * headT}
+                        y2={ey + ny * 9 * spriteScale * headT}
+                        strokeWidth={Math.max(1, width * 0.75)}
+                        strokeOpacity={0.42 * k} />
+                  <line className="cv-bullet-pellet"
+                        x1={sx - nx * 3 * spriteScale}
+                        y1={sy - ny * 3 * spriteScale}
+                        x2={ex - nx * 9 * spriteScale * headT}
+                        y2={ey - ny * 9 * spriteScale * headT}
+                        strokeWidth={Math.max(1, width * 0.75)}
+                        strokeOpacity={0.35 * k} />
+                </g>
+              )}
+              <line className="cv-bullet-glint"
+                    x1={sx - ux * 4} y1={sy - uy * 4}
+                    x2={ex} y2={ey}
+                    strokeWidth={width + 1.25}
+                    strokeOpacity={0.38 * k} />
+              <line className="cv-bullet-line"
+                    x1={sx} y1={sy}
+                    x2={ex} y2={ey}
+                    strokeWidth={width}
+                    strokeOpacity={k} />
+              <line className="cv-bullet-tip"
+                    x1={ex - ux * Math.min(16, segmentPx * 0.24)}
+                    y1={ey - uy * Math.min(16, segmentPx * 0.24)}
+                    x2={ex} y2={ey}
+                    strokeWidth={width + 0.65}
+                    strokeOpacity={k} />
+              {!tr.hit && tr.missKind === 'ground' && showImpact && (
+                <g className="cv-bullet-ground-impact" opacity={impactK}>
+                  <ellipse className="cv-bullet-dust" cx={x2} cy={y2 + 2 * spriteScale} rx={7 * spriteScale} ry={2.4 * spriteScale} />
+                  <line className="cv-bullet-chip" x1={x2 - 4 * spriteScale} y1={y2} x2={x2 - 1 * spriteScale} y2={y2 - 4 * spriteScale} />
+                  <line className="cv-bullet-chip" x1={x2 + 1 * spriteScale} y1={y2} x2={x2 + 5 * spriteScale} y2={y2 - 3 * spriteScale} />
+                </g>
+              )}
+            </g>
           );
         })}
       </svg>
@@ -433,6 +549,7 @@
                 weaponCategory: ev.weaponCategory,
                 bodyPart: ev.bodyPart,
                 aimPart,
+                missKind: miss.kind || null,
                 impactDx: (trailRng() - 0.5) * 5,
                 impactDy: (trailRng() - 0.5) * 5,
                 missDx: miss.x,
@@ -455,7 +572,7 @@
 
         // Garbage-collect expired trails — only re-set if anything actually expired.
         setTrails(prev => {
-          const kept = prev.filter(tr => now - tr.bornMs < BULLET_TRAIL_MS);
+          const kept = prev.filter(tr => now - tr.bornMs < BULLET_TRAIL_MAX_MS);
           return kept.length === prev.length ? prev : kept;
         });
         setHpFlashes(prev => {
