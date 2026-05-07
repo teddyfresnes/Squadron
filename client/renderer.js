@@ -908,15 +908,34 @@
     }
 
     if (frame.muzzleFlash) {
-      const halfX = Math.round(stageW / 2);
+      // Front-rim flash via silhouette subtraction. Tint a copy of the sprite
+      // white, then erase the pixels of a back-shifted copy of the sprite —
+      // what remains is the front N pixels of every body part. The lit/unlit
+      // boundary is the back-shifted silhouette, so it curves around heads,
+      // torsos, arms, legs naturally instead of cutting a vertical seam.
+      const f = facing === -1 ? -1 : 1;
+      const t = ctx.getTransform();
+      const sx = t.a || 1;
+      const shiftPx = 4 * sx; // 4 stage-pixels of front-rim depth
+      const cw = ctx.canvas.width;
+      const ch = ctx.canvas.height;
+
+      const off = document.createElement('canvas');
+      off.width = cw;
+      off.height = ch;
+      const offCtx = off.getContext('2d');
+
+      offCtx.drawImage(ctx.canvas, 0, 0);
+      offCtx.globalCompositeOperation = 'source-in';
+      offCtx.fillStyle = 'rgba(255,255,255,0.97)';
+      offCtx.fillRect(0, 0, cw, ch);
+      offCtx.globalCompositeOperation = 'destination-out';
+      offCtx.drawImage(ctx.canvas, -f * shiftPx, 0);
+
       ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-      if (facing === -1) {
-        ctx.fillRect(0, 0, halfX, stageH);
-      } else {
-        ctx.fillRect(halfX, 0, stageW - halfX, stageH);
-      }
+      ctx.drawImage(off, 0, 0);
       ctx.restore();
     }
 
