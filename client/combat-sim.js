@@ -51,14 +51,14 @@
   const LANE_RANK = { back: 0, mid: 1, front: 2 };
   const BODY_PARTS = ['head', 'chestLeft', 'chestRight', 'abdomen', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg', 'torso'];
   const BODY_PART_WEIGHTS = [
-    { key: 'head', weight: 12 },
-    { key: 'chestLeft', weight: 12 },
-    { key: 'chestRight', weight: 12 },
-    { key: 'abdomen', weight: 10 },
-    { key: 'leftArm', weight: 13 },
-    { key: 'rightArm', weight: 13 },
-    { key: 'leftLeg', weight: 14 },
-    { key: 'rightLeg', weight: 14 }
+    { key: 'head', weight: 7 },
+    { key: 'chestLeft', weight: 18 },
+    { key: 'chestRight', weight: 18 },
+    { key: 'abdomen', weight: 14 },
+    { key: 'leftArm', weight: 8 },
+    { key: 'rightArm', weight: 8 },
+    { key: 'leftLeg', weight: 7 },
+    { key: 'rightLeg', weight: 7 }
   ];
 
   // â”€â”€ Weapon stats loader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -90,27 +90,40 @@
   }
 
   const TRAIL_BODY_POINTS = {
-    head: { x: 0, y: 0.74 },
-    chestLeft: { x: -5, y: 0.58 },
-    chestRight: { x: 5, y: 0.58 },
-    abdomen: { x: 0, y: 0.47 },
-    leftArm: { x: -13, y: 0.52 },
-    rightArm: { x: 13, y: 0.52 },
-    leftLeg: { x: -5, y: 0.3 },
-    rightLeg: { x: 5, y: 0.3 },
-    torso: { x: 0, y: 0.55 },
-    feet: { x: 0, y: 0.16 }
+    head:       { x:  0, y: 0.48 },
+    chestLeft:  { x: -5, y: 0.41 },
+    chestRight: { x:  5, y: 0.41 },
+    abdomen:    { x:  0, y: 0.37 },
+    leftArm:    { x: -13, y: 0.41 },
+    rightArm:   { x:  13, y: 0.41 },
+    leftLeg:    { x: -5, y: 0.32 },
+    rightLeg:   { x:  5, y: 0.32 },
+    torso:      { x:  0, y: 0.40 },
+    feet:       { x:  0, y: 0.30 }
+  };
+
+  // Muzzle position per weapon category. x = stage-pixels forward of soldier
+  // center (≈ gripX + barrel length). y = ratio above groundY (gun is held at
+  // shoulder height, slightly higher than chest).
+  const MUZZLE_OFFSETS = {
+    pistol:  { x: 14, y: 0.45 },
+    smg:     { x: 22, y: 0.46 },
+    rifle:   { x: 32, y: 0.46 },
+    shotgun: { x: 28, y: 0.46 },
+    sniper:  { x: 44, y: 0.46 },
+    heavy:   { x: 38, y: 0.45 },
+    default: { x: 22, y: 0.46 }
   };
 
   const TRAIL_AIM_PARTS = ['head', 'chestLeft', 'chestRight', 'abdomen', 'leftLeg', 'rightLeg', 'feet'];
   const SHOT_TRAIL_PROFILES = {
-    pistol:  { duration: 240, travel: 1.48, segment: 72,  width: 1.2 },
-    smg:     { duration: 220, travel: 1.7,  segment: 88,  width: 1.08 },
-    rifle:   { duration: 260, travel: 1.45, segment: 118, width: 1.38 },
-    shotgun: { duration: 260, travel: 1.25, segment: 84,  width: 1.42, spread: true },
-    sniper:  { duration: 330, travel: 1.12, segment: 164, width: 1.82 },
-    heavy:   { duration: 340, travel: 1.08, segment: 142, width: 2 },
-    default: { duration: BULLET_TRAIL_MS, travel: 1.42, segment: 90, width: 1.25 }
+    pistol:  { duration: 150, travel: 2.6, segment: 110, width: 1.7 },
+    smg:     { duration: 140, travel: 2.8, segment: 130, width: 1.6 },
+    rifle:   { duration: 170, travel: 2.7, segment: 180, width: 2.0 },
+    shotgun: { duration: 180, travel: 2.2, segment: 130, width: 2.0, spread: true },
+    sniper:  { duration: 220, travel: 2.4, segment: 240, width: 2.6 },
+    heavy:   { duration: 230, travel: 2.1, segment: 210, width: 2.8 },
+    default: { duration: 170, travel: 2.7, segment: 150, width: 1.9 }
   };
 
   function randomTrailPart(rng) {
@@ -128,10 +141,12 @@
   function trailMissOffset(rng, ax, tx) {
     const dir = tx >= ax ? 1 : -1;
     const r = rng();
-    if (r < 0.26) return { kind: 'over', x: (rng() - 0.5) * 24, y: -(24 + rng() * 42) };
-    if (r < 0.55) return { kind: 'behind', x: dir * (78 + rng() * 120), y: (rng() - 0.5) * 28 };
-    if (r < 0.8) return { kind: 'ground', x: (rng() - 0.5) * 34, y: rng() * 8 };
-    return { kind: 'wide', x: (rng() < 0.5 ? -1 : 1) * (30 + rng() * 58), y: (rng() - 0.5) * 36 };
+    // Every miss pierces past the target — bullets don't stop at the trooper.
+    const passBy = 90 + rng() * 130;
+    if (r < 0.30) return { kind: 'over',   x: dir * passBy + (rng() - 0.5) * 28, y: -(22 + rng() * 38) };
+    if (r < 0.55) return { kind: 'behind', x: dir * (passBy + 30 + rng() * 70), y: (rng() - 0.5) * 24 };
+    if (r < 0.80) return { kind: 'ground', x: dir * (60 + rng() * 90) + (rng() - 0.5) * 24, y: rng() * 8 };
+    return                                 { kind: 'wide',   x: dir * passBy + (rng() < 0.5 ? -1 : 1) * (16 + rng() * 28), y: (rng() - 0.5) * 32 };
   }
 
   function bodyTrailPoint(part, spriteScale) {
@@ -303,10 +318,11 @@
           if (k <= 0) return null;
           const groundY = arenaH * GROUND_Y_RATIO;
           const dir = tr.tx >= tr.ax ? 1 : -1;
-          const muzzle = bodyTrailPoint('torso', spriteScale);
+          const cat = tr.weaponCategory || 'default';
+          const mz = MUZZLE_OFFSETS[cat] || MUZZLE_OFFSETS.default;
           const target = bodyTrailPoint(tr.aimPart || tr.bodyPart || 'torso', spriteScale);
-          const x1 = xOffset + tr.ax * pxPerTile + dir * 14 * spriteScale;
-          const y1 = groundY + tr.ay * laneScale - muzzle.y + 1 * spriteScale;
+          const x1 = xOffset + tr.ax * pxPerTile + dir * mz.x * spriteScale;
+          const y1 = groundY + tr.ay * laneScale - STAGE_H * spriteScale * mz.y;
           let x2 = xOffset + tr.tx * pxPerTile + target.x + (tr.hit ? tr.impactDx : tr.missDx);
           let y2 = groundY + tr.ty * laneScale - target.y + (tr.hit ? tr.impactDy : tr.missDy);
           if (!tr.hit && tr.missKind === 'ground') {
@@ -356,21 +372,21 @@
                 </g>
               )}
               <line className="cv-bullet-glint"
-                    x1={sx - ux * 4} y1={sy - uy * 4}
+                    x1={sx - ux * 6} y1={sy - uy * 6}
                     x2={ex} y2={ey}
-                    strokeWidth={width + 1.25}
-                    strokeOpacity={0.38 * k} />
+                    strokeWidth={width + 2.2}
+                    strokeOpacity={0.6 * k} />
               <line className="cv-bullet-line"
                     x1={sx} y1={sy}
                     x2={ex} y2={ey}
                     strokeWidth={width}
                     strokeOpacity={k} />
               <line className="cv-bullet-tip"
-                    x1={ex - ux * Math.min(16, segmentPx * 0.24)}
-                    y1={ey - uy * Math.min(16, segmentPx * 0.24)}
+                    x1={ex - ux * Math.min(24, segmentPx * 0.32)}
+                    y1={ey - uy * Math.min(24, segmentPx * 0.32)}
                     x2={ex} y2={ey}
-                    strokeWidth={width + 0.65}
-                    strokeOpacity={k} />
+                    strokeWidth={width + 1.1}
+                    strokeOpacity={Math.min(1, 1.15 * k)} />
               {!tr.hit && tr.missKind === 'ground' && showImpact && (
                 <g className="cv-bullet-ground-impact" opacity={impactK}>
                   <ellipse className="cv-bullet-dust" cx={x2} cy={y2 + 2 * spriteScale} rx={7 * spriteScale} ry={2.4 * spriteScale} />
