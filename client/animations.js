@@ -354,32 +354,20 @@
     }
   };
 
-  // ---------- HURT (3 frames) ----------
+  // ---------- HURT (5 frames) ----------
+  // Smooth backward stagger then return to rest. No tint, no head snap —
+  // just a clean recoil along the facing axis (bodyDX = backward).
   Anims.hurt = {
     name: 'Hurt',
-    frames: 3,
-    fps: 8,
+    frames: 5,
+    fps: 16,
+    loop: false,
     get: function (i) {
       const d = mark(defaults(), 'hurt', i);
-      if (i === 0) {
-        d.bodyDY = -2;
-        d.headDY = -1;   // small extra head snap-back on top of body recoil
-        d.tint = '#ff2030';
-        d.alpha = 0.9;
-        d.headBack = 1;
-        d.eyesClosed = true;
-      } else if (i === 1) {
-        d.bodyDY = -1;
-        d.headDY = -1;
-        d.tint = '#ff2030';
-        d.alpha = 0.85;
-        d.eyesClosed = true;
-      } else {
-        d.bodyDY = 0;
-        d.headDY = 0;
-      }
-      d.aimAngle = 0.4;  // weapon drops
-      d.mouthHurt = true;
+      const recoil = [4, 3, 2, 1, 0][i] || 0;
+      d.bodyDX = recoil;
+      d.bodyDY = i === 0 ? -1 : 0;   // tiny upward jolt on impact
+      d.aimAngle = 0.35 * (recoil / 4); // weapon dips with the stagger and recovers
       return d;
     }
   };

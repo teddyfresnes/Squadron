@@ -785,6 +785,13 @@
       ctx.translate(-originX, 0);
     }
 
+    // Whole-body horizontal shift relative to facing (positive = backward).
+    // Applied after the facing flip so a single negative-X translate works for
+    // both directions (mirrored coords cancel out).
+    if (frame.bodyDX) {
+      ctx.translate(-frame.bodyDX, 0);
+    }
+
     const bodyDY = frame.bodyDY || 0;
     const headDY = frame.headDY || 0;
     const torsoStretchY = Math.max(0, frame.torsoStretch || 0);

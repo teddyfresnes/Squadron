@@ -29,7 +29,7 @@
   const TURN_GAP = 0.04;                // tiny pause between turns for readability
   const MAX_ACTIVE_ACTIONS = 2;         // Minitroopers-like overlaps, but never a full scrum
   const OVERLAP_CHANCE = 0.35;
-  const AIM_OVERLAP_CHANCE = 0.40;
+  const AIM_OVERLAP_CHANCE = 0.4:!!!!!!!!0;
   const OVERLAP_RETRY_DELAY = 0.28;
   const AIM_DELAY_MIN = 0.38;           // minimum aim-up duration (covers short aim anims)
   const AIM_HOLD = 0.18;                // pause after aim anim ends, before first shot
