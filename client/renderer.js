@@ -532,6 +532,33 @@
     };
   }
 
+  function weaponPoint(stageW, stageH, cfg, anim, frameIdx, facing, options, localPoint) {
+    options = options || {};
+    facing = facing || 1;
+    const frame = anim.get(frameIdx, options.animState || null);
+    const weapon = options.weapon || window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
+    const hold = getHold(weapon);
+    const bodyProfile = getBodyProfile(cfg);
+    const originX = (stageW / 2) | 0;
+    const originY = Math.round(stageH * 0.63) + (bodyProfile.originYOffset || 0);
+    const upperBodyDXLocal = (hold.upperBodyX || 0) + (frame.forwardLean || 0);
+    const grip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal, bodyProfile);
+    const point = pointOnWeapon(grip, localPoint(weapon), computeAngle(hold, frame));
+    if (facing === -1) {
+      point.x = Math.round(originX - (point.x - originX));
+    }
+    return point;
+  }
+
+  function weaponMuzzlePoint(stageW, stageH, cfg, anim, frameIdx, facing, options) {
+    return weaponPoint(stageW, stageH, cfg, anim, frameIdx, facing, options, function (weapon) {
+      return {
+        x: weapon.muzzleX - weapon.gripX,
+        y: weapon.muzzleY - weapon.gripY
+      };
+    });
+  }
+
   function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
   }
@@ -943,5 +970,5 @@
     ctx.restore();
   }
 
-  window.CharacterRenderer = { renderFrame, getWeaponHold: getHold };
+  window.CharacterRenderer = { renderFrame, getWeaponHold: getHold, weaponMuzzlePoint };
 })();

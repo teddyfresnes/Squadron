@@ -104,19 +104,6 @@
     feet:       { x:  0, y: 0.30 }
   };
 
-  // Muzzle position per weapon category. x = stage-pixels forward of soldier
-  // center (≈ gripX + barrel length). y = ratio above groundY (gun is held at
-  // shoulder height, slightly higher than chest).
-  const MUZZLE_OFFSETS = {
-    pistol:  { x: 14, y: 0.45 },
-    smg:     { x: 22, y: 0.46 },
-    rifle:   { x: 32, y: 0.46 },
-    shotgun: { x: 28, y: 0.46 },
-    sniper:  { x: 44, y: 0.46 },
-    heavy:   { x: 38, y: 0.45 },
-    default: { x: 22, y: 0.46 }
-  };
-
   const TRAIL_AIM_PARTS = ['head', 'chestLeft', 'chestRight', 'abdomen', 'leftLeg', 'rightLeg', 'feet'];
   const SHOT_TRAIL_PROFILES = {
     pistol:  { duration: 150, travel: 2.6, segment: 110, width: 1.7 },
@@ -157,6 +144,28 @@
       x: p.x * spriteScale,
       y: STAGE_H * spriteScale * p.y
     };
+  }
+
+  function trailMuzzlePoint(tr) {
+    const R = window.CharacterRenderer;
+    const anim = window.Anims && window.Anims.shoot;
+    if (!R || typeof R.weaponMuzzlePoint !== 'function' || !anim) return null;
+    const weapon = getWeaponByName(tr.weaponName);
+    const list = window.Weapons && window.Weapons.list || [];
+    const weaponIdx = weapon ? list.indexOf(weapon) : -1;
+    const cfg = Object.assign({}, tr.actorCfg || {});
+    if (weaponIdx >= 0) cfg.weaponIdx = weaponIdx;
+    if (cfg.weaponIdx == null || cfg.weaponIdx < 0) cfg.weaponIdx = 0;
+    return R.weaponMuzzlePoint(STAGE_W, STAGE_H, cfg, anim, 0, tr.facing || 1, {
+      weapon,
+      animState: {
+        shotProfile: tr.shotProfile,
+        weaponCategory: tr.weaponCategory,
+        weaponType: tr.weaponType,
+        shotIndex: tr.shotIndex,
+        shotCount: tr.shotCount
+      }
+    });
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
@@ -325,12 +334,12 @@
             : 0;
           if (streakK <= 0 && muzzleK <= 0 && hitImpactK <= 0) return null;
           const groundY = arenaH * GROUND_Y_RATIO;
-          const dir = tr.tx >= tr.ax ? 1 : -1;
-          const cat = tr.weaponCategory || 'default';
-          const mz = MUZZLE_OFFSETS[cat] || MUZZLE_OFFSETS.default;
+          const muzzle = trailMuzzlePoint(tr);
           const target = bodyTrailPoint(tr.aimPart || tr.bodyPart || 'torso', spriteScale);
-          const x1 = xOffset + tr.ax * pxPerTile + dir * mz.x * spriteScale;
-          const y1 = groundY + tr.ay * laneScale - STAGE_H * spriteScale * mz.y;
+          const stageLeft = xOffset + tr.ax * pxPerTile - (STAGE_W * spriteScale) / 2;
+          const stageTop = groundY + tr.ay * laneScale - STAGE_H * spriteScale;
+          const x1 = muzzle ? stageLeft + muzzle.x * spriteScale : xOffset + tr.ax * pxPerTile;
+          const y1 = muzzle ? stageTop + muzzle.y * spriteScale : groundY + tr.ay * laneScale - STAGE_H * spriteScale * 0.46;
           let x2 = xOffset + tr.tx * pxPerTile + target.x + (tr.hit ? tr.impactDx : tr.missDx);
           let y2 = groundY + tr.ty * laneScale - target.y + (tr.hit ? tr.impactDy : tr.missDy);
           if (!tr.hit && tr.missKind === 'ground') {
@@ -587,6 +596,7 @@
           for (let i = lastEventIdx; i < battle.events.length; i++) {
             const ev = battle.events[i];
             if (ev.type === 'shoot') {
+              const actor = battle.all.find(s => s.id === ev.actorId);
               const aimPart = ev.bodyPart || randomTrailPart(trailRng);
               const miss = ev.hit ? { x: 0, y: 0 } : trailMissOffset(trailRng, ev.ax, ev.tx);
               const impactSpread = ev.hit
@@ -601,8 +611,15 @@
                 ax: ev.ax, ay: ev.ay,
                 tx: ev.tx, ty: ev.ty,
                 hit: ev.hit,
+                actorCfg: actor && actor.cfg,
+                weaponName: ev.weaponName || (actor && actor.weaponName),
                 weaponCategory: ev.weaponCategory,
                 bodyPart: ev.bodyPart,
+                weaponType: ev.weaponType,
+                shotProfile: ev.shotProfile,
+                shotIndex: ev.shotIndex,
+                shotCount: ev.shotCount,
+                facing: ev.facing || (ev.tx >= ev.ax ? 1 : -1),
                 aimPart,
                 missKind: miss.kind || null,
                 impactDx: (trailRng() - 0.5) * 5,

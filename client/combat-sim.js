@@ -559,8 +559,11 @@
               tx: target.x, ty: target.laneOffsetPx,
               shotIndex: shot.index,
               shotCount: a.shots.length,
+              weaponName: actor.weaponName,
               weaponCategory: a.weaponCategory,
               weaponType: a.weaponType,
+              shotProfile: a.shotProfile,
+              facing: actor.facing,
               hit: shot.hit,
               bodyPart: shot.hit ? bodyPart : null,
               damage: shot.hit ? shot.damage : 0

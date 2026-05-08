@@ -119,7 +119,7 @@ smg, heavy, shotgun → 'front'
 
 ```js
 { t, type: 'turn',  actorId, action: 'move'|'shoot'|'idle' }
-{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, shotIndex?: number, shotCount?: number, weaponCategory?: string, weaponType?: string, bodyPart?: 'head'|'chestLeft'|'chestRight'|'abdomen'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg', damage }
+{ t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, shotIndex?: number, shotCount?: number, weaponName?: string, weaponCategory?: string, weaponType?: string, shotProfile?: string, facing?: 1|-1, bodyPart?: 'head'|'chestLeft'|'chestRight'|'abdomen'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg', damage }
 { t, type: 'hit',   targetId, hp, bodyPart, damage, bodyHits }
 { t, type: 'die',   targetId, bodyPart, damage }
 { t, type: 'end',   winner: 'A'|'B'|'draw' }
