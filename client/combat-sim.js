@@ -31,6 +31,8 @@
   const OVERLAP_CHANCE = 0.35;
   const AIM_OVERLAP_CHANCE = 0.40;
   const OVERLAP_RETRY_DELAY = 0.28;
+  const AIM_DELAY_MIN = 0.38;           // minimum aim-up duration (covers short aim anims)
+  const AIM_HOLD = 0.18;                // pause after aim anim ends, before first shot
 
   const LANE_OFFSETS = { front: 0, mid: -80, back: -180 };
   // Per-soldier Y spread within a lane so soldiers don't stack on one line.
@@ -396,11 +398,11 @@
       // â”€â”€ SHOOT turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const burst = burstCount(w);
       const hitChance = w.accuracy != null ? w.accuracy : 0.5;
-      const aimDur = actor.aimed ? 0 : animDur('aim');
+      const aimDur = Math.max(AIM_DELAY_MIN, actor.aimed ? 0 : animDur('aim'));
       const shotAnim = animDur('shoot');
       const unAimDur = animDur('unaim');
       const interval = shotInterval(w, burst);
-      const recovery = Math.max(shotAnim, w.recovery || 0.1);
+      const recovery = Math.max(shotAnim, 0.08);  // unaim starts right after shoot anim
       const shotProfile = shotProfileKey(w);
 
       // Pre-roll shots so the action is a self-contained, deterministic plan.
@@ -408,7 +410,7 @@
       for (let i = 0; i < burst; i++) {
         const hit = rng() < hitChance;
         shots.push({
-          atT: aimDur + i * interval,        // local time within the turn
+          atT: aimDur + AIM_HOLD + i * interval,  // small pause after aim before firing
           index: i,
           hit,
           part: hit ? rollHitPart(rng) : null,
@@ -589,10 +591,7 @@
           actor.state = 'shoot'; actor.stateT = 0;
         }
 
-        if (a.elapsed < a.aimDur) {
-          if (actor.state !== 'aim') { actor.state = 'aim'; actor.stateT = a.elapsed; }
-          else actor.stateT = a.elapsed;
-        } else if (a.elapsed >= a.unaimStartT) {
+        if (a.elapsed >= a.unaimStartT) {
           actor.animState = {
             shotProfile: a.shotProfile,
             weaponCategory: a.weaponCategory,
@@ -600,6 +599,10 @@
           };
           actor.state = 'unaim';
           actor.stateT = a.elapsed - a.unaimStartT;
+        } else if (a.elapsed < a.shots[0].atT) {
+          // aim phase + hold: stay in aim pose until first shot fires
+          if (actor.state !== 'aim') { actor.state = 'aim'; actor.stateT = 0; }
+          else actor.stateT += dt;
         } else if (actor.state === 'aim') {
           actor.state = 'shoot'; actor.stateT = 0;
         } else if (actor.state === 'shoot') {
