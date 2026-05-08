@@ -28,8 +28,8 @@
   const IDLE_TURN_DURATION = 0.4;
   const TURN_GAP = 0.04;                // tiny pause between turns for readability
   const MAX_ACTIVE_ACTIONS = 2;         // Minitroopers-like overlaps, but never a full scrum
-  const OVERLAP_CHANCE = 0.05;
-  const AIM_OVERLAP_CHANCE = 0.10;
+  const OVERLAP_CHANCE = 0.35;
+  const AIM_OVERLAP_CHANCE = 0.40;
   const OVERLAP_RETRY_DELAY = 0.28;
 
   const LANE_OFFSETS = { front: 0, mid: -80, back: -180 };

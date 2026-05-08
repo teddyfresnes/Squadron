@@ -17,7 +17,7 @@
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
-  const SHADOW_FOOT_Y = STAGE_H * 0.705;
+  const SHADOW_FOOT_Y = STAGE_H * 0.82;
   const BODY_PART_META = [
     { key: 'head', className: 'head', label: 'Tete' },
     { key: 'chestLeft', className: 'chest-left', label: 'Torse gauche', fallbackKey: 'torso' },
