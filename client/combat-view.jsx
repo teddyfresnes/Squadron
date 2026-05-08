@@ -11,7 +11,9 @@
   const STAGE_H = (UI && UI.STAGE_H) || 112;
   const GROUND_Y_RATIO = 0.78;          // where the ground line sits inside the arena
   const BULLET_TRAIL_MS = 260;          // default visual life for bullet streaks
-  const BULLET_TRAIL_MAX_MS = 360;
+  const BULLET_TRAIL_MAX_MS = 480;
+  const MUZZLE_FLASH_MS = 95;
+  const HIT_IMPACT_MS = 280;
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
@@ -314,8 +316,14 @@
           const age = nowMs - tr.bornMs;
           const profile = shotTrailProfile(tr.weaponCategory);
           const duration = profile.duration || BULLET_TRAIL_MS;
-          const k = Math.max(0, 1 - age / duration);
-          if (k <= 0) return null;
+          const streakK = Math.max(0, 1 - age / duration);
+          const muzzleK = Math.max(0, 1 - age / MUZZLE_FLASH_MS);
+          const arrivalAge = duration / Math.max(1, profile.travel || 1);
+          const sinceArrival = age - arrivalAge;
+          const hitImpactK = tr.hit && sinceArrival >= 0
+            ? Math.max(0, 1 - sinceArrival / HIT_IMPACT_MS)
+            : 0;
+          if (streakK <= 0 && muzzleK <= 0 && hitImpactK <= 0) return null;
           const groundY = arenaH * GROUND_Y_RATIO;
           const dir = tr.tx >= tr.ax ? 1 : -1;
           const cat = tr.weaponCategory || 'default';
@@ -348,12 +356,13 @@
           const sy = y1 + dy * tailT;
           const ex = x1 + dx * headT;
           const ey = y1 + dy * headT;
-          const showImpact = headT > 0.9;
-          const impactK = showImpact ? Math.max(0, 1 - (headT - 0.9) / 0.1) : 0;
+          const showGroundImpact = headT > 0.9;
+          const groundImpactK = showGroundImpact ? Math.max(0, 1 - (headT - 0.9) / 0.1) : 0;
           const width = profile.width || 1.25;
+          const muzzleScale = (profile.width || 1.25) * 0.55 + 0.6;
           return (
             <g key={tr.key} className={'cv-bullet-fx cv-bullet-' + (tr.hit ? 'hit' : tr.missKind) + ' cv-bullet-cat-' + (tr.weaponCategory || 'default')}>
-              {profile.spread && (
+              {profile.spread && streakK > 0 && (
                 <g className="cv-bullet-spread">
                   <line className="cv-bullet-pellet"
                         x1={sx + nx * 3 * spriteScale}
@@ -361,37 +370,93 @@
                         x2={ex + nx * 9 * spriteScale * headT}
                         y2={ey + ny * 9 * spriteScale * headT}
                         strokeWidth={Math.max(1, width * 0.75)}
-                        strokeOpacity={0.42 * k} />
+                        strokeOpacity={0.42 * streakK} />
                   <line className="cv-bullet-pellet"
                         x1={sx - nx * 3 * spriteScale}
                         y1={sy - ny * 3 * spriteScale}
                         x2={ex - nx * 9 * spriteScale * headT}
                         y2={ey - ny * 9 * spriteScale * headT}
                         strokeWidth={Math.max(1, width * 0.75)}
-                        strokeOpacity={0.35 * k} />
+                        strokeOpacity={0.35 * streakK} />
                 </g>
               )}
-              <line className="cv-bullet-glint"
-                    x1={sx - ux * 6} y1={sy - uy * 6}
-                    x2={ex} y2={ey}
-                    strokeWidth={width + 2.2}
-                    strokeOpacity={0.6 * k} />
-              <line className="cv-bullet-line"
-                    x1={sx} y1={sy}
-                    x2={ex} y2={ey}
-                    strokeWidth={width}
-                    strokeOpacity={k} />
-              <line className="cv-bullet-tip"
-                    x1={ex - ux * Math.min(24, segmentPx * 0.32)}
-                    y1={ey - uy * Math.min(24, segmentPx * 0.32)}
-                    x2={ex} y2={ey}
-                    strokeWidth={width + 1.1}
-                    strokeOpacity={Math.min(1, 1.15 * k)} />
-              {!tr.hit && tr.missKind === 'ground' && showImpact && (
-                <g className="cv-bullet-ground-impact" opacity={impactK}>
+              {streakK > 0 && (
+                <g>
+                  <line className="cv-bullet-glint"
+                        x1={sx - ux * 6} y1={sy - uy * 6}
+                        x2={ex} y2={ey}
+                        strokeWidth={width + 2.2}
+                        strokeOpacity={0.6 * streakK} />
+                  <line className="cv-bullet-line"
+                        x1={sx} y1={sy}
+                        x2={ex} y2={ey}
+                        strokeWidth={width}
+                        strokeOpacity={streakK} />
+                  <line className="cv-bullet-tip"
+                        x1={ex - ux * Math.min(24, segmentPx * 0.32)}
+                        y1={ey - uy * Math.min(24, segmentPx * 0.32)}
+                        x2={ex} y2={ey}
+                        strokeWidth={width + 1.1}
+                        strokeOpacity={Math.min(1, 1.15 * streakK)} />
+                </g>
+              )}
+              {!tr.hit && tr.missKind === 'ground' && showGroundImpact && (
+                <g className="cv-bullet-ground-impact" opacity={groundImpactK}>
                   <ellipse className="cv-bullet-dust" cx={x2} cy={y2 + 2 * spriteScale} rx={7 * spriteScale} ry={2.4 * spriteScale} />
                   <line className="cv-bullet-chip" x1={x2 - 4 * spriteScale} y1={y2} x2={x2 - 1 * spriteScale} y2={y2 - 4 * spriteScale} />
                   <line className="cv-bullet-chip" x1={x2 + 1 * spriteScale} y1={y2} x2={x2 + 5 * spriteScale} y2={y2 - 3 * spriteScale} />
+                </g>
+              )}
+              {muzzleK > 0 && (
+                <g className="cv-bullet-muzzle" opacity={muzzleK}>
+                  <circle cx={x1} cy={y1}
+                          r={(4 + 5 * (1 - muzzleK)) * spriteScale * muzzleScale}
+                          fill="rgba(255,180,60,0.55)" />
+                  <circle cx={x1} cy={y1}
+                          r={(1.7 + 1.7 * (1 - muzzleK)) * spriteScale * muzzleScale}
+                          fill="rgba(255,250,220,0.95)" />
+                  <line x1={x1} y1={y1}
+                        x2={x1 + ux * 18 * spriteScale * muzzleScale}
+                        y2={y1 + uy * 18 * spriteScale * muzzleScale}
+                        stroke="rgba(255,235,170,0.95)"
+                        strokeWidth={(width + 0.6)}
+                        strokeLinecap="round" />
+                  <line x1={x1 - nx * 6 * spriteScale * muzzleScale} y1={y1 - ny * 6 * spriteScale * muzzleScale}
+                        x2={x1 + nx * 6 * spriteScale * muzzleScale} y2={y1 + ny * 6 * spriteScale * muzzleScale}
+                        stroke="rgba(255,210,120,0.7)"
+                        strokeWidth={Math.max(0.9, width * 0.65)}
+                        strokeLinecap="round"
+                        strokeOpacity={0.75} />
+                  <line x1={x1} y1={y1}
+                        x2={x1 - ux * 5 * spriteScale * muzzleScale}
+                        y2={y1 - uy * 5 * spriteScale * muzzleScale}
+                        stroke="rgba(255,180,80,0.65)"
+                        strokeWidth={Math.max(0.9, width * 0.6)}
+                        strokeLinecap="round"
+                        strokeOpacity={0.6} />
+                </g>
+              )}
+              {hitImpactK > 0 && (
+                <g className="cv-bullet-hitimpact">
+                  <circle cx={x2} cy={y2}
+                          r={(2.8 + 4 * (1 - hitImpactK)) * spriteScale}
+                          fill="rgba(170,20,20,0.55)"
+                          opacity={hitImpactK} />
+                  <circle cx={x2} cy={y2}
+                          r={(1.3 + 1.4 * (1 - hitImpactK)) * spriteScale}
+                          fill="rgba(255,80,40,0.92)"
+                          opacity={hitImpactK} />
+                  {tr.impactSpread && tr.impactSpread.map((s, i) => {
+                    const r = s.r * (0.4 + 1.1 * (1 - hitImpactK));
+                    const sxp = x2 + Math.cos(s.ang) * r * spriteScale;
+                    const syp = y2 + Math.sin(s.ang) * r * spriteScale + (1 - hitImpactK) * 4 * spriteScale;
+                    return (
+                      <circle key={i} cx={sxp} cy={syp}
+                              r={s.sz * spriteScale}
+                              fill="rgba(160,15,15,0.85)"
+                              opacity={hitImpactK} />
+                    );
+                  })}
                 </g>
               )}
             </g>
@@ -524,6 +589,13 @@
             if (ev.type === 'shoot') {
               const aimPart = ev.bodyPart || randomTrailPart(trailRng);
               const miss = ev.hit ? { x: 0, y: 0 } : trailMissOffset(trailRng, ev.ax, ev.tx);
+              const impactSpread = ev.hit
+                ? [0, 1, 2, 3, 4, 5].map(() => ({
+                    ang: trailRng() * Math.PI * 2,
+                    r: 5 + trailRng() * 7,
+                    sz: 0.6 + trailRng() * 0.7
+                  }))
+                : null;
               newOnes.push({
                 key: 'tr' + i,
                 ax: ev.ax, ay: ev.ay,
@@ -537,6 +609,7 @@
                 impactDy: (trailRng() - 0.5) * 5,
                 missDx: miss.x,
                 missDy: miss.y,
+                impactSpread,
                 bornMs: now
               });
             }
