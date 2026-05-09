@@ -11,9 +11,10 @@
   const STAGE_H = (UI && UI.STAGE_H) || 112;
   const GROUND_Y_RATIO = 0.78;          // where the ground line sits inside the arena
   const BULLET_TRAIL_MS = 260;          // default visual life for bullet streaks
-  const BULLET_TRAIL_MAX_MS = 480;
+  const BULLET_TRAIL_MAX_MS = 560;
   const MUZZLE_FLASH_MS = 95;
   const HIT_IMPACT_MS = 280;
+  const GROUND_IMPACT_MS = 360;
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
@@ -130,15 +131,12 @@
   function trailMissOffset(rng, ax, tx) {
     const dir = tx >= ax ? 1 : -1;
     const r = rng();
-    // Every miss pierces past the target — bullets don't stop at the trooper.
-    const passBy = 90 + rng() * 130;
-    if (r < 0.28) return { kind: 'over',      x: dir * passBy + (rng() - 0.5) * 28, y: -(22 + rng() * 38) };
-    // 'behind' flies far off-screen
-    if (r < 0.48) return { kind: 'behind',    x: dir * (1400 + rng() * 900), y: (rng() - 0.5) * 24 };
-    // 'farground' lands on the ground far behind the target with a stylish impact
-    if (r < 0.62) return { kind: 'farground', x: dir * (passBy + 140 + rng() * 220), y: 0 };
-    if (r < 0.82) return { kind: 'ground',    x: dir * (60 + rng() * 90) + (rng() - 0.5) * 24, y: rng() * 8 };
-    return                                  { kind: 'wide',     x: dir * passBy + (rng() < 0.5 ? -1 : 1) * (16 + rng() * 28), y: (rng() - 0.5) * 32 };
+    // Every miss ends on the ground so a dust impact is visible at the line tip.
+    // Variety is in WHERE on the ground (short, close behind, far behind, wide).
+    if (r < 0.18) return { kind: 'short',     x: -dir * (50 + rng() * 90) + (rng() - 0.5) * 20, y: rng() * 6 };
+    if (r < 0.48) return { kind: 'ground',    x: dir * (60 + rng() * 100) + (rng() - 0.5) * 24, y: rng() * 6 };
+    if (r < 0.72) return { kind: 'farground', x: dir * (220 + rng() * 200), y: rng() * 4 };
+    return                                   { kind: 'wide',     x: dir * (80 + rng() * 70) + (rng() < 0.5 ? -1 : 1) * (40 + rng() * 60), y: rng() * 8 };
   }
 
   function bodyTrailPoint(part, spriteScale) {
@@ -335,7 +333,10 @@
           const hitImpactK = tr.hit && sinceArrival >= 0
             ? Math.max(0, 1 - sinceArrival / HIT_IMPACT_MS)
             : 0;
-          if (streakK <= 0 && muzzleK <= 0 && hitImpactK <= 0) return null;
+          const groundImpactK = !tr.hit && sinceArrival >= 0
+            ? Math.max(0, 1 - sinceArrival / GROUND_IMPACT_MS)
+            : 0;
+          if (streakK <= 0 && muzzleK <= 0 && hitImpactK <= 0 && groundImpactK <= 0) return null;
           const groundY = arenaH * GROUND_Y_RATIO;
           const muzzle = trailMuzzlePoint(tr);
           const target = bodyTrailPoint(tr.aimPart || tr.bodyPart || 'torso', spriteScale);
@@ -345,11 +346,13 @@
           const y1 = muzzle ? stageTop + muzzle.y * spriteScale : groundY + tr.ay * laneScale - STAGE_H * spriteScale * 0.46;
           let x2 = xOffset + tr.tx * pxPerTile + target.x + (tr.hit ? tr.impactDx : tr.missDx);
           let y2 = groundY + tr.ty * laneScale - target.y + (tr.hit ? tr.impactDy : tr.missDy);
-          if (!tr.hit && (tr.missKind === 'ground' || tr.missKind === 'farground')) {
+          if (!tr.hit) {
+            // All misses land on the ground — endpoint is centered on target X plus the miss offset.
             x2 = xOffset + tr.tx * pxPerTile + tr.missDx;
             y2 = groundY + tr.ty * laneScale - 3 * spriteScale + tr.missDy;
           }
-          // 'behind' is intentionally not clamped — let it fly off-screen
+          // Keep endpoints inside the arena so dust impact stays visible.
+          x2 = clamp(x2, 8, arenaW - 8);
           y2 = clamp(y2, -60, arenaH + 30);
           const dx = x2 - x1;
           const dy = y2 - y1;
@@ -366,8 +369,7 @@
           const sy = y1 + dy * tailT;
           const ex = x1 + dx * headT;
           const ey = y1 + dy * headT;
-          const showGroundImpact = headT > 0.9;
-          const groundImpactK = showGroundImpact ? Math.max(0, 1 - (headT - 0.9) / 0.1) : 0;
+          const showGroundImpact = groundImpactK > 0;
           const width = profile.width || 1.25;
           const muzzleScale = (profile.width || 1.25) * 0.55 + 0.6;
           return (
@@ -410,7 +412,7 @@
                         strokeOpacity={Math.min(1, 1.15 * streakK)} />
                 </g>
               )}
-              {!tr.hit && (tr.missKind === 'ground' || tr.missKind === 'farground') && showGroundImpact && (
+              {!tr.hit && showGroundImpact && (
                 <g className="cv-bullet-ground-impact" opacity={groundImpactK}>
                   <ellipse className="cv-bullet-dust" cx={x2} cy={y2 + 2 * spriteScale}
                            rx={(tr.missKind === 'farground' ? 10 : 7) * spriteScale}
