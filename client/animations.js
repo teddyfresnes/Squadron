@@ -377,17 +377,20 @@
     loop: false,
     get: function (i) {
       const d = mark(defaults(), 'hurt', i);
-      const tiltSeq      = [-0.10, -0.30, -0.45, -0.45, -0.30, -0.12,  0.05, 0   ];
-      const frontStepSeq = [ 0.6,   1.5,   2.0,   2.0,   1.8,   1.2,   0.4,  0   ];
-      const frontLiftSeq = [ 0.20,  0.50,  0.40,  0.05,  0,     0,     0,    0   ];
-      const frontBendSeq = [ 0.30,  0.50,  0.65,  0.70,  0.55,  0.30,  0.10, 0   ];
-      const backStepSeq  = [-0.4,  -1.5,  -2.0,  -2.0,  -1.6,  -0.9,  -0.2,  0   ];
-      const backLiftSeq  = [ 0.10,  0.30,  0.25,  0.05,  0,     0,     0,    0   ];
-      const backBendSeq  = [-0.25, -0.45, -0.55, -0.60, -0.45, -0.25, -0.10, 0   ];
-      const gripXSeq     = [ 2,     4,     5,     5,     4,     3,     1,    0   ];
-      const gripYSeq     = [-1,    -3,    -4,    -4,    -3,    -2,    -1,    0   ];
-      const aimSeq       = [-0.30, -0.80, -1.10, -1.15, -0.75, -0.40, -0.10, 0   ];
-      const bodyDYSeq    = [-1,    -1,     0,     0,     0,     0,     0,    0   ];
+      // Front-loaded: F0 is already at peak brutal so a burst (which resets
+      // stateT to 0 on every hit) keeps slamming the body backward instead of
+      // playing a soft ramp-up each time. Recovery is spread over F2-F7.
+      const tiltSeq      = [-0.50, -0.45, -0.40, -0.30, -0.18, -0.08,  0.05, 0   ];
+      const frontStepSeq = [ 2.0,   2.0,   2.0,   1.8,   1.5,   1.0,   0.4,  0   ];
+      const frontLiftSeq = [ 0.50,  0.30,  0.10,  0,     0,     0,     0,    0   ];
+      const frontBendSeq = [ 0.70,  0.70,  0.65,  0.55,  0.40,  0.25,  0.10, 0   ];
+      const backStepSeq  = [-2.0,  -2.0,  -2.0,  -1.7,  -1.3,  -0.8,  -0.2,  0   ];
+      const backLiftSeq  = [ 0.30,  0.20,  0.10,  0,     0,     0,     0,    0   ];
+      const backBendSeq  = [-0.60, -0.60, -0.55, -0.45, -0.35, -0.20, -0.10, 0   ];
+      const gripXSeq     = [ 5,     5,     5,     4,     3,     2,     1,    0   ];
+      const gripYSeq     = [-4,    -4,    -3,    -3,    -2,    -1,    -1,    0   ];
+      const aimSeq       = [-1.20, -1.15, -1.05, -0.80, -0.55, -0.30, -0.10, 0   ];
+      const bodyDYSeq    = [-2,    -1,     0,     0,     0,     0,     0,    0   ];
 
       d.deathAngle = tiltSeq[i] || 0;
       d.legs = {
