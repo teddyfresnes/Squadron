@@ -323,6 +323,7 @@
       for (const s of all) {
         if (s.hp <= 0) continue;
         if (s.cooldown > worldT) continue;
+        if (s.state === 'hurt') continue;
         if (activeActions.some(a => a.actorId === s.id)) continue;
         if (!best) { best = s; continue; }
         if (s.cooldown < best.cooldown) { best = s; continue; }

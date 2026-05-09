@@ -2666,7 +2666,7 @@ html, body {
 .cv-selected-marker {
   position: absolute;
   left: 50%;
-  top: 70.5%;
+  top: 82%;
   transform: translate(-50%, -50%);
   width: 48px;
   height: 13px;

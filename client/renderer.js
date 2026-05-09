@@ -774,9 +774,12 @@
       ctx.translate(-originX, -(originY - 4 + (frame.bodyDY || 0)));
     }
     if (frame.deathAngle) {
-      ctx.translate(originX, originY);
+      // Pivot at the feet (legs extend ~7px below originY) so the body tips
+      // over and lies flat on the ground instead of floating at hip-level.
+      const deathPivotY = originY + 12;
+      ctx.translate(originX, deathPivotY);
       ctx.rotate(facing * frame.deathAngle);
-      ctx.translate(-originX, -originY);
+      ctx.translate(-originX, -deathPivotY);
     }
 
     if (facing === -1) {
