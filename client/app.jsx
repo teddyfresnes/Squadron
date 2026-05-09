@@ -254,6 +254,22 @@ function App({ onSwitchMode }) {
   const [facing, setFacing] = useState(1);
   const [bgMode, setBgMode] = useState('light');
   const [scale, setScale] = useState(SCALE);
+  const [, forceUpdate] = useState(0);
+
+  // Sync weapon names from weapon-config.json (source of truth) into window.Weapons.list
+  useEffect(() => {
+    fetch('./weapon-config.json?ts=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.json())
+      .then(config => {
+        const nameById = {};
+        for (const w of config.weapons) nameById[w.id] = w.name;
+        for (const w of window.Weapons.list) {
+          if (nameById[w.id]) w.name = nameById[w.id];
+        }
+        forceUpdate(n => n + 1);
+      })
+      .catch(err => console.error('[app] failed to sync weapon names:', err));
+  }, []);
 
   useEffect(() => { localStorage.setItem('char-cfg', JSON.stringify(cfg)); }, [cfg]);
   useEffect(() => { localStorage.setItem('char-anim', animKey); }, [animKey]);
