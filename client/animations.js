@@ -427,21 +427,47 @@
     }
   };
 
-  // ---------- DEAD (6 frames: fall, 1 rest hold) ----------
+  // ---------- DEAD (10 frames: hurt-style hit, then fall flat on the back) ----------
+  // F0-F2 reuse the hurt opening (brutal backward lean, weapon thrust up as
+  // counter-weight). Instead of recovering, the lean keeps tipping until the
+  // body lies flat on its back (deathAngle = -π/2). Eyes close on impact.
+  // Weapon is dropped once the body is past the tipping point.
   Anims.dead = {
     name: 'Dead',
-    frames: 6,
-    fps: 8,
+    frames: 10,
+    fps: 12,
     loop: false,
     get: function (i) {
       const d = mark(defaults(), 'dead', i);
-      const fall = Math.min(1, i / 4);
-      d.deathAngle = fall * (Math.PI / 2);  // rotate 90° to face down
-      d.bodyDY = Math.round(fall * 6);
+      const HALF_PI = Math.PI / 2;
+      const tiltSeq      = [-0.50, -0.55, -0.70, -0.95, -1.25, -1.45, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI];
+      const frontStepSeq = [ 2.0,   2.0,   1.8,   1.4,   0.9,   0.4,   0,        0,        0,        0      ];
+      const frontLiftSeq = [ 0.50,  0.30,  0.10,  0,     0,     0,     0,        0,        0,        0      ];
+      const frontBendSeq = [ 0.70,  0.70,  0.60,  0.45,  0.30,  0.15,  0.05,     0,        0,        0      ];
+      const backStepSeq  = [-2.0,  -2.0,  -1.8,  -1.4,  -0.9,  -0.4,   0,        0,        0,        0      ];
+      const backLiftSeq  = [ 0.30,  0.20,  0.10,  0,     0,     0,     0,        0,        0,        0      ];
+      const backBendSeq  = [-0.60, -0.60, -0.50, -0.35, -0.20, -0.10,  0,        0,        0,        0      ];
+      const gripXSeq     = [ 5,     5,     4,     3,     2,     1,     0,        0,        0,        0      ];
+      const gripYSeq     = [-4,    -4,    -2,     0,     1,     2,     3,        4,        4,        4      ];
+      const aimSeq       = [-1.20, -1.10, -0.85, -0.55, -0.20,  0.10,  0.30,     0.40,     0.40,     0.40   ];
+      const bodyDYSeq    = [-2,    -1,     0,     0,     0,     0,     0,        0,        0,        0      ];
+
+      d.deathAngle = tiltSeq[i] || 0;
+      d.legs = {
+        front: 0,
+        back: 0,
+        frontStep: frontStepSeq[i] || 0,
+        frontLift: frontLiftSeq[i] || 0,
+        frontBend: frontBendSeq[i] || 0,
+        backStep: backStepSeq[i] || 0,
+        backLift: backLiftSeq[i] || 0,
+        backBend: backBendSeq[i] || 0
+      };
+      d.gripOffset = { x: gripXSeq[i] || 0, y: gripYSeq[i] || 0 };
+      d.aimAngle = aimSeq[i] || 0;
+      d.bodyDY = bodyDYSeq[i] || 0;
       d.eyesClosed = true;
-      d.aimAngle = 0.4;
-      d.showWeapon = true;
-      d.weaponDropped = i >= 4;
+      d.weaponDropped = i >= 6;
       return d;
     }
   };
