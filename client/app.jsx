@@ -300,7 +300,7 @@ function App({ onSwitchMode }) {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-dot" />
+          <img className="brand-dot" src="assets/images/icons/favicon.png" alt="Squadron" />
           <div className="brand-text">
             <div className="brand-title">SQUADRON DEV PART</div>
           </div>
