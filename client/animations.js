@@ -354,20 +354,72 @@
     }
   };
 
-  // ---------- HURT (5 frames) ----------
-  // Smooth backward stagger then return to rest. No tint, no head snap —
-  // just a clean recoil along the facing axis (bodyDX = backward).
+  // ---------- HURT (default — biomechanical "took a hit, recovers") ----------
+  // Frame-by-frame story:
+  //   brutal impact → whole body leans back hard around the feet, legs split
+  //   into a wide stance (front leg shoots forward, back leg shoots backward)
+  //   to catch the lost balance, weapon thrusts forward as counter-weight,
+  //   then everything pulls back to rest with a small forward overshoot.
+  // Knobs used (all exist in the renderer, no rendering changes needed):
+  //   - deathAngle (negative): tilts whole body backward around feet, keeps
+  //     torso solidly attached to hips (no forwardLean offset gap)
+  //   - frame.legs front/back step+lift+bend: split stance — front leg max
+  //     forward, back leg max backward (stepX clamps to ±2 px in parts.js so
+  //     ±2 is the visible cap; bends carry the rest of the spread)
+  //   - frame.gripOffset (x>0, y<0): pushes weapon grip forward+up so the
+  //     trigger arm reaches forward as a counter-weight (capped at 5 px to
+  //     avoid breaking the elbow IK in resolveElbow)
+  //   - aimAngle (negative): weapon tilts up hard — instinctive raised-arm reflex
   Anims.hurt = {
     name: 'Hurt',
+    frames: 8,
+    fps: 14,
+    loop: false,
+    get: function (i) {
+      const d = mark(defaults(), 'hurt', i);
+      const tiltSeq      = [-0.10, -0.30, -0.45, -0.45, -0.30, -0.12,  0.05, 0   ];
+      const frontStepSeq = [ 0.6,   1.5,   2.0,   2.0,   1.8,   1.2,   0.4,  0   ];
+      const frontLiftSeq = [ 0.20,  0.50,  0.40,  0.05,  0,     0,     0,    0   ];
+      const frontBendSeq = [ 0.30,  0.50,  0.65,  0.70,  0.55,  0.30,  0.10, 0   ];
+      const backStepSeq  = [-0.4,  -1.5,  -2.0,  -2.0,  -1.6,  -0.9,  -0.2,  0   ];
+      const backLiftSeq  = [ 0.10,  0.30,  0.25,  0.05,  0,     0,     0,    0   ];
+      const backBendSeq  = [-0.25, -0.45, -0.55, -0.60, -0.45, -0.25, -0.10, 0   ];
+      const gripXSeq     = [ 2,     4,     5,     5,     4,     3,     1,    0   ];
+      const gripYSeq     = [-1,    -3,    -4,    -4,    -3,    -2,    -1,    0   ];
+      const aimSeq       = [-0.30, -0.80, -1.10, -1.15, -0.75, -0.40, -0.10, 0   ];
+      const bodyDYSeq    = [-1,    -1,     0,     0,     0,     0,     0,    0   ];
+
+      d.deathAngle = tiltSeq[i] || 0;
+      d.legs = {
+        front: 0,
+        back: 0,
+        frontStep: frontStepSeq[i] || 0,
+        frontLift: frontLiftSeq[i] || 0,
+        frontBend: frontBendSeq[i] || 0,
+        backStep: backStepSeq[i] || 0,
+        backLift: backLiftSeq[i] || 0,
+        backBend: backBendSeq[i] || 0
+      };
+      d.gripOffset = { x: gripXSeq[i] || 0, y: gripYSeq[i] || 0 };
+      d.aimAngle = aimSeq[i] || 0;
+      d.bodyDY = bodyDYSeq[i] || 0;
+      return d;
+    }
+  };
+
+  // ---------- HURT 2 (smooth recoil, no tilt) ----------
+  // Quick backward slide along the facing axis then return — lighter reaction.
+  Anims.hurt2 = {
+    name: 'Hurt 2',
     frames: 5,
     fps: 16,
     loop: false,
     get: function (i) {
-      const d = mark(defaults(), 'hurt', i);
+      const d = mark(defaults(), 'hurt2', i);
       const recoil = [4, 3, 2, 1, 0][i] || 0;
       d.bodyDX = recoil;
-      d.bodyDY = i === 0 ? -1 : 0;   // tiny upward jolt on impact
-      d.aimAngle = 0.35 * (recoil / 4); // weapon dips with the stagger and recovers
+      d.bodyDY = i === 0 ? -1 : 0;
+      d.aimAngle = 0.35 * (recoil / 4);
       return d;
     }
   };
@@ -436,5 +488,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'reload', 'hurt', 'dead', 'roll', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
 })();
