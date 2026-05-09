@@ -176,7 +176,7 @@
     const life = hpPct(s);
     const hpLabel = hpText(s);
     const shadowTop = Math.round(SHADOW_FOOT_Y * spriteScale);
-    const hpTop = Math.round(STAGE_H * 0.39 * spriteScale);
+    const hpTop = Math.round(STAGE_H * 0.12 * spriteScale);
 
     function handleClick(ev) {
       ev.stopPropagation();

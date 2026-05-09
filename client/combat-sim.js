@@ -259,6 +259,7 @@
       state: 'idle',
       stateT: 0,
       animState: null,
+      hurtOverride: 0,
       cooldown: 0,            // when this soldier next gets a turn
       initiative: 0,          // boost stat (V1: always 0; ready for skills)
       aimed: false,
@@ -492,6 +493,7 @@
       action.elapsed = 0;
       const actor = all.find(s => s.id === action.actorId);
       if (!actor || actor.hp <= 0) return false;
+      actor.hurtOverride = 0;
 
       if (action.type === 'move') {
         actor.state = 'run'; actor.stateT = 0;
@@ -578,6 +580,7 @@
                 events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: shot.damage });
               } else {
                 target.state = 'hurt'; target.stateT = 0;
+                target.hurtOverride = animDur('hurt');
                 events.push({
                   t: worldT, type: 'hit',
                   targetId: target.id, hp: target.hp,
@@ -620,6 +623,14 @@
           actor.animState = null;
         }
         completed.add(a);
+      }
+
+      if (actor.hurtOverride > 0) {
+        actor.hurtOverride = Math.max(0, actor.hurtOverride - dt);
+        if (actor.hurtOverride > 0) {
+          actor.state = 'hurt';
+          actor.stateT = animDur('hurt') - actor.hurtOverride;
+        }
       }
     }
 
