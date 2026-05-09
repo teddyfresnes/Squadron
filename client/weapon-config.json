@@ -21,7 +21,7 @@
     "damageMax": "hit_points"
   },
   "weapons": [
-    { "id": "SMG-01", "name": "Uzi", "category": "smg", "weaponType": "automatic", "magazineSize": 20, "shootSpeed": 9.5, "damage": 1.5, "accuracy": 0.62, "criticalChance": 0.05, "recovery": 0.12, "burst": 1, "rangeMin": 1, "rangeMax": 14, "damageMin": 1, "damageMax": 2 },
+    { "id": "SMG-01", "name": "Uzi", "category": "smg", "weaponType": "automatic", "magazineSize": 20, "shootSpeed": 9.5, "damage": 1.5, "accuracy": 0.62, "criticalChance": 0.05, "recovery": 0.12, "burst": 5, "rangeMin": 1, "rangeMax": 14, "damageMin": 1, "damageMax": 2 },
     { "id": "SMG-02", "name": "MAC-10", "category": "smg", "weaponType": "automatic", "magazineSize": 20, "shootSpeed": 10.5, "damage": 1.5, "accuracy": 0.55, "criticalChance": 0.04, "recovery": 0.13, "burst": 1, "rangeMin": 1, "rangeMax": 12, "damageMin": 1, "damageMax": 2 },
     { "id": "SMG-03", "name": "TEC-9", "category": "smg", "weaponType": "semi_auto", "magazineSize": 20, "shootSpeed": 4.5, "damage": 1.5, "accuracy": 0.6, "criticalChance": 0.05, "recovery": 0.16, "burst": 1, "rangeMin": 1, "rangeMax": 13, "damageMin": 1, "damageMax": 2 },
     { "id": "SMG-04", "name": "Skorpion vz. 61", "category": "smg", "weaponType": "automatic", "magazineSize": 20, "shootSpeed": 8.5, "damage": 1, "accuracy": 0.58, "criticalChance": 0.04, "recovery": 0.12, "burst": 1, "rangeMin": 1, "rangeMax": 12, "damageMin": 1, "damageMax": 1 },

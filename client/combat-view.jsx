@@ -132,10 +132,13 @@
     const r = rng();
     // Every miss pierces past the target — bullets don't stop at the trooper.
     const passBy = 90 + rng() * 130;
-    if (r < 0.30) return { kind: 'over',   x: dir * passBy + (rng() - 0.5) * 28, y: -(22 + rng() * 38) };
-    if (r < 0.55) return { kind: 'behind', x: dir * (passBy + 30 + rng() * 70), y: (rng() - 0.5) * 24 };
-    if (r < 0.80) return { kind: 'ground', x: dir * (60 + rng() * 90) + (rng() - 0.5) * 24, y: rng() * 8 };
-    return                                 { kind: 'wide',   x: dir * passBy + (rng() < 0.5 ? -1 : 1) * (16 + rng() * 28), y: (rng() - 0.5) * 32 };
+    if (r < 0.28) return { kind: 'over',      x: dir * passBy + (rng() - 0.5) * 28, y: -(22 + rng() * 38) };
+    // 'behind' flies far off-screen
+    if (r < 0.48) return { kind: 'behind',    x: dir * (1400 + rng() * 900), y: (rng() - 0.5) * 24 };
+    // 'farground' lands on the ground far behind the target with a stylish impact
+    if (r < 0.62) return { kind: 'farground', x: dir * (passBy + 140 + rng() * 220), y: 0 };
+    if (r < 0.82) return { kind: 'ground',    x: dir * (60 + rng() * 90) + (rng() - 0.5) * 24, y: rng() * 8 };
+    return                                  { kind: 'wide',     x: dir * passBy + (rng() < 0.5 ? -1 : 1) * (16 + rng() * 28), y: (rng() - 0.5) * 32 };
   }
 
   function bodyTrailPoint(part, spriteScale) {
@@ -342,13 +345,11 @@
           const y1 = muzzle ? stageTop + muzzle.y * spriteScale : groundY + tr.ay * laneScale - STAGE_H * spriteScale * 0.46;
           let x2 = xOffset + tr.tx * pxPerTile + target.x + (tr.hit ? tr.impactDx : tr.missDx);
           let y2 = groundY + tr.ty * laneScale - target.y + (tr.hit ? tr.impactDy : tr.missDy);
-          if (!tr.hit && tr.missKind === 'ground') {
+          if (!tr.hit && (tr.missKind === 'ground' || tr.missKind === 'farground')) {
             x2 = xOffset + tr.tx * pxPerTile + tr.missDx;
             y2 = groundY + tr.ty * laneScale - 3 * spriteScale + tr.missDy;
           }
-          if (!tr.hit && tr.missKind === 'behind') {
-            x2 = clamp(x2, -80, arenaW + 80);
-          }
+          // 'behind' is intentionally not clamped — let it fly off-screen
           y2 = clamp(y2, -60, arenaH + 30);
           const dx = x2 - x1;
           const dy = y2 - y1;
@@ -409,11 +410,21 @@
                         strokeOpacity={Math.min(1, 1.15 * streakK)} />
                 </g>
               )}
-              {!tr.hit && tr.missKind === 'ground' && showGroundImpact && (
+              {!tr.hit && (tr.missKind === 'ground' || tr.missKind === 'farground') && showGroundImpact && (
                 <g className="cv-bullet-ground-impact" opacity={groundImpactK}>
-                  <ellipse className="cv-bullet-dust" cx={x2} cy={y2 + 2 * spriteScale} rx={7 * spriteScale} ry={2.4 * spriteScale} />
+                  <ellipse className="cv-bullet-dust" cx={x2} cy={y2 + 2 * spriteScale}
+                           rx={(tr.missKind === 'farground' ? 10 : 7) * spriteScale}
+                           ry={(tr.missKind === 'farground' ? 3.2 : 2.4) * spriteScale} />
                   <line className="cv-bullet-chip" x1={x2 - 4 * spriteScale} y1={y2} x2={x2 - 1 * spriteScale} y2={y2 - 4 * spriteScale} />
                   <line className="cv-bullet-chip" x1={x2 + 1 * spriteScale} y1={y2} x2={x2 + 5 * spriteScale} y2={y2 - 3 * spriteScale} />
+                  {tr.missKind === 'farground' && (
+                    <g className="cv-bullet-farground-extra">
+                      <ellipse className="cv-bullet-dust" cx={x2} cy={y2 + 1 * spriteScale} rx={5.5 * spriteScale} ry={1.8 * spriteScale} opacity={0.7} />
+                      <line className="cv-bullet-chip" x1={x2 - 2 * spriteScale} y1={y2} x2={x2 - 5 * spriteScale} y2={y2 - 6 * spriteScale} />
+                      <line className="cv-bullet-chip" x1={x2 + 3 * spriteScale} y1={y2} x2={x2 + 7 * spriteScale} y2={y2 - 1 * spriteScale} />
+                      <circle cx={x2} cy={y2 - 1 * spriteScale} r={1.4 * spriteScale} fill="rgba(255,220,140,0.92)" />
+                    </g>
+                  )}
                 </g>
               )}
               {muzzleK > 0 && (
