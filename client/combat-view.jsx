@@ -191,7 +191,9 @@
               onClick={handleClick}
               aria-label={(s.name || 'Soldat') + ', niveau ' + (s.level || 1)}
               aria-pressed={isSelected}>
-        <div className="cv-ground-shadow" style={{ top: shadowTop }} />
+        {s.state !== 'dead' && (
+          <div className="cv-ground-shadow" style={{ top: shadowTop }} />
+        )}
         <SpriteCanvas
           cfg={s.cfg}
           animKey={s.state}

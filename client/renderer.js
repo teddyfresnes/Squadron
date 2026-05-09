@@ -774,9 +774,16 @@
       ctx.translate(-originX, -(originY - 4 + (frame.bodyDY || 0)));
     }
     if (frame.deathAngle) {
-      // Pivot at the feet (legs extend ~7px below originY) so the body tips
-      // over and lies flat on the ground instead of floating at hip-level.
-      const deathPivotY = originY + 12;
+      // Optional pre-rotation backward slide so the body skids back as it
+      // falls. Positive `deathBackShift` pushes the body opposite to facing.
+      if (frame.deathBackShift) {
+        ctx.translate(-facing * frame.deathBackShift, 0);
+      }
+      // Pivot at the actual rendered feet — legs extend 7px below originY in
+      // body-local space, then the body scale (×3 male / ×2.76 female) expands
+      // that around (originX, originY). So feet sit at originY + 7 * scale.
+      const profileScale = (bodyProfile && bodyProfile.scale) || BODY_SCALE;
+      const deathPivotY = originY + 7 * profileScale;
       ctx.translate(originX, deathPivotY);
       ctx.rotate(facing * frame.deathAngle);
       ctx.translate(-originX, -deathPivotY);
@@ -840,7 +847,7 @@
 
     if (pack) {
       withBodyScale(ctx, originX, originY, bodyProfile, function () {
-        drawBackpack(ctx, torsoTL_x, torsoTL_y, pack);
+        drawBackpack(ctx, torsoTL_x, torsoTL_y, pack, { crushed: !!frame.bodyCollapsed });
       });
     }
 
@@ -917,12 +924,27 @@
       };
       drawBentArm(ctx, shoulderFront, elbow, throwHand, uniform, smooth, bodyProfile);
     } else if (!frame.tuck) {
+      // When the weapon is dropped (final death frames), override the
+      // shoulder and hand to body-axis positions (body-local X = originX)
+      // so the whole arm lies flat along the body line on the ground after
+      // the death rotation, instead of slanting up to the real shoulder.
+      let armShoulder = shoulderFront;
+      let armHand = weaponGrip;
+      if (frame.weaponDropped) {
+        armShoulder = worldPoint(originX, originY, originX, originY - 7, bodyProfile);
+        armHand = worldPoint(originX, originY, originX, originY - 1, bodyProfile);
+      }
       const armElbow = elbowOffset(hold, 'rear', motion, frame);
-      const elbow = resolveElbow(shoulderFront, {
-        x: Math.round(shoulderFront.x + (armElbow ? armElbow.x : 9)),
-        y: Math.round(shoulderFront.y + (armElbow ? armElbow.y : 1))
-      }, weaponGrip, weapon, 'rear', relaxedCarry);
-      drawBentArm(ctx, shoulderFront, elbow, weaponGrip, uniform, smooth, bodyProfile);
+      const elbow = frame.weaponDropped
+        ? {
+            x: Math.round((armShoulder.x + armHand.x) / 2),
+            y: Math.round((armShoulder.y + armHand.y) / 2)
+          }
+        : resolveElbow(shoulderFront, {
+            x: Math.round(shoulderFront.x + (armElbow ? armElbow.x : 9)),
+            y: Math.round(shoulderFront.y + (armElbow ? armElbow.y : 1))
+          }, weaponGrip, weapon, 'rear', relaxedCarry);
+      drawBentArm(ctx, armShoulder, elbow, armHand, uniform, smooth, bodyProfile);
     }
 
     if (frame.grenadeReleased) {

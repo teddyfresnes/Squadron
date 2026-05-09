@@ -435,24 +435,31 @@
   Anims.dead = {
     name: 'Dead',
     frames: 10,
-    fps: 12,
+    fps: 14,
     loop: false,
     get: function (i) {
       const d = mark(defaults(), 'dead', i);
       const HALF_PI = Math.PI / 2;
-      const tiltSeq      = [-0.50, -0.55, -0.70, -0.95, -1.25, -1.45, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI];
-      const frontStepSeq = [ 2.0,   2.0,   1.8,   1.4,   0.9,   0.4,   0,        0,        0,        0      ];
-      const frontLiftSeq = [ 0.50,  0.30,  0.10,  0,     0,     0,     0,        0,        0,        0      ];
-      const frontBendSeq = [ 0.70,  0.70,  0.60,  0.45,  0.30,  0.15,  0.05,     0,        0,        0      ];
-      const backStepSeq  = [-2.0,  -2.0,  -1.8,  -1.4,  -0.9,  -0.4,   0,        0,        0,        0      ];
-      const backLiftSeq  = [ 0.30,  0.20,  0.10,  0,     0,     0,     0,        0,        0,        0      ];
-      const backBendSeq  = [-0.60, -0.60, -0.50, -0.35, -0.20, -0.10,  0,        0,        0,        0      ];
-      const gripXSeq     = [ 5,     5,     4,     3,     2,     1,     0,        0,        0,        0      ];
-      const gripYSeq     = [-4,    -4,    -2,     0,     1,     2,     3,        4,        4,        4      ];
-      const aimSeq       = [-1.20, -1.10, -0.85, -0.55, -0.20,  0.10,  0.30,     0.40,     0.40,     0.40   ];
-      const bodyDYSeq    = [-2,    -1,     0,     0,     0,     0,     0,        0,        0,        0      ];
+      // Brutal fall: peak tilt by frame 3 (≈0.21s at 14fps) and slam to
+      // -π/2 by frame 4. Body skids backward as it falls (deathBackShift).
+      const tiltSeq          = [-0.55, -1.10, -1.45, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI];
+      const backShiftSeq     = [ 1,     5,    10,    16,       20,       22,       23,       24,       24,       24      ];
+      // Legs collapse quickly — slight back-step then settle.
+      const frontStepSeq     = [ 1.5,   0.6,   0.1,   0,        0,        0,        0,        0,        0,        0      ];
+      const frontLiftSeq     = [ 0.30,  0.10,  0,     0,        0,        0,        0,        0,        0,        0      ];
+      const frontBendSeq     = [ 0.55,  0.30,  0.10,  0,        0,        0,        0,        0,        0,        0      ];
+      const backStepSeq      = [-1.5,  -0.6,  -0.1,   0,        0,        0,        0,        0,        0,        0      ];
+      const backLiftSeq      = [ 0.20,  0.05,  0,     0,        0,        0,        0,        0,        0,        0      ];
+      const backBendSeq      = [-0.45, -0.20, -0.05,  0,        0,        0,        0,        0,        0,        0      ];
+      const gripXSeq         = [ 5,     3,     1,     0,        0,        0,        0,        0,        0,        0      ];
+      const gripYSeq         = [-3,    -1,     1,     3,        4,        4,        4,        4,        4,        4      ];
+      const aimSeq           = [-1.10, -0.65, -0.20,  0.20,     0.35,     0.40,     0.40,     0.40,     0.40,     0.40   ];
+      const bodyDYSeq        = [-2,    -1,     0,     0,        0,        0,        0,        0,        0,        0      ];
 
       d.deathAngle = tiltSeq[i] || 0;
+      d.deathBackShift = backShiftSeq[i] || 0;
+      // Legs lying once the body has tipped past horizontal (frame 3+).
+      const lying = i >= 3;
       d.legs = {
         front: 0,
         back: 0,
@@ -461,13 +468,17 @@
         frontBend: frontBendSeq[i] || 0,
         backStep: backStepSeq[i] || 0,
         backLift: backLiftSeq[i] || 0,
-        backBend: backBendSeq[i] || 0
+        backBend: backBendSeq[i] || 0,
+        lying: lying,
+        // Slight spread so both legs are still discernible side-by-side.
+        lyingSpread: lying ? 1 : 0
       };
       d.gripOffset = { x: gripXSeq[i] || 0, y: gripYSeq[i] || 0 };
       d.aimAngle = aimSeq[i] || 0;
       d.bodyDY = bodyDYSeq[i] || 0;
       d.eyesClosed = true;
-      d.weaponDropped = i >= 6;
+      d.weaponDropped = i >= 3;
+      d.bodyCollapsed = lying;
       return d;
     }
   };

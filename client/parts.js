@@ -1055,10 +1055,23 @@
   };
 
   // ---------- BACKPACK ----------
-  Parts.drawBackpack = function (ctx, tx, ty, pack) {
+  Parts.drawBackpack = function (ctx, tx, ty, pack, opts) {
     if (!pack) return;
+    opts = opts || {};
     const b = pack.base, s = pack.shade, h = pack.hl;
     const O = P.outline;
+    if (opts.crushed) {
+      // Body lying flat — squash the pack into a thin slab so it looks
+      // crushed under the torso instead of sticking out at full width.
+      const tpl = [
+        '.OO.',
+        'OBHO',
+        'OBSO',
+        '.OO.'
+      ];
+      E.stamp(ctx, tx - 2, ty + 3, tpl, { O, B: b, H: h, S: s });
+      return;
+    }
     // Behind torso, so sits on LEFT side (back). tx is torso TL.
     const tpl = [
       '.OO.',
@@ -1260,8 +1273,18 @@
     // backward so the stance keeps a little side-view spread.
     const frontWalk = typeof legOffsets.frontStep === 'number' || typeof legOffsets.frontLift === 'number';
     const backWalk = typeof legOffsets.backStep === 'number' || typeof legOffsets.backLift === 'number';
+    // Lying pose collapses both legs to the same body-local X so the
+    // X-offset between front/back doesn't become a Y-offset after the
+    // death rotation around the feet. A small body-local Y offset on the
+    // front leg becomes a small SCREEN-X spread after rotation — both legs
+    // stay at ground level but slightly visible side-by-side.
+    const lying = legOffsets.lying === true;
+    const spread = lying ? (legOffsets.lyingSpread || 0) : 0;
+    const backX = tx + 3;
+    const frontX = lying ? tx + 3 : tx + 0;
+    const frontDY = lying ? -spread : 0;
     drawSideLeg(
-      tx + 3,
+      backX,
       backWalk ? ty : ty + legOffsets.back,
       legOffsets.backBend,
       false,
@@ -1269,8 +1292,8 @@
       backWalk ? legOffsets.backLift : 0
     );
     drawSideLeg(
-      tx + 0,
-      frontWalk ? ty : ty + legOffsets.front,
+      frontX,
+      (frontWalk ? ty : ty + legOffsets.front) + frontDY,
       legOffsets.frontBend,
       true,
       frontWalk ? legOffsets.frontStep : null,
@@ -1465,8 +1488,17 @@
       strokeLine(ctx, ex + 1.95, ey - 0.9, ex + 2.18, ey - 1.22, P.outline, 0.24);
     }
     if (opts.closed) {
-      strokeLine(ctx, ex - 1.25, ey, ex + 1.0, ey, eyeOutline, lashes ? 0.35 : 0.28);
-      strokeLine(ctx, ex + 1.2, ey, ex + 2.55, ey, eyeOutline, lashes ? 0.3 : 0.24);
+      const w = lashes ? 0.3 : 0.24;
+      // Slight downward bow on each closed eye (⌣) — looks shut/peaceful and
+      // keeps the strokes short so they don't bleed into the helmet strap.
+      strokePath(ctx, eyeOutline, w, function () {
+        ctx.moveTo(ex - 0.85, ey - 0.1);
+        ctx.quadraticCurveTo(ex - 0.05, ey + 0.45, ex + 0.7, ey - 0.1);
+      });
+      strokePath(ctx, eyeOutline, w * 0.9, function () {
+        ctx.moveTo(ex + 1.45, ey - 0.05);
+        ctx.quadraticCurveTo(ex + 1.92, ey + 0.35, ex + 2.4, ey - 0.05);
+      });
       if (lashes) drawLashesHD();
       return;
     }
@@ -2365,8 +2397,17 @@
     fillRoundRect(ctx, tx + 4.35, ty + 4.7, 1.2, 1.2, 0.25, vest.shade);
   };
 
-  Parts.drawBackpackHD = function (ctx, tx, ty, pack) {
+  Parts.drawBackpackHD = function (ctx, tx, ty, pack, opts) {
     if (!pack) return;
+    opts = opts || {};
+    if (opts.crushed) {
+      // Crushed slab under the lying body — narrower (≈55%) and shorter,
+      // pinned to the lower torso so it reads like a flattened pack.
+      fillRoundRect(ctx, tx - 2.6, ty + 4.45, 4.0, 2.65, 0.6, P.outline);
+      fillRoundRect(ctx, tx - 2.15, ty + 4.78, 3.05, 2.05, 0.45, pack.base);
+      strokeLine(ctx, tx - 1.85, ty + 5.65, tx + 0.55, ty + 5.65, pack.shade, 0.32);
+      return;
+    }
     fillRoundRect(ctx, tx - 3.08, ty + 1.18, 4.0, 6.95, 1.05, P.outline);
     fillRoundRect(ctx, tx - 2.55, ty + 1.62, 2.95, 6.02, 0.78, pack.base);
     fillRoundRect(ctx, tx - 2.28, ty + 2.08, 2.05, 1.28, 0.42, pack.hl || pack.base);
@@ -2527,8 +2568,16 @@
     // it. Walk keeps both hip anchors fixed and only shifts/lifts lower legs.
     const frontWalk = typeof legOffsets.frontStep === 'number' || typeof legOffsets.frontLift === 'number';
     const backWalk = typeof legOffsets.backStep === 'number' || typeof legOffsets.backLift === 'number';
+    // Lying pose: collapse both legs to the same X, then add a small Y offset
+    // on the front leg which becomes a small horizontal screen spread after
+    // the death rotation, keeping both legs flat on the ground line.
+    const lyingHD = legOffsets.lying === true;
+    const spreadHD = lyingHD ? (legOffsets.lyingSpread || 0) : 0;
+    const backHDX = tx + 4.35;
+    const frontHDX = lyingHD ? tx + 4.35 : tx + 1.75;
+    const frontHDY = lyingHD ? -spreadHD : 0;
     drawSideLegHD(
-      tx + 4.35,
+      backHDX,
       backWalk ? ty : ty + legOffsets.back,
       legOffsets.backBend,
       false,
@@ -2536,8 +2585,8 @@
       backWalk ? legOffsets.backLift : 0
     );
     drawSideLegHD(
-      tx + 1.75,
-      frontWalk ? ty : ty + legOffsets.front,
+      frontHDX,
+      (frontWalk ? ty : ty + legOffsets.front) + frontHDY,
       legOffsets.frontBend,
       true,
       frontWalk ? legOffsets.frontStep : null,
