@@ -2740,9 +2740,21 @@ html, body {
   stroke-width: 1.1;
 }
 .cv-arena.is-paused .cv-bg,
-.cv-arena.is-paused .cv-soldier,
+.cv-arena.is-paused .cv-soldier:not(.is-selected),
 .cv-arena.is-paused .cv-trails {
   filter: grayscale(0.76) saturate(0.42) brightness(0.82) contrast(0.92);
+}
+.cv-arena.is-paused .cv-soldier.is-selected {
+  z-index: 12;
+  filter:
+    drop-shadow(0 0 2px rgba(255, 245, 170, 0.95))
+    drop-shadow(0 0 6px rgba(255, 200, 70, 0.78))
+    drop-shadow(0 0 14px rgba(255, 170, 50, 0.45))
+    saturate(1.18) contrast(1.08);
+}
+.cv-arena.is-paused .cv-soldier.is-selected .cv-selected-marker {
+  border-color: rgba(255, 235, 140, 0.95);
+  box-shadow: 0 0 6px rgba(255, 220, 110, 0.7), inset 0 0 4px rgba(255, 220, 110, 0.45);
 }
 .cv-pause-overlay {
   position: absolute;
@@ -2863,23 +2875,25 @@ html, body {
   letter-spacing: 0.08em;
 }
 .cv-inspect-main {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 12px;
-  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
 }
 .cv-inspect-vitals {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
   min-width: 0;
 }
 .cv-life-rail {
   position: relative;
   width: 24px;
-  height: 150px;
+  height: 158px;
   flex: 0 0 24px;
   overflow: visible;
+  cursor: crosshair;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0)),
     rgba(5, 8, 12, 0.78);
@@ -2901,165 +2915,178 @@ html, body {
 .cv-life-rail.is-low .cv-life-fill {
   background: linear-gradient(180deg, #ffd06a 0%, #f97316 52%, #b91c1c 100%);
 }
-.cv-life-rail:hover::after,
-.cv-body-graph:hover::after {
-  content: attr(data-hp);
+.cv-body-graph {
+  position: relative;
+  width: 96px;
+  height: 158px;
+  flex: 0 0 96px;
+  padding: 0;
+  background:
+    radial-gradient(120% 80% at 50% 18%, rgba(120, 200, 255, 0.08), rgba(0,0,0,0) 60%),
+    linear-gradient(180deg, rgba(8, 16, 24, 0.92), rgba(4, 8, 14, 0.95));
+  border: 1px solid rgba(120, 180, 220, 0.22);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 0 18px rgba(80, 140, 200, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+  cursor: crosshair;
+}
+.cv-body-graph::before {
+  content: '';
   position: absolute;
-  left: 50%;
-  top: -28px;
-  z-index: 10;
-  transform: translateX(-50%);
-  padding: 4px 7px;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(120,200,255,0.045) 0 1px, transparent 1px 4px);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+}
+.cv-body-graph::after {
+  content: '';
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: -4px;
+  height: 16px;
+  background: linear-gradient(180deg, rgba(120,210,255,0.42), rgba(120,210,255,0));
+  pointer-events: none;
+  animation: cv-body-scanline 2.4s linear infinite;
+  opacity: 0.6;
+}
+@keyframes cv-body-scanline {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(160px); }
+}
+.cv-body-svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.cv-body-zone {
+  stroke: rgba(8, 14, 22, 0.95);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0.5px 0 rgba(0,0,0,0.45));
+  transition: filter 140ms ease-out;
+}
+.cv-body-zone.hit-1 {
+  filter: drop-shadow(0 0 3px rgba(255, 170, 60, 0.55));
+}
+.cv-body-zone.hit-2 {
+  filter: drop-shadow(0 0 5px rgba(255, 70, 50, 0.85));
+}
+.cv-hp-cursor-tooltip {
+  position: absolute;
+  z-index: 14;
+  padding: 4px 8px;
   border-radius: 4px;
   color: #f7f7f7;
-  background: rgba(0, 0, 0, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   font-size: 10px;
   line-height: 1;
   font-weight: 800;
+  letter-spacing: 0.06em;
   white-space: nowrap;
   pointer-events: none;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
-.cv-body-graph {
-  position: relative;
-  width: 88px;
-  height: 150px;
-  flex: 0 0 88px;
+.cv-inspect-weapons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.018)),
-    rgba(6, 8, 12, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+    linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0)),
+    rgba(8, 10, 16, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.32);
+  max-height: 188px;
+  overflow-y: auto;
 }
-.cv-body-node {
-  position: absolute;
-  display: block;
-  background: #626e78;
-  border: 1px solid rgba(8, 10, 14, 0.92);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 0 rgba(255, 255, 255, 0.04);
+.cv-inspect-weapons-empty {
+  padding: 10px 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
 }
-.cv-body-node.hit-1 {
-  background: #fca5a5;
-  border-color: rgba(254, 202, 202, 0.68);
-  box-shadow: 0 0 8px rgba(252, 165, 165, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
-}
-.cv-body-node.hit-2 {
-  background: #7f1d1d;
-  border-color: rgba(239, 68, 68, 0.84);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-.cv-body-head {
-  left: 33px;
-  top: 8px;
-  width: 22px;
-  height: 22px;
-  border-radius: 7px 7px 6px 6px;
-}
-.cv-body-chest-left,
-.cv-body-chest-right {
-  top: 35px;
-  width: 13px;
-  height: 31px;
-}
-.cv-body-chest-left {
-  left: 30px;
-  border-radius: 6px 2px 2px 4px;
-}
-.cv-body-chest-right {
-  left: 45px;
-  border-radius: 2px 6px 4px 2px;
-}
-.cv-body-abdomen {
-  left: 34px;
-  top: 68px;
-  width: 20px;
-  height: 24px;
-  border-radius: 3px 3px 6px 6px;
-}
-.cv-body-left-arm,
-.cv-body-right-arm {
-  top: 39px;
-  width: 12px;
-  height: 50px;
+.cv-inspect-weapon-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 5px;
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
 }
-.cv-body-left-arm {
-  left: 17px;
-  transform: rotate(9deg);
+.cv-inspect-weapon-card.is-equipped {
+  border-color: rgba(217, 150, 80, 0.78);
+  background:
+    linear-gradient(180deg, rgba(217, 150, 80, 0.14), rgba(217, 150, 80, 0.04)),
+    rgba(0, 0, 0, 0.32);
+  box-shadow:
+    0 0 10px rgba(217, 150, 80, 0.22),
+    inset 0 0 0 1px rgba(217, 150, 80, 0.18);
 }
-.cv-body-right-arm {
-  right: 17px;
-  transform: rotate(-9deg);
+.cv-inspect-weapon-card-icon {
+  position: relative;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
 }
-.cv-body-left-leg,
-.cv-body-right-leg {
-  top: 94px;
-  width: 13px;
-  height: 47px;
-  border-radius: 4px 4px 6px 6px;
+.cv-inspect-weapon-card-icon .game-icon,
+.cv-inspect-weapon-card-icon .weapon-game-icon {
+  width: 36px;
+  height: 36px;
 }
-.cv-body-left-leg {
-  left: 31px;
-  transform: rotate(3deg);
+.cv-inspect-weapon-card-star {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffcb47;
+  color: #2a1a02;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 0 4px rgba(255, 203, 71, 0.8);
 }
-.cv-body-right-leg {
-  right: 31px;
-  transform: rotate(-3deg);
-}
-.cv-inspect-loadout {
+.cv-inspect-weapon-card-body {
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
-.cv-inspect-weapon {
-  min-width: 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.cv-inspect-weapon-head {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-bottom: 7px;
-}
-.cv-inspect-weapon-head .game-icon {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-}
-.cv-inspect-weapon-head .weapon-game-icon,
-.cv-inspect-skill .weapon-game-icon {
-  margin: 0;
-}
-.cv-weapon-2d {
-  width: 76px;
-  height: 34px;
-  flex: 0 0 76px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.24);
-}
-.cv-inspect-weapon-name {
+.cv-inspect-weapon-card-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0;
   color: var(--text);
 }
+.cv-inspect-weapon-card.is-equipped .cv-inspect-weapon-card-name {
+  color: #ffd899;
+}
 .cv-weapon-placeholder {
-  width: 76px;
-  height: 34px;
-  flex: 0 0 76px;
+  display: inline-block;
+  width: 36px;
+  height: 36px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.35);
@@ -3132,41 +3159,6 @@ html, body {
   width: 30px;
   height: 30px;
   flex: 0 0 30px;
-}
-.cv-inspect-inventory {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-}
-.cv-inspect-inventory-weapon {
-  position: relative;
-  height: 32px;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border-radius: 6px;
-  border: 1px solid rgba(217, 150, 80, 0.25);
-  background: rgba(9, 10, 14, 0.58);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
-}
-.cv-inspect-inventory-weapon.is-equipped {
-  border-color: rgba(217, 150, 80, 0.78);
-  background: rgba(217, 150, 80, 0.11);
-  box-shadow: 0 0 12px rgba(217, 150, 80, 0.22), inset 0 0 0 1px rgba(217, 150, 80, 0.18);
-}
-.cv-inspect-hp {
-  align-self: flex-start;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.34);
-  color: var(--text-dim);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
 }
 .cv-hud {
   display: flex;

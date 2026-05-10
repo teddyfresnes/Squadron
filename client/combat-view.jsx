@@ -19,16 +19,6 @@
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
   const SHADOW_FOOT_Y = STAGE_H * 0.82;
-  const BODY_PART_META = [
-    { key: 'head', className: 'head', label: 'Tete' },
-    { key: 'chestLeft', className: 'chest-left', label: 'Torse gauche', fallbackKey: 'torso' },
-    { key: 'chestRight', className: 'chest-right', label: 'Torse droit', fallbackKey: 'torso' },
-    { key: 'abdomen', className: 'abdomen', label: 'Ventre', fallbackKey: 'torso' },
-    { key: 'leftArm', className: 'left-arm', label: 'Bras gauche' },
-    { key: 'rightArm', className: 'right-arm', label: 'Bras droit' },
-    { key: 'leftLeg', className: 'left-leg', label: 'Jambe gauche' },
-    { key: 'rightLeg', className: 'right-leg', label: 'Jambe droite' }
-  ];
 
   function frameForState(state, stateT) {
     const anim = window.Anims[state] || window.Anims.idle;
@@ -78,7 +68,7 @@
 
   function uniqueWeaponNames(s) {
     const seen = new Set();
-    return [s.weaponName, s.preferredWeapon, s.skill1Name, s.skill2Name]
+    return [s.weaponName, s.preferredWeapon, s.skill1Name, s.skill2Name, ...(s.unlockedWeapons || [])]
       .filter(Boolean)
       .filter(name => {
         if (seen.has(name)) return false;
@@ -89,6 +79,11 @@
 
   function magazineSizeFor(s) {
     const stats = s.weapon || (window.CombatSim && window.CombatSim.getWeaponStats(s.weaponName));
+    return Math.max(1, Math.round((stats && stats.magazineSize) || DEFAULT_MAGAZINE_SIZE));
+  }
+
+  function magazineSizeForWeaponName(name) {
+    const stats = window.CombatSim && window.CombatSim.getWeaponStats(name);
     return Math.max(1, Math.round((stats && stats.magazineSize) || DEFAULT_MAGAZINE_SIZE));
   }
 
@@ -218,19 +213,83 @@
     return part.fallbackKey ? clamp(hits[part.fallbackKey] || 0, 0, 2) : 0;
   }
 
-  function BodyGraph({ s }) {
+  // Stylized soldier silhouette in SVG. Each region is colored by hit level.
+  // Coordinates target a 88x150 viewBox so the shape stays crisp at any size.
+  const BODY_SVG_PATHS = {
+    head:       'M36 8 H52 A4 4 0 0 1 56 12 V24 A4 4 0 0 1 52 28 H36 A4 4 0 0 1 32 24 V12 A4 4 0 0 1 36 8 Z',
+    chestLeft:  'M30 34 H43 V64 H32 L28 56 L29 42 Z',
+    chestRight: 'M45 34 H58 L59 42 L60 56 L56 64 H45 Z',
+    abdomen:    'M33 64 H55 L54 84 L48 90 H40 L34 84 Z',
+    leftArm:    'M16 36 L24 34 L26 56 L24 86 L18 88 L13 78 L12 60 Z',
+    rightArm:   'M64 34 L72 36 L76 60 L75 78 L70 88 L64 86 L62 56 Z',
+    leftLeg:    'M32 90 H42 L42 122 L40 138 L33 140 L29 128 L29 108 Z',
+    rightLeg:   'M46 90 H56 L59 108 L59 128 L55 140 L48 138 L46 122 Z'
+  };
+
+  const BODY_SVG_PARTS = [
+    { key: 'head',       label: 'Tete' },
+    { key: 'chestLeft',  label: 'Torse gauche', fallbackKey: 'torso' },
+    { key: 'chestRight', label: 'Torse droit',  fallbackKey: 'torso' },
+    { key: 'abdomen',    label: 'Ventre',       fallbackKey: 'torso' },
+    { key: 'leftArm',    label: 'Bras gauche' },
+    { key: 'rightArm',   label: 'Bras droit' },
+    { key: 'leftLeg',    label: 'Jambe gauche' },
+    { key: 'rightLeg',   label: 'Jambe droite' }
+  ];
+
+  function BodyGraph({ s, onCursor, onLeave }) {
     const hits = s.bodyHits || {};
     const hpLabel = hpText(s);
     return (
-      <div className="cv-body-graph" role="img" aria-label={'Etat du corps, ' + hpLabel} title={hpLabel} data-hp={hpLabel}>
-        {BODY_PART_META.map(part => {
-          const hitLevel = hitLevelFor(hits, part);
-          return (
-            <span key={part.key}
-                  className={'cv-body-node cv-body-' + part.className + ' hit-' + hitLevel}
-                  title={part.label + ' : ' + hitLevel} />
-          );
-        })}
+      <div className="cv-body-graph"
+           role="img"
+           aria-label={'Etat du corps, ' + hpLabel}
+           onMouseMove={onCursor}
+           onMouseLeave={onLeave}>
+        <svg className="cv-body-svg" viewBox="0 0 88 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs>
+            <pattern id="cv-body-grid" width="6" height="6" patternUnits="userSpaceOnUse">
+              <path d="M6 0 L0 0 0 6" fill="none" stroke="rgba(174, 196, 220, 0.06)" strokeWidth="0.5" />
+            </pattern>
+            <linearGradient id="cv-body-fill-0" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8090a0" />
+              <stop offset="100%" stopColor="#3a4654" />
+            </linearGradient>
+            <linearGradient id="cv-body-fill-1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ffd07a" />
+              <stop offset="100%" stopColor="#c44a18" />
+            </linearGradient>
+            <linearGradient id="cv-body-fill-2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ff5a3a" />
+              <stop offset="100%" stopColor="#5a0a0a" />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="88" height="150" fill="url(#cv-body-grid)" />
+          <g className="cv-body-corners" stroke="rgba(220,230,240,0.46)" strokeWidth="1" fill="none" strokeLinecap="square">
+            <path d="M2 2 H8 M2 2 V8" />
+            <path d="M86 2 H80 M86 2 V8" />
+            <path d="M2 148 H8 M2 148 V142" />
+            <path d="M86 148 H80 M86 148 V142" />
+          </g>
+          <line className="cv-body-axis" x1="44" y1="6" x2="44" y2="144"
+                stroke="rgba(174,196,220,0.12)" strokeWidth="0.5" strokeDasharray="2 3" />
+          <g className="cv-body-shape">
+            {BODY_SVG_PARTS.map(part => {
+              const lvl = hitLevelFor(hits, part);
+              return (
+                <path key={part.key}
+                      d={BODY_SVG_PATHS[part.key]}
+                      className={'cv-body-zone hit-' + lvl}
+                      fill={'url(#cv-body-fill-' + lvl + ')'}>
+                  <title>{part.label + ' : ' + lvl}</title>
+                </path>
+              );
+            })}
+          </g>
+          <g className="cv-body-scan">
+            <line x1="6" y1="0" x2="82" y2="0" stroke="rgba(120,200,255,0.55)" strokeWidth="0.6" />
+          </g>
+        </svg>
       </div>
     );
   }
@@ -253,26 +312,37 @@
     const G = window.SquadronGame && window.SquadronGame.helpers;
     const SkillTooltip = G && G.SkillTooltip;
     const WeaponGameIcon = UI.WeaponGameIcon;
-    const activeWeapon = getWeaponByName(s.weaponName);
-    const skillWeapons = uniqueWeaponNames(s).map(getWeaponByName).filter(Boolean);
-    const magSize = magazineSizeFor(s);
+    const allWeapons = uniqueWeaponNames(s).map(getWeaponByName).filter(Boolean);
+    const skillWeapons = allWeapons;
     const life = hpPct(s);
     const hpLabel = hpText(s);
     const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
-    const panelW = Math.max(282, Math.min(376, arenaW - 16));
-    const panelH = 320;
+    const panelW = Math.max(310, Math.min(412, arenaW - 16));
+    const panelH = 360;
     const rawLeft = s.team === 'A'
       ? layout.left + layout.stageW - 18
       : layout.left - panelW + 18;
     const left = clamp(rawLeft, 8, Math.max(8, arenaW - panelW - 8));
     const top = clamp(layout.top + Math.min(18, layout.stageH * 0.18), 8, Math.max(8, arenaH - panelH - 8));
 
+    const panelRef = useRef(null);
+    const [hpHover, setHpHover] = useState(null);
+
     function stop(ev) {
       ev.stopPropagation();
     }
 
+    function trackCursor(ev) {
+      const el = panelRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setHpHover({ x: ev.clientX - rect.left, y: ev.clientY - rect.top });
+    }
+    function clearCursor() { setHpHover(null); }
+
     return (
-      <div className={'cv-inspect-panel cv-inspect-team-' + s.team}
+      <div ref={panelRef}
+           className={'cv-inspect-panel cv-inspect-team-' + s.team}
            style={{ left, top, width: panelW }}
            onClick={stop}>
         <button type="button" className="cv-inspect-close" onClick={onClose} aria-label="Fermer">×</button>
@@ -280,40 +350,62 @@
           <div className="cv-inspect-name">{s.name || 'Soldat'}</div>
           <div className="cv-inspect-level">NIV {s.level || 1}</div>
         </div>
+
+        <div className="cv-inspect-weapons">
+          {allWeapons.length === 0 && (
+            <div className="cv-inspect-weapons-empty">Aucune arme</div>
+          )}
+          {allWeapons.map(w => {
+            const isEquipped = w.name === s.weaponName;
+            const isPreferred = w.name === s.preferredWeapon;
+            const mag = magazineSizeForWeaponName(w.name);
+            return (
+              <div key={w.name}
+                   className={'cv-inspect-weapon-card' + (isEquipped ? ' is-equipped' : '')}>
+                <div className="cv-inspect-weapon-card-icon">
+                  {WeaponGameIcon ? <WeaponGameIcon weapon={w} /> : <span className="cv-weapon-placeholder" />}
+                  {isPreferred && <span className="cv-inspect-weapon-card-star" title="Arme préférée">★</span>}
+                </div>
+                <div className="cv-inspect-weapon-card-body">
+                  <div className="cv-inspect-weapon-card-name" title={w.name}>{w.name}</div>
+                  <AmmoRow total={mag} filled={mag} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="cv-inspect-main">
           <div className="cv-inspect-vitals">
             <div className={'cv-life-rail' + (life <= 35 ? ' is-low' : '')}
-                 title={hpLabel}
-                 data-hp={hpLabel}
-                 aria-label={hpLabel}>
+                 aria-label={hpLabel}
+                 onMouseMove={trackCursor}
+                 onMouseLeave={clearCursor}>
               <div className="cv-life-fill" style={{ height: life + '%' }} />
             </div>
-            <BodyGraph s={s} />
+            <BodyGraph s={s} onCursor={trackCursor} onLeave={clearCursor} />
           </div>
-          <div className="cv-inspect-loadout">
-            <div className="cv-inspect-weapon">
-              <div className="cv-inspect-weapon-head">
-                {activeWeapon && WeaponGameIcon ? <WeaponGameIcon weapon={activeWeapon} /> : <span className="cv-weapon-placeholder" />}
-                <div className="cv-inspect-weapon-name">{s.weaponName || 'Arme'}</div>
-              </div>
-              <AmmoRow total={magSize} filled={magSize} />
-              <AmmoRow total={magSize} filled={magSize} small />
-            </div>
-            <div className="cv-inspect-skills">
-              {skillWeapons.map(w => {
-                const icon = (
-                  <span className="cv-inspect-skill">
-                    {WeaponGameIcon ? <WeaponGameIcon weapon={w} /> : null}
-                  </span>
-                );
-                return SkillTooltip
-                  ? <SkillTooltip key={w.name} weapon={w} tipDir="below">{icon}</SkillTooltip>
-                  : React.cloneElement(icon, { key: w.name });
-              })}
-            </div>
+          <div className="cv-inspect-skills" aria-label="Armes débloquées">
+            {skillWeapons.map(w => {
+              const icon = (
+                <span className="cv-inspect-skill">
+                  {WeaponGameIcon ? <WeaponGameIcon weapon={w} /> : null}
+                </span>
+              );
+              return SkillTooltip
+                ? <SkillTooltip key={w.name} weapon={w} tipDir="below">{icon}</SkillTooltip>
+                : React.cloneElement(icon, { key: w.name });
+            })}
           </div>
         </div>
-        <div className="cv-inspect-hp">{Math.ceil(s.hp)}/{s.hpMax}</div>
+
+        {hpHover && (
+          <div className="cv-hp-cursor-tooltip"
+               style={{ left: hpHover.x + 12, top: hpHover.y - 22 }}
+               aria-hidden="true">
+            {hpLabel}
+          </div>
+        )}
       </div>
     );
   }
@@ -742,7 +834,7 @@
                           pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
                           isActive={(battle.activeActions || []).some(a => a.actorId === s.id)}
                           isSelected={selectedSoldierId === s.id}
-                          showHpBar={!!(hpFlashes[s.id] && hpFlashes[s.id] > nowMs)}
+                          showHpBar={!!(hpFlashes[s.id] && hpFlashes[s.id] > nowMs && s.hp > 0 && s.state !== 'dead')}
                           onSelect={handleSelectSoldier} />
           ))}
           <TrailsLayer trails={trails}

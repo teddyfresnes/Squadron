@@ -157,8 +157,9 @@ smg, heavy, shotgun → 'front'
 
 - Crée la bataille au mount (après `loadWeaponStats()`)
 - Loop `requestAnimationFrame` : accumulator fixe-step (`DT`), max 6 pas par frame
-- `ArenaSoldier` : `<button>` positionné absolument avec `<SpriteCanvas>` + ombre au sol ; la barre de vie au-dessus du soldat n'apparait que brièvement après un hit
-- `SoldierInspectMenu` : panneau contextuel (nom, niveau, corps touché, vie verticale, munitions, inventaire armes en vignettes 2D avec tooltip)
+- `ArenaSoldier` : `<button>` positionné absolument avec `<SpriteCanvas>` + ombre au sol ; la barre de vie au-dessus du soldat n'apparait que brièvement après un hit, et jamais quand `hp <= 0` ou `state === 'dead'`
+- Sélection en pause : tout l'arène reste en effet VHS (grayscale), mais le soldat sélectionné garde ses couleurs et reçoit un halo doré (CSS `.cv-soldier.is-selected` dans `.cv-arena.is-paused`)
+- `SoldierInspectMenu` : panneau contextuel structuré en 3 sections — header (nom + niveau), liste de toutes les armes débloquées (icône + nom + barre de munitions), puis vitals (jauge de vie verticale + silhouette SVG du corps) et icônes skills d'armes en bas avec tooltip. La vie s'affiche uniquement en tooltip suiveur de curseur sur la jauge ou la silhouette (pas d'affichage statique 10/10)
 - `TrailsLayer` : SVG overlay, trails disparaissent en 300 ms
 - `ResultOverlay` : affiché quand `battle.done && battle.endHoldT >= 1.2`
 
