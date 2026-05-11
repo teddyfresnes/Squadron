@@ -268,7 +268,6 @@
               <stop offset="100%" stopColor="#5a0a0a" />
             </linearGradient>
           </defs>
-          <rect x="0" y="0" width="88" height="150" fill="url(#cv-body-grid)" />
           <g className="cv-body-corners" stroke="rgba(220,230,240,0.46)" strokeWidth="1" fill="none" strokeLinecap="square">
             <path d="M2 2 H8 M2 2 V8" />
             <path d="M86 2 H80 M86 2 V8" />
@@ -290,21 +289,18 @@
               );
             })}
           </g>
-          <g className="cv-body-scan">
-            <line x1="6" y1="0" x2="82" y2="0" stroke="rgba(120,200,255,0.55)" strokeWidth="0.6" />
-          </g>
         </svg>
       </div>
     );
   }
 
-  function AmmoRow({ total, filled, small, reserve }) {
+  function AmmoRow({ total, filled, small, loaded, reserve }) {
     const count = Math.max(1, Math.round(total || DEFAULT_MAGAZINE_SIZE));
     const full = clamp(filled == null ? count : Math.round(filled), 0, count);
     const bullets = [];
     for (let i = 0; i < count; i++) bullets.push(i);
     return (
-      <div className={'cv-ammo-row' + (small ? ' cv-ammo-row-small' : '') + (reserve ? ' cv-ammo-row-reserve' : '')} aria-hidden="true">
+      <div className={'cv-ammo-row' + (small ? ' cv-ammo-row-small' : '') + (loaded ? ' cv-ammo-row-loaded' : '') + (reserve ? ' cv-ammo-row-reserve' : '')} aria-hidden="true">
         {bullets.map(i => (
           <span key={i} className={'cv-ammo-bullet' + (i < full ? ' is-full' : ' is-empty')} />
         ))}
@@ -316,7 +312,7 @@
     const count = Math.max(1, Math.round(total || DEFAULT_MAGAZINE_SIZE));
     return (
       <div className="cv-ammo-stack" aria-hidden="true">
-        <AmmoRow total={count} filled={count} small />
+        <AmmoRow total={count} filled={count} small loaded />
         <AmmoRow total={count} filled={count} small reserve />
       </div>
     );

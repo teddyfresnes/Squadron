@@ -535,13 +535,6 @@ function WeaponGameIcon({ weapon }) {
       ctx.fillRect(2, 2, size - 4, size - 4);
       ctx.fillStyle = '#e3363b';
       ctx.fillRect(4, 4, size - 8, 5);
-      ctx.fillStyle = '#7a1019';
-      ctx.beginPath();
-      ctx.moveTo(size - 12, size);
-      ctx.lineTo(size, size - 12);
-      ctx.lineTo(size, size);
-      ctx.closePath();
-      ctx.fill();
     }
 
     function drawFallback() {
