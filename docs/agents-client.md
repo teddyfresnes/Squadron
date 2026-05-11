@@ -31,7 +31,7 @@
 
 ```js
 const SOLDIER_COUNT = 10;
-const SKILL1_NAMES  = ['Glok 17', 'Ozi', 'Mossburg 500', 'AKS-74V', 'Steir Scout'];
+const SKILL1_NAMES  = ['Beretta 93', 'M3 Grease Goon', 'Mossburg 500', 'AKS-74V', 'Steir Scout'];
 const SERVER_URL    = 'http://127.0.0.1:3001';  // changer si serveur public
 ```
 
@@ -86,12 +86,12 @@ Défini dans `app.jsx` (`HAIRSTYLES_BY_BODY`) et répliqué dans `server/utils/g
 ## Armes (indices 0–60)
 
 ```
-smg×11      : 0–10   (Ozi, MAK-10, TEK-9, Skorpian, HX MP7, PN P90, PN P90 Tac, MP5Q, MPX9, Thompsen, KRYSS)
-rifle×10    : 11–20  (AK-48, AKS-74V, AK-74N, M4A2, Mk18S, HX G3, PN FAL, PN FAL Tac, FAMAZ, FAMAZ-C)
-heavy×14    : 21–34  (M202 FLARE, Lazor, Karl Gustov, XM26, RPG-8, Recoillite, Stingar, AT5, Twin, M80, M61, M248, M135, M33)
-shotgun×8   : 35–42  (SPAX-12, Dbl-Barrel, 870, 500, M4, Blunderbus, Sawed-Off, O/U)
-sniper×10   : 43–52  (Accurazy, AWN, SVD, HX PSG1, M200, M82A2, HS50, Hekate, Scout, CMR)
-pistol×8    : 53–60  (Walthar, Kolt, Modal 29, Redhauk, Glok17, Dezert, M1912, Makarovv)
+smg×11      : 0–10   (M3 Grease Goon, TEK-9, MAK-11, Skorpian, HX MP7, PN P90, PN F2001, Ozi, Kolt SCAMP, TPX, MPX9)
+rifle×10    : 11–20  (AK-48, AKS-74V, AK-74N, M4A2, Mk18S, HX G3, PN FAL, M204, FAMAZ, FAMAZ-C)
+heavy×14    : 21–34  (Infernal Toob, Lazor, Karl Gustov, XM26, RPG-8, Recoillite, Stingar, AT5, M202 FLARE, M80, M61, M248, M135, M33)
+shotgun×8   : 35–42  (SPAX-12, Stooger, Ithaka, Mossburg, Dbl-Barrel, Blunderbus, Flintlok, O/U)
+sniper×10   : 43–52  (AWQ, AWN, SVD, HX PSG1, M200, M82A2, HS50, Hekate, Scout, CMR)
+pistol×8    : 53–60  (Makarovv, Ruger Silenst, Sovyet PB, Standart HDM, Beretta 93, Revolvair, M1912, Makarovv Mk.II)
 ```
 
 Stats gameplay dans `weapon-config.json` ; rendu visuel dans `weapons.js`. Depuis `schemaVersion: 2`, les dégâts utilisent `damageMin`/`damageMax` par balle, et `damage` reste une moyenne/fallback d'affichage.

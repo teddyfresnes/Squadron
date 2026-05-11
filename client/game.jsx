@@ -8,7 +8,7 @@ const { useState, useEffect, useRef, useCallback } = React;
 const SQUADS_KEY    = 'squadron-squads';
 const LAST_SQUAD_KEY = 'squadron-last-squad';
 const SOLDIER_COUNT = 10;
-const SKILL1_NAMES  = ['Glok 17', 'Ozi', 'Mossburg 500', 'AKS-74V', 'Steir Scout'];
+const SKILL1_NAMES  = ['Beretta 93', 'M3 Grease Goon', 'Mossburg 500', 'AKS-74V', 'Steir Scout'];
 const SERVER_URL    = 'http://127.0.0.1:3001';
 
 // ── Weapon stats (from weapon-config.json) ──────────────────────────────────

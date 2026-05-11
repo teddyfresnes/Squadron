@@ -20,27 +20,20 @@ const HAIR_STYLES = {
 // [smg×11, rifle×10, heavy×14, shotgun×8, sniper×10, pistol×8] = 61 total
 const WEAPON_NAMES = [
   // SMG 0-10
-  'Ozi','MAK-10','TEK-9','Skorpian vz. 61','HX MP7','PN P90','PN P90 Tac',
-  'MP5Q-PDW','MPX9 Suppressed','Thompsen M1A1','KRYSS Vector',
+  'M3 Grease Goon','TEK-9','MAK-11','Skorpian vz. 61','HX MP7','PN P90','PN F2001','Ozi','Kolt SCAMP','TPX','MPX9',
   // Rifle 11-20
-  'AK-48','AKS-74V','AK-74N','M4A2 Suppressed','Mk18S Suppressed',
-  'HX G3','PN FAL','PN FAL Tac','FAMAZ F1','FAMAZ Compact',
+  'AK-48','AKS-74V','AK-74N','M4A2 Suppressed','Mk18S Suppressed','HX G3','PN FAL','M204','FAMAZ F1','FAMAZ Compact',
   // Heavy 21-34
-  'M202 FLARE','Lazor Cannon','Karl Gustov M3','XM26 Grenade Lobber',
-  'RPG-8 Launcher','Recoillite Rifle','FIM-93 Stingar','AT5 Launcher',
-  'Twin-Barrel Lancher','M80 Grenade Launcher','M61E4','M248 SAW','M135 Minigun','M33 MGL',
+  'Infernal Toob','Lazor Cannon','Karl Gustov M3','XM26 Grenade Lobber','RPG-8 Launcher','Recoillite Rifle','FIM-93 Stingar','AT5 Launcher','M202 FLARE','M80 Grenade Launcher','M61E4','M248 SAW','M135 Minigun','M33 MGL',
   // Shotgun 35-42
-  'Franchi SPAX-12','Double-Barrel Shogun','Reminton 870','Mossburg 500',
-  'Bonelli M4','Blunderbus','Sawed-Off Shogun','Over-Under Shogun',
+  'Franchi SPAX-12','Stooger Coach Gun','Ithaka 37','Mossburg 500','Double-Barrel Shogun','Blunderbus','Flintlok Shogun','Over-Under Shogun',
   // Sniper 43-52
-  'Accurazy AWP','AWN Suppressed','SVD Dragunof','HX PSG1',
-  'CheyTak M200','Barret M82A2','Steir HS .50','PGM Hekate II','Steir Scout','Compact Marksman Rifl',
+  'AWQ','AWN','SVD Dragunof','HX PSG1','CheyTak M200','Barret M82A2','Steir HS .50','PGM Hekate II','Steir Scout','Compact Marksman Rifl',
   // Pistol 53-60
-  'Walthar PPK','Kolt Python','S&W Modal 29','Ruger Super Redhauk',
-  'Glok 17','Dezert Eagle','Gold M1912','Makarovv PM',
+  'Makarovv PM','Ruger Mark I Silenst','Sovyet PB 6P9 Silenced','High Standart HDM','Beretta 93','Revolvair','Gold M1912','Makarovv PM Mk.II',
 ];
 
-// Primary skill pool indices (Glok 17=57, Ozi=0, Mossburg 500=38, AKS-74V=12, Steir Scout=51)
+// Primary skill pool indices (Beretta 93=57, M3 Grease Goon=0, Mossburg 500=38, AKS-74V=12, Steir Scout=51)
 const SKILL1_INDICES = [57, 0, 38, 12, 51];
 
 // ── Name lists (copied from game.jsx to keep client & server in sync) ────────
