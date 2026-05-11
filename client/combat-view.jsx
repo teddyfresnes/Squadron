@@ -193,6 +193,7 @@
         {s.state !== 'dead' && (
           <div className="cv-ground-shadow" style={{ top: shadowTop }} />
         )}
+        {isSelected && <div className="cv-selected-marker" />}
         <SpriteCanvas
           cfg={s.cfg}
           animKey={s.state}
@@ -206,7 +207,6 @@
             <div className="cv-hpbar-fill" style={{ width: life + '%' }} />
           </div>
         )}
-        {isSelected && <div className="cv-selected-marker" />}
       </button>
     );
   }
@@ -220,25 +220,25 @@
   // Stylized soldier silhouette in SVG. Each region is colored by hit level.
   // Coordinates target a 88x150 viewBox so the shape stays crisp at any size.
   const BODY_SVG_PATHS = {
-    head:       'M36 8 H52 A4 4 0 0 1 56 12 V24 A4 4 0 0 1 52 28 H36 A4 4 0 0 1 32 24 V12 A4 4 0 0 1 36 8 Z',
-    chestLeft:  'M30 34 H43 V64 H32 L28 56 L29 42 Z',
-    chestRight: 'M45 34 H58 L59 42 L60 56 L56 64 H45 Z',
-    abdomen:    'M33 64 H55 L54 84 L48 90 H40 L34 84 Z',
-    leftArm:    'M16 36 L24 34 L26 56 L24 86 L18 88 L13 78 L12 60 Z',
-    rightArm:   'M64 34 L72 36 L76 60 L75 78 L70 88 L64 86 L62 56 Z',
-    leftLeg:    'M32 90 H42 L42 122 L40 138 L33 140 L29 128 L29 108 Z',
-    rightLeg:   'M46 90 H56 L59 108 L59 128 L55 140 L48 138 L46 122 Z'
+    head:       'M44 13 C55 13 64 22 64 33 C64 44 55 53 44 53 C33 53 24 44 24 33 C24 22 33 13 44 13 Z',
+    chestLeft:  'M27 56 H43 V89 H34 L27 78 Z',
+    chestRight: 'M45 56 H61 L61 78 L54 89 H45 Z',
+    abdomen:    'M33 91 H55 L58 106 H30 Z',
+    leftArm:    'M16 58 L29 62 L24 88 L17 110 L7 106 L12 84 Z',
+    rightArm:   'M59 62 L72 58 L76 84 L81 106 L71 110 L64 88 Z',
+    leftLeg:    'M30 108 H43 L39 136 H24 Z',
+    rightLeg:   'M45 108 H58 L64 136 H49 Z'
   };
 
   const BODY_SVG_PARTS = [
-    { key: 'head',       label: 'Tete' },
-    { key: 'chestLeft',  label: 'Torse gauche', fallbackKey: 'torso' },
-    { key: 'chestRight', label: 'Torse droit',  fallbackKey: 'torso' },
-    { key: 'abdomen',    label: 'Ventre',       fallbackKey: 'torso' },
     { key: 'leftArm',    label: 'Bras gauche' },
     { key: 'rightArm',   label: 'Bras droit' },
     { key: 'leftLeg',    label: 'Jambe gauche' },
-    { key: 'rightLeg',   label: 'Jambe droite' }
+    { key: 'rightLeg',   label: 'Jambe droite' },
+    { key: 'abdomen',    label: 'Ventre',       fallbackKey: 'torso' },
+    { key: 'chestLeft',  label: 'Torse gauche', fallbackKey: 'torso' },
+    { key: 'chestRight', label: 'Torse droit',  fallbackKey: 'torso' },
+    { key: 'head',       label: 'Tete' }
   ];
 
   function BodyGraph({ s, onCursor, onLeave }) {
@@ -256,16 +256,16 @@
               <path d="M6 0 L0 0 0 6" fill="none" stroke="rgba(174, 196, 220, 0.06)" strokeWidth="0.5" />
             </pattern>
             <linearGradient id="cv-body-fill-0" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8090a0" />
-              <stop offset="100%" stopColor="#3a4654" />
+              <stop offset="0%" stopColor="#6a6d6b" />
+              <stop offset="100%" stopColor="#4a4e4b" />
             </linearGradient>
             <linearGradient id="cv-body-fill-1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ffd07a" />
-              <stop offset="100%" stopColor="#c44a18" />
+              <stop offset="0%" stopColor="#b65a38" />
+              <stop offset="100%" stopColor="#77301f" />
             </linearGradient>
             <linearGradient id="cv-body-fill-2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ff5a3a" />
-              <stop offset="100%" stopColor="#5a0a0a" />
+              <stop offset="0%" stopColor="#d3372e" />
+              <stop offset="100%" stopColor="#5c1717" />
             </linearGradient>
           </defs>
           <g className="cv-body-corners" stroke="rgba(220,230,240,0.46)" strokeWidth="1" fill="none" strokeLinecap="square">

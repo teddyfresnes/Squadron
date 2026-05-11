@@ -2666,16 +2666,16 @@ html, body {
 .cv-selected-marker {
   position: absolute;
   left: 50%;
-  top: 82%;
+  top: 86%;
   transform: translate(-50%, -50%);
-  width: 48px;
-  height: 13px;
+  width: 44px;
+  height: 11px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.42);
   background: transparent;
   box-shadow: none;
   pointer-events: none;
-  z-index: 2;
+  z-index: 0;
 }
 .cv-hpbar {
   position: absolute;
@@ -2921,8 +2921,8 @@ html, body {
   height: 158px;
   flex: 0 0 96px;
   padding: 0;
-  background: rgba(18, 21, 28, 0.88);
-  border: 1px solid rgba(120, 180, 220, 0.22);
+  background: rgba(44, 47, 48, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.42);
   overflow: hidden;
@@ -2942,11 +2942,13 @@ html, body {
   position: relative;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
   display: block;
+  padding: 8px 6px;
 }
 .cv-body-zone {
-  stroke: rgba(8, 14, 22, 0.95);
-  stroke-width: 0.7;
+  stroke: rgba(44, 47, 48, 0.94);
+  stroke-width: 1.6;
   stroke-linejoin: round;
   transition: filter 140ms ease-out;
 }
@@ -3003,7 +3005,7 @@ html, body {
 .cv-inspect-weapon-card {
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 6px;
   flex: 0 0 auto;
   min-width: 0;
@@ -3019,7 +3021,7 @@ html, body {
   cursor: help;
 }
 .cv-inspect-weapon-card-img {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   height: 28px;
   display: inline-flex;
@@ -3055,15 +3057,16 @@ html, body {
   gap: 3px;
   min-height: 15px;
   margin-top: 0;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 .cv-ammo-stack {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 2px;
   min-width: 0;
+  margin-left: auto;
 }
 .cv-ammo-row-small {
   gap: 1px;
