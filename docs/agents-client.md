@@ -31,7 +31,7 @@
 
 ```js
 const SOLDIER_COUNT = 10;
-const SKILL1_NAMES  = ['Glock 17', 'Uzi', 'Mossberg 500', 'AKS-74U', 'Steyr Scout'];
+const SKILL1_NAMES  = ['Glok 17', 'Ozi', 'Mossburg 500', 'AKS-74V', 'Steir Scout'];
 const SERVER_URL    = 'http://127.0.0.1:3001';  // changer si serveur public
 ```
 
@@ -86,15 +86,16 @@ Défini dans `app.jsx` (`HAIRSTYLES_BY_BODY`) et répliqué dans `server/utils/g
 ## Armes (indices 0–60)
 
 ```
-smg×11      : 0–10   (Uzi, MAC-10, TEC-9, Skorpion, MP7, P90, P90T, MP5K, MP9, Thompson, KRISS)
-rifle×10    : 11–20  (AK-47, AKS-74U, AK-74, M4A1, Mk18, G3, FAL, FAL-T, FAMAS, FAMAS-C)
-heavy×14    : 21–34  (M202, Laser, Carl Gustaf, XM25, RPG-7, Recoilless, Stinger, AT4, Twin, M79, M60, M249, Minigun, M32)
-shotgun×8   : 35–42  (SPAS-12, Dbl-Barrel, 870, 500, M4, Blunderbuss, Sawed-Off, O/U)
-sniper×10   : 43–52  (AWP, AWM, SVD, PSG1, M200, M82, HS50, Hecate, Scout, CMR)
-pistol×8    : 53–60  (PPK, Python, M29, Redhawk, Glock17, Desert Eagle, M1911, Makarov)
+smg×11      : 0–10   (Ozi, MAK-10, TEK-9, Skorpian, HX MP7, PN P90, PN P90 Tac, MP5Q, MPX9, Thompsen, KRYSS)
+rifle×10    : 11–20  (AK-48, AKS-74V, AK-74N, M4A2, Mk18S, HX G3, PN FAL, PN FAL Tac, FAMAZ, FAMAZ-C)
+heavy×14    : 21–34  (M202 FLARE, Lazor, Karl Gustov, XM26, RPG-8, Recoillite, Stingar, AT5, Twin, M80, M61, M248, M135, M33)
+shotgun×8   : 35–42  (SPAX-12, Dbl-Barrel, 870, 500, M4, Blunderbus, Sawed-Off, O/U)
+sniper×10   : 43–52  (Accurazy, AWN, SVD, HX PSG1, M200, M82A2, HS50, Hekate, Scout, CMR)
+pistol×8    : 53–60  (Walthar, Kolt, Modal 29, Redhauk, Glok17, Dezert, M1912, Makarovv)
 ```
 
 Stats gameplay dans `weapon-config.json` ; rendu visuel dans `weapons.js`. Depuis `schemaVersion: 2`, les dégâts utilisent `damageMin`/`damageMax` par balle, et `damage` reste une moyenne/fallback d'affichage.
+Les noms publics sont volontairement legerement fictifs ; `aliases` dans `weapon-config.json` garde les anciens noms pour les sauvegardes et les squads deja crees.
 IDs texte : `SMG-01`, `RIFLE-01`, etc. — doivent correspondre entre les deux fichiers.
 
 ---

@@ -591,7 +591,7 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
   const allWeapons = (window.Weapons && window.Weapons.list) || [];
   const upgradeCost = calcUpgradeCost(soldier);
   const canUpgrade = tokens >= upgradeCost;
-  const unlockedSet = new Set(soldier.unlockedWeapons || []);
+  const unlockedWeapons = soldier.unlockedWeapons || [];
   const preferredWeapon = soldier.preferredWeapon ? G.getWeaponByName(soldier.preferredWeapon) : null;
 
   // Group weapons by type
@@ -622,8 +622,8 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
                 <div className="hq-sd-skill-group-title">{label}</div>
                 <div className="hq-sd-skill-grid">
                   {grouped[key].map(w => {
-                    const unlocked = unlockedSet.has(w.name);
-                    const preferred = soldier.preferredWeapon === w.name;
+                    const unlocked = unlockedWeapons.some(name => G.getWeaponByName(name) === w);
+                    const preferred = preferredWeapon === w;
                     return (
                       <SkillTooltip key={w.name} weapon={w} tipDir="below">
                         <button

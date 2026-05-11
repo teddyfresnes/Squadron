@@ -261,10 +261,13 @@ function App({ onSwitchMode }) {
     fetch('./weapon-config.json?ts=' + Date.now(), { cache: 'no-store' })
       .then(r => r.json())
       .then(config => {
-        const nameById = {};
-        for (const w of config.weapons) nameById[w.id] = w.name;
+        const metaById = {};
+        for (const w of config.weapons) metaById[w.id] = w;
         for (const w of window.Weapons.list) {
-          if (nameById[w.id]) w.name = nameById[w.id];
+          const meta = metaById[w.id];
+          if (!meta) continue;
+          w.name = meta.name;
+          w.aliases = Array.isArray(meta.aliases) ? meta.aliases.slice() : [];
         }
         forceUpdate(n => n + 1);
       })

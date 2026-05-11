@@ -8,14 +8,27 @@ const { useState, useEffect, useRef, useCallback } = React;
 const SQUADS_KEY    = 'squadron-squads';
 const LAST_SQUAD_KEY = 'squadron-last-squad';
 const SOLDIER_COUNT = 10;
-const SKILL1_NAMES  = ['Glock 17', 'Uzi', 'Mossberg 500', 'AKS-74U', 'Steyr Scout'];
+const SKILL1_NAMES  = ['Glok 17', 'Ozi', 'Mossburg 500', 'AKS-74V', 'Steir Scout'];
 const SERVER_URL    = 'http://127.0.0.1:3001';
 
 // ── Weapon stats (from weapon-config.json) ──────────────────────────────────
 const weaponStats = {};
 fetch('./weapon-config.json')
   .then(r => r.json())
-  .then(data => { for (const w of data.weapons) weaponStats[w.id] = w; })
+  .then(data => {
+    const list = window.Weapons && window.Weapons.list || [];
+    const byId = {};
+    for (const w of data.weapons) {
+      weaponStats[w.id] = w;
+      byId[w.id] = w;
+    }
+    for (const w of list) {
+      const meta = byId[w.id];
+      if (!meta) continue;
+      w.name = meta.name;
+      w.aliases = Array.isArray(meta.aliases) ? meta.aliases.slice() : [];
+    }
+  })
   .catch(() => {});
 
 // ── Name lists ───────────────────────────────────────────────────────────────
@@ -130,7 +143,12 @@ async function apiFetch(path, opts = {}) {
 function randInt(n) { return Math.floor(Math.random() * n); }
 function pick(arr)  { return arr[randInt(arr.length)]; }
 function getWeaponByName(name) {
-  return (window.Weapons && window.Weapons.list || []).find(w => w.name === name) || null;
+  const needle = String(name || '');
+  return (window.Weapons && window.Weapons.list || []).find(w => (
+    w.name === needle ||
+    w.id === needle ||
+    (Array.isArray(w.aliases) && w.aliases.includes(needle))
+  )) || null;
 }
 function pickSkills() {
   const skill1Name = pick(SKILL1_NAMES);
@@ -357,8 +375,8 @@ function SkillTooltip({ weapon, text, tipDir = 'above', children }) {
             <span className="sq-skill-tip-spec-val">{Math.round(stats.accuracy * 100)}<span className="sq-skill-tip-unit">%</span></span>
           </div>
           <div className="sq-skill-tip-spec">
-            <span className="sq-skill-tip-spec-key">Critique</span>
-            <span className="sq-skill-tip-spec-val">{Math.round(stats.criticalChance * 100)}<span className="sq-skill-tip-unit">%</span></span>
+            <span className="sq-skill-tip-spec-key">Rafale</span>
+            <span className="sq-skill-tip-spec-val">{Math.max(1, Math.round(stats.burst || 1))} <span className="sq-skill-tip-unit">tirs</span></span>
           </div>
           <div className="sq-skill-tip-spec">
             <span className="sq-skill-tip-spec-key">Portée</span>

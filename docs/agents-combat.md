@@ -193,7 +193,7 @@ Chaque combattant expose `bodyHits` :
 
 ## Dégâts armes
 
-`weapon-config.json` schemaVersion 2 expose `damageMin` et `damageMax`. À chaque balle, `combat-sim.js` tire un entier déterministe dans cette plage ; `damage` reste une moyenne/fallback pour les UI anciennes.
+`weapon-config.json` schemaVersion 2 expose `damageMin` et `damageMax`. À chaque balle, `combat-sim.js` tire un entier déterministe dans cette plage ; `damage` reste une moyenne/fallback pour les UI anciennes. L'equilibrage actuel part d'une base niveau 1 a 10 PV : les armes a forte rafale infligent peu par tir, les armes lourdes/snipers frappent fort mais restent plus lentes ou moins fiables.
 
 ---
 

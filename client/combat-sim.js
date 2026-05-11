@@ -71,7 +71,13 @@
       .then(r => r.json())
       .then(data => {
         for (const key of Object.keys(statsByName)) delete statsByName[key];
-        for (const w of data.weapons) statsByName[w.name] = w;
+        for (const w of data.weapons) {
+          statsByName[w.name] = w;
+          statsByName[w.id] = w;
+          if (Array.isArray(w.aliases)) {
+            for (const alias of w.aliases) statsByName[alias] = w;
+          }
+        }
       })
       .catch(() => {});
   }
@@ -169,7 +175,7 @@
   // â”€â”€ Combatant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function defaultStats() {
     return {
-      name: 'Glock 17', category: 'pistol', weaponType: 'semi_auto',
+      name: 'Glok 17', category: 'pistol', weaponType: 'semi_auto',
       damage: 2, damageMin: 1, damageMax: 2, accuracy: 0.5, shootSpeed: 2, burst: 1,
       recovery: 0.2, rangeMin: 1, rangeMax: 10
     };
@@ -225,7 +231,7 @@
   function buildCombatant(soldier, team, idxInTeam, teamSize, rng) {
     const level = soldier.level || 1;
     const hpMax = 10 + 2 * (level - 1);
-    const weaponName = soldier.preferredWeapon || soldier.skill1Name || 'Glock 17';
+    const weaponName = soldier.preferredWeapon || soldier.skill1Name || 'Glok 17';
     const stats = getWeaponStats(weaponName) || defaultStats();
     const lane = laneForCategory(stats.category);
     // Keep the nearest spawn at the side, then fan larger squads toward center

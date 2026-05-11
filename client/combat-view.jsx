@@ -63,7 +63,11 @@
       if (w) return w;
     }
     const list = window.Weapons && window.Weapons.list || [];
-    return list.find(w => w.name === name) || null;
+    return list.find(w => (
+      w.name === name ||
+      w.id === name ||
+      (Array.isArray(w.aliases) && w.aliases.includes(name))
+    )) || null;
   }
 
   function uniqueWeaponNames(s) {
