@@ -312,6 +312,7 @@
     const G = window.SquadronGame && window.SquadronGame.helpers;
     const SkillTooltip = G && G.SkillTooltip;
     const WeaponGameIcon = UI.WeaponGameIcon;
+    const WeaponIcon = UI.WeaponIcon;
     const allWeapons = uniqueWeaponNames(s).map(getWeaponByName).filter(Boolean);
     const skillWeapons = allWeapons;
     const life = hpPct(s);
@@ -356,15 +357,11 @@
             <div className="cv-inspect-weapons-empty">Aucune arme</div>
           )}
           {allWeapons.map(w => {
-            const isEquipped = w.name === s.weaponName;
-            const isPreferred = w.name === s.preferredWeapon;
             const mag = magazineSizeForWeaponName(w.name);
             return (
-              <div key={w.name}
-                   className={'cv-inspect-weapon-card' + (isEquipped ? ' is-equipped' : '')}>
-                <div className="cv-inspect-weapon-card-icon">
-                  {WeaponGameIcon ? <WeaponGameIcon weapon={w} /> : <span className="cv-weapon-placeholder" />}
-                  {isPreferred && <span className="cv-inspect-weapon-card-star" title="Arme préférée">★</span>}
+              <div key={w.name} className="cv-inspect-weapon-card">
+                <div className="cv-inspect-weapon-card-img">
+                  {WeaponIcon ? <WeaponIcon weapon={w} /> : <span className="cv-weapon-placeholder" />}
                 </div>
                 <div className="cv-inspect-weapon-card-body">
                   <div className="cv-inspect-weapon-card-name" title={w.name}>{w.name}</div>
