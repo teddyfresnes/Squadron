@@ -231,7 +231,20 @@
   function buildCombatant(soldier, team, idxInTeam, teamSize, rng) {
     const level = soldier.level || 1;
     const hpMax = 10 + 2 * (level - 1);
-    const weaponName = soldier.preferredWeapon || soldier.skill1Name || 'Glok 17';
+    const unlockedWeapons = [];
+    function addWeaponName(name) {
+      const value = typeof name === 'string'
+        ? name
+        : (name && (name.name || name.id)) || null;
+      if (value && !unlockedWeapons.includes(value)) unlockedWeapons.push(value);
+    }
+    if (Array.isArray(soldier.unlockedWeapons)) {
+      soldier.unlockedWeapons.forEach(addWeaponName);
+    }
+    addWeaponName(soldier.skill1Name);
+    addWeaponName(soldier.skill2Name);
+    addWeaponName(soldier.preferredWeapon);
+    const weaponName = soldier.preferredWeapon || soldier.skill1Name || unlockedWeapons[0] || 'Glock 17';
     const stats = getWeaponStats(weaponName) || defaultStats();
     const lane = laneForCategory(stats.category);
     // Keep the nearest spawn at the side, then fan larger squads toward center
@@ -248,9 +261,9 @@
       level,
       team,
       cfg: soldier.config,
-      skill1Name: soldier.skill1Name || null,
-      skill2Name: soldier.skill2Name || null,
-      unlockedWeapons: Array.isArray(soldier.unlockedWeapons) ? soldier.unlockedWeapons.slice() : null,
+      skill1Name: soldier.skill1Name || unlockedWeapons[0] || null,
+      skill2Name: soldier.skill2Name || unlockedWeapons.find(name => name !== (soldier.skill1Name || unlockedWeapons[0])) || null,
+      unlockedWeapons,
       preferredWeapon: soldier.preferredWeapon || null,
       weaponName,
       weapon: stats,

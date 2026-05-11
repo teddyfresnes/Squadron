@@ -1061,15 +1061,17 @@
     const b = pack.base, s = pack.shade, h = pack.hl;
     const O = P.outline;
     if (opts.crushed) {
-      // Body lying flat — squash the pack into a thin slab so it looks
-      // crushed under the torso instead of sticking out at full width.
+      // Body lying flat — compress the pack on its side-depth axis, while
+      // keeping its length along the torso. This avoids chopping off the top.
       const tpl = [
-        '.OO.',
-        'OBHO',
-        'OBSO',
-        '.OO.'
+        'OO',
+        'BH',
+        'BB',
+        'BS',
+        'BB',
+        'OO'
       ];
-      E.stamp(ctx, tx - 2, ty + 3, tpl, { O, B: b, H: h, S: s });
+      E.stamp(ctx, tx - 3, ty + 1, tpl, { O, B: b, H: h, S: s });
       return;
     }
     // Behind torso, so sits on LEFT side (back). tx is torso TL.
@@ -2401,11 +2403,11 @@
     if (!pack) return;
     opts = opts || {};
     if (opts.crushed) {
-      // Crushed slab under the lying body — narrower (≈55%) and shorter,
-      // pinned to the lower torso so it reads like a flattened pack.
-      fillRoundRect(ctx, tx - 2.6, ty + 4.45, 4.0, 2.65, 0.6, P.outline);
-      fillRoundRect(ctx, tx - 2.15, ty + 4.78, 3.05, 2.05, 0.45, pack.base);
-      strokeLine(ctx, tx - 1.85, ty + 5.65, tx + 0.55, ty + 5.65, pack.shade, 0.32);
+      // Crushed slab under the lying body: thin on the side-depth axis, still
+      // long along the torso so the top of the pack does not collapse first.
+      fillRoundRect(ctx, tx - 3.05, ty + 1.32, 2.1, 6.65, 0.72, P.outline);
+      fillRoundRect(ctx, tx - 2.74, ty + 1.78, 1.42, 5.72, 0.48, pack.base);
+      strokeLine(ctx, tx - 2.06, ty + 2.18, tx - 2.06, ty + 7.08, pack.shade, 0.32);
       return;
     }
     fillRoundRect(ctx, tx - 3.08, ty + 1.18, 4.0, 6.95, 1.05, P.outline);

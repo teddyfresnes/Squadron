@@ -420,6 +420,18 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
   const { AnimPreview, WeaponGameIcon } = window.SquadronUI;
   const skill1 = getWeaponByName(soldier.skill1Name);
   const skill2 = getWeaponByName(soldier.skill2Name);
+  const configWeapon = window.Weapons && window.Weapons.list && window.Weapons.list[soldier.config && soldier.config.weaponIdx];
+  const skill1Weapon = skill1 || configWeapon || null;
+  function renderSkillSlot(weapon, name) {
+    if (weapon) {
+      return <SkillTooltip weapon={weapon} tipDir="below"><WeaponGameIcon weapon={weapon} /></SkillTooltip>;
+    }
+    return (
+      <SkillTooltip text={name || 'Arme inconnue'} tipDir="below">
+        <span className="sq-skill-fallback sq-skill-fallback-unknown">?</span>
+      </SkillTooltip>
+    );
+  }
   return (
     <button
       type="button"
@@ -435,12 +447,8 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       </div>
       <div className="sq-soldier-name">{soldier.name}</div>
       <div className="sq-skills-row">
-        {skill1
-          ? <SkillTooltip weapon={skill1} tipDir="below"><WeaponGameIcon weapon={skill1} /></SkillTooltip>
-          : <span className="sq-skill-fallback" />}
-        {skill2
-          ? <SkillTooltip weapon={skill2} tipDir="below"><WeaponGameIcon weapon={skill2} /></SkillTooltip>
-          : <span className="sq-skill-fallback" />}
+        {renderSkillSlot(skill1Weapon, soldier.skill1Name)}
+        {renderSkillSlot(skill2, soldier.skill2Name)}
       </div>
     </button>
   );

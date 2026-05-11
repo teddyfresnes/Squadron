@@ -72,11 +72,30 @@
 
   function uniqueWeaponNames(s) {
     const seen = new Set();
-    return [s.weaponName, s.preferredWeapon, s.skill1Name, s.skill2Name, ...(s.unlockedWeapons || [])]
+    const names = [s.weaponName, s.preferredWeapon, s.skill1Name, s.skill2Name, ...(s.unlockedWeapons || [])]
+      .map(w => typeof w === 'string' ? w : (w && (w.name || w.id)) || null)
       .filter(Boolean)
       .filter(name => {
         if (seen.has(name)) return false;
         seen.add(name);
+        return true;
+      });
+    if (s.cfg && window.Weapons && window.Weapons.list && window.Weapons.list[s.cfg.weaponIdx]) {
+      const configured = window.Weapons.list[s.cfg.weaponIdx].name;
+      if (configured && !seen.has(configured)) names.push(configured);
+    }
+    return names;
+  }
+
+  function uniqueWeapons(s) {
+    const seen = new Set();
+    return uniqueWeaponNames(s)
+      .map(getWeaponByName)
+      .filter(Boolean)
+      .filter(w => {
+        const key = w.id || w.name;
+        if (seen.has(key)) return false;
+        seen.add(key);
         return true;
       });
   }
@@ -323,7 +342,7 @@
     const SkillTooltip = G && G.SkillTooltip;
     const WeaponGameIcon = UI.WeaponGameIcon;
     const WeaponIcon = UI.WeaponIcon;
-    const allWeapons = uniqueWeaponNames(s).map(getWeaponByName).filter(Boolean);
+    const allWeapons = uniqueWeapons(s);
     const skillWeapons = allWeapons;
     const life = hpPct(s);
     const hpLabel = hpText(s);
