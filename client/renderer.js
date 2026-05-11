@@ -783,7 +783,8 @@
       // body-local space, then the body scale (×3 male / ×2.76 female) expands
       // that around (originX, originY). So feet sit at originY + 7 * scale.
       const profileScale = (bodyProfile && bodyProfile.scale) || BODY_SCALE;
-      const deathPivotY = originY + 7 * profileScale;      ctx.translate(originX, deathPivotY);
+      const deathPivotY = originY + 7 * profileScale;
+      ctx.translate(originX, deathPivotY);
       ctx.rotate(facing * frame.deathAngle);
       ctx.translate(-originX, -deathPivotY);
     }

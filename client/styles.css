@@ -2805,8 +2805,8 @@ html, body {
   z-index: 90;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
+  gap: 7px;
+  padding: 9px;
   color: var(--text);
   background:
     linear-gradient(180deg, rgba(32, 35, 47, 0.96), rgba(16, 18, 25, 0.96)),
@@ -2876,9 +2876,9 @@ html, body {
 }
 .cv-inspect-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, max-content) minmax(72px, 1fr);
+  gap: 10px;
+  align-items: center;
   min-width: 0;
 }
 .cv-inspect-vitals {
@@ -2997,47 +2997,53 @@ html, body {
 }
 .cv-inspect-weapons {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0)),
-    rgba(8, 10, 16, 0.4);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.32);
-  max-height: 188px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 5px 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  max-height: 92px;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 .cv-inspect-weapons-empty {
-  padding: 10px 6px;
+  width: 100%;
+  padding: 6px;
   color: var(--text-dim);
   font-size: 11px;
   font-style: italic;
   text-align: center;
 }
 .cv-inspect-weapon-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  padding: 5px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.32);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
-}
-.cv-inspect-weapon-card-img {
-  flex: 0 0 auto;
-  width: 96px;
-  min-height: 30px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 2px 4px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  justify-content: space-between;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+  height: 34px;
+  padding: 3px 5px;
+  border: 1px solid rgba(140, 166, 200, 0.28);
+  border-radius: 5px;
+  background:
+    linear-gradient(180deg, rgba(150, 178, 220, 0.12), rgba(36, 46, 66, 0.12)),
+    rgba(10, 13, 20, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.035);
+  cursor: help;
+}
+.cv-inspect-weapon-card-img {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  overflow: hidden;
 }
 .cv-inspect-weapon-card-img canvas {
   max-width: 100%;
@@ -3046,20 +3052,10 @@ html, body {
   display: block;
 }
 .cv-inspect-weapon-card-body {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: none;
 }
 .cv-inspect-weapon-card-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text);
+  display: none;
 }
 .cv-weapon-placeholder {
   display: inline-block;
@@ -3071,16 +3067,28 @@ html, body {
 }
 .cv-ammo-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 3px;
   min-height: 15px;
-  margin-top: 4px;
+  margin-top: 0;
+  justify-content: flex-end;
+}
+.cv-ammo-stack {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
 }
 .cv-ammo-row-small {
-  gap: 2px;
-  min-height: 9px;
+  gap: 1px;
+  min-height: 8px;
   opacity: 0.88;
+}
+.cv-ammo-row-reserve {
+  opacity: 0.54;
 }
 .cv-ammo-bullet {
   position: relative;
@@ -3110,35 +3118,40 @@ html, body {
   background: rgba(8, 10, 14, 0.72);
 }
 .cv-ammo-row-small .cv-ammo-bullet {
-  width: 4px;
+  width: 3px;
   height: 8px;
-  flex-basis: 4px;
+  flex-basis: 3px;
   border-radius: 3px 3px 1px 1px;
 }
 .cv-inspect-skills {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 34px);
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 4px 0;
+  justify-content: start;
+  gap: 7px;
+  min-height: 76px;
+  padding: 0;
+  align-self: center;
 }
 .cv-inspect-skill {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
-  border: 1px solid rgba(217, 150, 80, 0.34);
-  background: rgba(217, 150, 80, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(217, 150, 80, 0.08);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .cv-inspect-skill .game-icon {
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+}
+.cv-inspect-skill .weapon-game-icon {
+  margin: 0;
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
 }
 .cv-hud {
   display: flex;

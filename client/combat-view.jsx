@@ -298,16 +298,26 @@
     );
   }
 
-  function AmmoRow({ total, filled, small }) {
+  function AmmoRow({ total, filled, small, reserve }) {
     const count = Math.max(1, Math.round(total || DEFAULT_MAGAZINE_SIZE));
     const full = clamp(filled == null ? count : Math.round(filled), 0, count);
     const bullets = [];
     for (let i = 0; i < count; i++) bullets.push(i);
     return (
-      <div className={'cv-ammo-row' + (small ? ' cv-ammo-row-small' : '')} aria-hidden="true">
+      <div className={'cv-ammo-row' + (small ? ' cv-ammo-row-small' : '') + (reserve ? ' cv-ammo-row-reserve' : '')} aria-hidden="true">
         {bullets.map(i => (
           <span key={i} className={'cv-ammo-bullet' + (i < full ? ' is-full' : ' is-empty')} />
         ))}
+      </div>
+    );
+  }
+
+  function AmmoStack({ total }) {
+    const count = Math.max(1, Math.round(total || DEFAULT_MAGAZINE_SIZE));
+    return (
+      <div className="cv-ammo-stack" aria-hidden="true">
+        <AmmoRow total={count} filled={count} small />
+        <AmmoRow total={count} filled={count} small reserve />
       </div>
     );
   }
@@ -322,8 +332,8 @@
     const life = hpPct(s);
     const hpLabel = hpText(s);
     const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
-    const panelW = Math.max(310, Math.min(412, arenaW - 16));
-    const panelH = 360;
+    const panelW = Math.max(300, Math.min(390, arenaW - 16));
+    const panelH = 300;
     const rawLeft = s.team === 'A'
       ? layout.left + layout.stageW - 18
       : layout.left - panelW + 18;
@@ -331,19 +341,20 @@
     const top = clamp(layout.top + Math.min(18, layout.stageH * 0.18), 8, Math.max(8, arenaH - panelH - 8));
 
     const panelRef = useRef(null);
-    const [hpHover, setHpHover] = useState(null);
+    const [cursorTip, setCursorTip] = useState(null);
 
     function stop(ev) {
       ev.stopPropagation();
     }
 
-    function trackCursor(ev) {
+    function trackCursor(ev, text) {
       const el = panelRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      setHpHover({ x: ev.clientX - rect.left, y: ev.clientY - rect.top });
+      setCursorTip({ text, x: ev.clientX - rect.left, y: ev.clientY - rect.top });
     }
-    function clearCursor() { setHpHover(null); }
+    function trackHpCursor(ev) { trackCursor(ev, hpLabel); }
+    function clearCursor() { setCursorTip(null); }
 
     return (
       <div ref={panelRef}
@@ -363,14 +374,15 @@
           {allWeapons.map(w => {
             const mag = magazineSizeForWeaponName(w.name);
             return (
-              <div key={w.name} className="cv-inspect-weapon-card">
+              <div key={w.name}
+                   className="cv-inspect-weapon-card"
+                   aria-label={w.name}
+                   onMouseMove={(ev) => trackCursor(ev, w.name)}
+                   onMouseLeave={clearCursor}>
                 <div className="cv-inspect-weapon-card-img">
-                  {WeaponIcon ? <WeaponIcon weapon={w} /> : <span className="cv-weapon-placeholder" />}
+                  {WeaponIcon ? <WeaponIcon weapon={w} scale={0.74} /> : <span className="cv-weapon-placeholder" />}
                 </div>
-                <div className="cv-inspect-weapon-card-body">
-                  <div className="cv-inspect-weapon-card-name" title={w.name}>{w.name}</div>
-                  <AmmoRow total={mag} filled={mag} />
-                </div>
+                <AmmoStack total={mag} />
               </div>
             );
           })}
@@ -380,11 +392,11 @@
           <div className="cv-inspect-vitals">
             <div className={'cv-life-rail' + (life <= 35 ? ' is-low' : '')}
                  aria-label={hpLabel}
-                 onMouseMove={trackCursor}
+                 onMouseMove={trackHpCursor}
                  onMouseLeave={clearCursor}>
               <div className="cv-life-fill" style={{ height: life + '%' }} />
             </div>
-            <BodyGraph s={s} onCursor={trackCursor} onLeave={clearCursor} />
+            <BodyGraph s={s} onCursor={trackHpCursor} onLeave={clearCursor} />
           </div>
           <div className="cv-inspect-skills" aria-label="Armes débloquées">
             {skillWeapons.map(w => {
@@ -400,11 +412,11 @@
           </div>
         </div>
 
-        {hpHover && (
+        {cursorTip && (
           <div className="cv-hp-cursor-tooltip"
-               style={{ left: hpHover.x + 12, top: hpHover.y - 22 }}
+               style={{ left: cursorTip.x + 12, top: cursorTip.y - 22 }}
                aria-hidden="true">
-            {hpLabel}
+            {cursorTip.text}
           </div>
         )}
       </div>
