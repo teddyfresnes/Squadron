@@ -35,7 +35,7 @@
 
   function resultOverlayDelay(winner) {
     if (winner === 'draw') return RESULT_OVERLAY_BASE_DELAY;
-    return Math.max(RESULT_OVERLAY_BASE_DELAY, animDuration('holster'));
+    return Math.max(RESULT_OVERLAY_BASE_DELAY, animDuration('holster') + animDuration('victory'));
   }
 
   function clamp(v, lo, hi) {

@@ -503,8 +503,16 @@
     function startWinnerAnimation(s) {
       s.aimed = false;
       s.animState = null;
-      s.endPhase = animDur('holster') > 0 ? 'holster' : null;
-      s.state = s.endPhase ? 'holster' : 'idle';
+      if (animDur('holster') > 0) {
+        s.endPhase = 'holster';
+        s.state = 'holster';
+      } else if (animDur('victory') > 0) {
+        s.endPhase = 'victory';
+        s.state = 'victory';
+      } else {
+        s.endPhase = null;
+        s.state = 'idle';
+      }
       s.stateT = 0;
     }
 
@@ -540,6 +548,21 @@
         if (s.endPhase === 'holster') {
           s.stateT += dt;
           if (s.stateT >= animDur('holster')) {
+            if (animDur('victory') > 0) {
+              s.state = 'victory';
+              s.stateT = 0;
+              s.endPhase = 'victory';
+            } else {
+              s.state = 'idle';
+              s.stateT = 0;
+              s.endPhase = null;
+            }
+          }
+          continue;
+        }
+        if (s.endPhase === 'victory') {
+          s.stateT += dt;
+          if (s.stateT >= animDur('victory')) {
             s.state = 'idle';
             s.stateT = 0;
             s.endPhase = null;

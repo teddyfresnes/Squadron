@@ -86,6 +86,16 @@
     return t < 0 ? 0 : (t > 1 ? 1 : t);
   }
 
+  // Canonical "bare-hands guard" pose — the rest position used as the shared
+  // boundary between holster (end), drawWeapon (start), and victory (start+end).
+  // Mirrors what the renderer produces when the soldier idles with the bareHands
+  // (Main nue) weapon: fists raised forward, elbows tucked. Values are unscaled
+  // (renderer multiplies by BODY_SCALE=3 via customArmPose/worldPoint).
+  // Source: HOLD_PROFILES.melee in renderer.js (grip 18/-13, foregrip-via-pointOnWeapon
+  // ≈ 23/-17, lowCarry*Elbow ≈ 7/12 relative to shoulder).
+  const IDLE_BARE_FRONT = { hx: 6, hy: -4, ex: 0, ey: -3 };
+  const IDLE_BARE_BACK  = { hx: 8, hy: -6, ex: 5, ey: -3 };
+
   const SHOT_PROFILES = {
     pistol: { recoil: 1.4, lift: -0.1, angle: -0.035, bodyKick: 0.45, headKick: 0.05, flash: 0.9, smoke: 0.55, climb: 0 },
     auto: { recoil: 1.8, lift: -0.18, angle: -0.04, bodyKick: 0.35, headKick: 0.04, flash: 0.95, smoke: 0.75, climb: 0.018 },
@@ -301,9 +311,11 @@
   };
 
   // ---------- HOLSTER (up, behind the shoulder, then into the body silhouette) ----------
+  // After the weapon vanishes, two extra frames bring the arm back to the
+  // shared IDLE_BARE rest pose so the handoff to idle/victory has no snap.
   Anims.holster = {
     name: 'Holster',
-    frames: 7,
+    frames: 9,
     fps: 24,
     loop: false,
     get: function (i) {
@@ -315,7 +327,13 @@
         { x: -15, y: -6,  a: -1.25, w: -0.95, c: 0.45, s: 0.68, show: true },
         { x: -13, y: 3,   a: -1.05, w: -0.9,  c: 0.58, s: 0.48, show: true },
         { x: -8,  y: 8,   a: -0.7,  w: -0.7,  c: 0.75, s: 0.32, show: true },
-        { x: -5,  y: 9,   a: -0.5,  w: -0.5,  c: 0.9,  s: 0.25, show: false }
+        { x: -5,  y: 9,   a: -0.5,  w: -0.5,  c: 0.9,  s: 0.25, show: false },
+        // arm sweeps forward from stashed-behind toward the IDLE_BARE guard
+        { x: 0,   y: 0,   a: 0,     w: 0,     c: 1,    s: 1,    show: false,
+          frontArm: { hx: 3, hy: 0, ex: 0, ey: -1 }, backArm: { hx: 5, hy: -2, ex: 4, ey: -1 } },
+        // settled at IDLE_BARE guard (fists up)
+        { x: 0,   y: 0,   a: 0,     w: 0,     c: 1,    s: 1,    show: false,
+          frontArm: IDLE_BARE_FRONT, backArm: IDLE_BARE_BACK }
       ][i] || {};
       d.lowCarryT = seq.c || 0;
       d.aimAngle = seq.a || 0;
@@ -324,19 +342,98 @@
       d.gripOffset = { x: seq.x || 0, y: seq.y || 0 };
       d.weaponScale = seq.s || 1;
       d.showWeapon = seq.show !== false;
+      if (seq.frontArm) d.frontArm = seq.frontArm;
+      if (seq.backArm) d.backArm = seq.backArm;
+      return d;
+    }
+  };
+
+  // ---------- VICTORY (fist pump from IDLE_BARE guard, Minitroopers vibe) ----------
+  // Both endpoints sit exactly at IDLE_BARE_FRONT/BACK so transitions in and out
+  // of the guard pose (post-holster, pre-drawWeapon, idle) have no snap. The
+  // front fist rises overhead, pumps 3 times, then returns to the guard. Values
+  // are unscaled — the renderer multiplies by BODY_SCALE=3, so small numbers
+  // here translate to the right visual extension (no more gorilla arms).
+  Anims.victory = {
+    name: 'Victory',
+    frames: 22,
+    fps: 14,
+    loop: false,
+    get: function (i) {
+      const d = mark(defaults(), 'victory', i);
+      // hx/hy = front hand pos (pre-scale, relative to body origin);
+      // ex/ey = front elbow; bob = bodyDY; bend = front knee flex.
+      // back arm stays at IDLE_BARE_BACK guard throughout.
+      // Geometry note: shoulderFront sits at world (originX-9, originY-21);
+      // baseline IDLE arm is 15+17 = ~32 px total. Peak fist uses hy=-18
+      // (hand at world y=-54, straight above shoulder) with ey=-12 (elbow 15 px
+      // above shoulder) → upper arm 15 px, forearm 18 px, matching baseline.
+      // Pumps cycle every 4 frames (peaks at 4/8/12) — same cadence as the
+      // original Minitroopers-style victory before the refactor.
+      // Back arm drops in counter-balance: low at each front-peak, up at guard.
+      const seq = [
+        // Phase 1 — eased rise from guard to overhead (frames 0-3)
+        { hx:  6, hy:  -4, ex:  0, ey:  -3, bob:  0.0, bend: 0.0  },                                    // IDLE_BARE_FRONT
+        { hx:  4, hy:  -8, ex: -1, ey:  -6, bob: -0.2, bend: 0.2,  back: { hx: 8, hy: -3, ex: 5, ey: -2 } },
+        { hx:  1, hy: -13, ex: -2, ey: -10, bob: -0.5, bend: 0.5,  back: { hx: 8, hy:  0, ex: 5, ey: -1 } },
+        { hx: -1, hy: -16, ex: -3, ey: -11, bob: -0.8, bend: 0.7,  back: { hx: 7, hy:  1, ex: 4, ey:  1 } },
+        // Phase 2 — three fist pumps, peaks 4 frames apart (frames 4-12)
+        { hx: -2, hy: -18, ex: -3, ey: -12, bob: -1.0, bend: 0.85, back: { hx: 7, hy:  2, ex: 4, ey:  2 } },  // peak 1
+        { hx: -2, hy: -16, ex: -3, ey: -11, bob: -0.6, bend: 0.7,  back: { hx: 7, hy:  0, ex: 4, ey:  1 } },
+        { hx: -2, hy: -15, ex: -3, ey: -11, bob: -0.4, bend: 0.6,  back: { hx: 7, hy: -1, ex: 5, ey:  0 } },  // lowest mid
+        { hx: -2, hy: -16, ex: -3, ey: -11, bob: -0.6, bend: 0.7,  back: { hx: 7, hy:  0, ex: 4, ey:  1 } },
+        { hx: -2, hy: -18, ex: -3, ey: -12, bob: -1.0, bend: 0.85, back: { hx: 7, hy:  2, ex: 4, ey:  2 } },  // peak 2
+        { hx: -2, hy: -16, ex: -3, ey: -11, bob: -0.6, bend: 0.7,  back: { hx: 7, hy:  0, ex: 4, ey:  1 } },
+        { hx: -2, hy: -15, ex: -3, ey: -11, bob: -0.4, bend: 0.6,  back: { hx: 7, hy: -1, ex: 5, ey:  0 } },  // lowest mid
+        { hx: -2, hy: -16, ex: -3, ey: -11, bob: -0.6, bend: 0.7,  back: { hx: 7, hy:  0, ex: 4, ey:  1 } },
+        { hx: -2, hy: -18, ex: -3, ey: -12, bob: -1.0, bend: 0.85, back: { hx: 7, hy:  2, ex: 4, ey:  2 } },  // peak 3
+        // Phase 3 — descent back to IDLE_BARE guard (frames 13-18)
+        { hx: -1, hy: -16, ex: -3, ey: -11, bob: -0.7, bend: 0.7,  back: { hx: 7, hy:  1, ex: 4, ey:  1 } },
+        { hx:  0, hy: -13, ex: -2, ey: -10, bob: -0.5, bend: 0.5,  back: { hx: 8, hy: -1, ex: 5, ey:  0 } },
+        { hx:  2, hy: -10, ex: -1, ey:  -8, bob: -0.3, bend: 0.3,  back: { hx: 8, hy: -2, ex: 5, ey: -1 } },
+        { hx:  4, hy:  -7, ex:  0, ey:  -5, bob: -0.1, bend: 0.15, back: { hx: 8, hy: -4, ex: 5, ey: -2 } },
+        { hx:  5, hy:  -5, ex:  0, ey:  -4, bob: -0.05, bend: 0.05, back: { hx: 8, hy: -5, ex: 5, ey: -3 } },
+        { hx:  6, hy:  -4, ex:  0, ey:  -3, bob:  0.0, bend: 0.0  },                                    // IDLE_BARE
+        // Phase 4 — hold IDLE_BARE guard (frames 19-21)
+        { hx:  6, hy:  -4, ex:  0, ey:  -3, bob:  0.0, bend: 0.0  },
+        { hx:  6, hy:  -4, ex:  0, ey:  -3, bob:  0.0, bend: 0.0  },
+        { hx:  6, hy:  -4, ex:  0, ey:  -3, bob:  0.0, bend: 0.0  }
+      ];
+      const p = seq[i] || seq[seq.length - 1];
+      d.showWeapon = false;
+      d.bodyDY = p.bob;
+      d.headDY = p.bob * 0.25;
+      d.legs = {
+        front: 0,
+        back: 0,
+        frontBend: p.bend,
+        backBend: -p.bend * 0.45
+      };
+      d.frontArm = { hx: p.hx, hy: p.hy, ex: p.ex, ey: p.ey };
+      d.backArm = p.back
+        ? { hx: p.back.hx, hy: p.back.hy, ex: p.back.ex, ey: p.back.ey }
+        : { hx: IDLE_BARE_BACK.hx, hy: IDLE_BARE_BACK.hy, ex: IDLE_BARE_BACK.ex, ey: IDLE_BARE_BACK.ey };
       return d;
     }
   };
 
   // ---------- DRAW WEAPON (appear from the body silhouette, lift from the back) ----------
+  // Mirrors holster: starts at the shared IDLE_BARE rest pose, then the arm
+  // reaches back before the weapon appears, so the wind-up reads naturally.
   Anims.drawWeapon = {
     name: 'Draw Weapon',
-    frames: 7,
+    frames: 9,
     fps: 24,
     loop: false,
     get: function (i) {
       const d = mark(defaults(), 'drawWeapon', i);
       const seq = [
+        // starts at IDLE_BARE guard (fists up)
+        { x: 0,   y: 0,   a: 0,     w: 0,     c: 1,    s: 1,    show: false,
+          frontArm: IDLE_BARE_FRONT, backArm: IDLE_BARE_BACK },
+        // front arm drops/sweeps back to reach for the weapon
+        { x: 0,   y: 0,   a: 0,     w: 0,     c: 1,    s: 1,    show: false,
+          frontArm: { hx: 3, hy: 0, ex: 0, ey: -1 }, backArm: { hx: 5, hy: -2, ex: 4, ey: -1 } },
         { x: -5,  y: 9,   a: -0.5,  w: -0.5,  c: 0.9,  s: 0.25, show: false },
         { x: -8,  y: 8,   a: -0.7,  w: -0.7,  c: 0.75, s: 0.32, show: true },
         { x: -13, y: 3,   a: -1.05, w: -0.9,  c: 0.58, s: 0.48, show: true },
@@ -352,6 +449,8 @@
       d.gripOffset = { x: seq.x || 0, y: seq.y || 0 };
       d.weaponScale = seq.s || 1;
       d.showWeapon = seq.show !== false;
+      if (seq.frontArm) d.frontArm = seq.frontArm;
+      if (seq.backArm) d.backArm = seq.backArm;
       return d;
     }
   };
@@ -637,5 +736,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
 })();
