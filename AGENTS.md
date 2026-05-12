@@ -83,7 +83,7 @@ Ces correspondances **doivent rester cohérentes** entre plusieurs fichiers :
 | Ordre et indices des armes (0–61) | `client/weapon-config.json` ↔ `client/weapons.js` ↔ `server/utils/generateTroopers.js` (WEAPON_NAMES) |
 | Tailles palette (SKIN, HAIR, EYE, UNIFORM) | `client/palette.js` ↔ `server/utils/generateTroopers.js` |
 | SKILL1_NAMES / SKILL1_INDICES | `client/game.jsx` ↔ `server/utils/generateTroopers.js` |
-| Animations référencées par le sim | `client/animations.js` (Anims) ↔ `client/combat-sim.js` (clés 'aim','shoot','unaim','hurt','run','idle','dead') |
+| Animations référencées par le sim | `client/animations.js` (Anims) ↔ `client/combat-sim.js` (clés 'aim','shoot','unaim','holster','victory','hurt','run','idle','dead') |
 | Calcul du power squad | `client/hq.jsx` ↔ `server/routes/squads.js` (1 soldat niv.1 = 5 power, +1 par niveau soldat) |
 
 ---

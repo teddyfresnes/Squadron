@@ -1137,7 +1137,7 @@
       return { x: mix(a.x, b2.x, t), y: mix(a.y, b2.y, t) };
     }
 
-    function drawLegPath(points, fill) {
+    function drawLegPath(points, fill, shade) {
       for (let i = 0; i < points.length - 1; i++) {
         const a = points[i];
         const b2 = points[i + 1];
@@ -1151,6 +1151,10 @@
         for (const p of seg) {
           E.px(ctx, p[0], p[1], fill);
           E.px(ctx, p[0], p[1] + 1, fill);
+        }
+        if (shade) {
+          const shadeSeg = linePoints(Math.round(a.x), Math.round(a.y + 1), Math.round(b2.x), Math.round(b2.y + 1));
+          for (const p of shadeSeg) E.px(ctx, p[0], p[1], shade);
         }
       }
     }
@@ -1191,8 +1195,8 @@
       ];
       const backKneel = [
         { x: tx + 5, y: ty + 1 },
-        { x: tx + 7, y: ty + 5 },
-        { x: tx + 2, y: ty + 6 }
+        { x: tx + 7, y: ty + 2 },
+        { x: tx + 7, y: ty + 6 }
       ];
       const frontStand = [
         { x: tx + 2, y: ty + 0 },
@@ -1202,13 +1206,13 @@
       const frontKneel = [
         { x: tx + 2, y: ty + 1 },
         { x: tx + 4, y: ty + 4 },
-        { x: tx + 8, y: ty + 6 }
+        { x: tx + 0, y: ty + 6 }
       ];
 
       const back = backStand.map((p, i) => pt(p, backKneel[i], t));
       const front = frontStand.map((p, i) => pt(p, frontKneel[i], t));
-      drawLegPath(back, s);
-      drawLegPath(front, b);
+      drawLegPath(back, s, b);
+      drawLegPath(front, b, s);
       drawBoot(back[2].x - 1, back[2].y, false);
       drawBoot(front[2].x, front[2].y, true);
 
@@ -2473,7 +2477,11 @@
         ctx.lineTo(points[1].x, points[1].y);
         ctx.lineTo(points[2].x, points[2].y);
       });
-      strokeLine(ctx, points[0].x + 0.35, points[0].y + 0.45, points[2].x + 0.05, points[2].y - 0.4, shade, 0.45);
+      strokePath(ctx, shade, 0.45, function () {
+        ctx.moveTo(points[0].x + 0.35, points[0].y + 0.45);
+        ctx.lineTo(points[1].x + 0.2, points[1].y + 0.15);
+        ctx.lineTo(points[2].x + 0.05, points[2].y - 0.4);
+      });
       const footX = points[2].x;
       const footY = points[2].y + 0.45;
       fillRoundRect(ctx, footX - 1.45, footY - 0.12, 4.75, 1.4, 0.42, P.outline);
@@ -2496,8 +2504,8 @@
       ];
       const backKneel = [
         { x: tx + 4.7, y: ty + 1.15 },
-        { x: tx + 6.7, y: ty + 5.25 },
-        { x: tx + 2.7, y: ty + 6.35 }
+        { x: tx + 6.95, y: ty + 2.05 },
+        { x: tx + 7.05, y: ty + 6.25 }
       ];
       const frontStand = [
         { x: tx + 1.75, y: ty + 0.2 },
@@ -2507,7 +2515,7 @@
       const frontKneel = [
         { x: tx + 1.65, y: ty + 1.1 },
         { x: tx + 3.3, y: ty + 3.75 },
-        { x: tx + 7.65, y: ty + 6.15 }
+        { x: tx + 0.45, y: ty + 6.15 }
       ];
 
       const back = backStand.map((p, i) => pt(p, backKneel[i], t));

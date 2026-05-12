@@ -710,6 +710,36 @@
     }
   }
 
+  function customArmPoint(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, hx, hy) {
+    return worldPoint(
+      originX,
+      originY,
+      originX + upperBodyDXLocal + (hx || 0),
+      originY + (bodyDY || 0) + (hy || 0),
+      bodyProfile
+    );
+  }
+
+  function customArmPose(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, arm, shoulder) {
+    if (!arm) return null;
+    const hand = customArmPoint(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, arm.hx, arm.hy);
+    const elbow = (arm.ex != null || arm.ey != null)
+      ? customArmPoint(
+          originX,
+          originY,
+          upperBodyDXLocal,
+          bodyDY,
+          bodyProfile,
+          arm.ex != null ? arm.ex : (arm.hx || 0) * 0.5,
+          arm.ey != null ? arm.ey : (arm.hy || 0) * 0.5
+        )
+      : {
+          x: Math.round((shoulder.x + hand.x) / 2),
+          y: Math.round((shoulder.y + hand.y) / 2) - 4
+        };
+    return { elbow, hand };
+  }
+
   function stanceLegs(frame, hold) {
     const legs = Object.assign({ front: 0, back: 0, frontBend: 0, backBend: 0 }, frame.legs || {});
     const strideLegs = (
@@ -846,9 +876,14 @@
     const weaponGrip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal, bodyProfile);
     const aim = computeAngle(hold, frame);
     const relaxedCarry = lowCarryT(motion, frame) > 0.5;
+    const showWeapon = frame.showWeapon !== false && !frame.weaponDropped;
+    const backArmPose = customArmPose(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, frame.backArm, shoulderBack);
+    const frontArmPose = customArmPose(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, frame.frontArm, shoulderFront);
 
     let supportHand = null;
     if (
+      showWeapon &&
+      !backArmPose &&
       (weapon.twoHanded || hold.support === true) &&
       hold.support !== false &&
       !frame.tuck &&
@@ -873,7 +908,9 @@
       });
     }
 
-    if (supportHand && !frame.tuck) {
+    if (backArmPose && !frame.tuck) {
+      drawBentArm(ctx, shoulderBack, backArmPose.elbow, backArmPose.hand, uniform, smooth, bodyProfile);
+    } else if (supportHand && !frame.tuck) {
       const armElbow = elbowOffset(hold, 'support', motion, frame);
       const elbow = resolveElbow(shoulderBack, {
         x: Math.round(shoulderBack.x + (armElbow ? armElbow.x : 12)),
@@ -915,7 +952,6 @@
       }
     });
 
-    const showWeapon = frame.showWeapon !== false && !frame.weaponDropped;
     if (showWeapon) {
       if (frame.useGrenade) {
         const g = window.Weapons.grenade;
@@ -946,6 +982,8 @@
         y: Math.round((shoulderFront.y + throwHand.y) / 2) - 4
       };
       drawBentArm(ctx, shoulderFront, elbow, throwHand, uniform, smooth, bodyProfile);
+    } else if (frontArmPose && !frame.tuck) {
+      drawBentArm(ctx, shoulderFront, frontArmPose.elbow, frontArmPose.hand, uniform, smooth, bodyProfile);
     } else if (!frame.tuck) {
       // When the weapon is dropped (final death frames), override the
       // shoulder and hand to body-axis positions (body-local X = originX)

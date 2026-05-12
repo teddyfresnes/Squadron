@@ -78,6 +78,14 @@
     return 0.5 - Math.cos(Math.PI * t) * 0.5;
   }
 
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function clamp01(t) {
+    return t < 0 ? 0 : (t > 1 ? 1 : t);
+  }
+
   const SHOT_PROFILES = {
     pistol: { recoil: 1.4, lift: -0.1, angle: -0.035, bodyKick: 0.45, headKick: 0.05, flash: 0.9, smoke: 0.55, climb: 0 },
     auto: { recoil: 1.8, lift: -0.18, angle: -0.04, bodyKick: 0.35, headKick: 0.04, flash: 0.95, smoke: 0.75, climb: 0.018 },
@@ -320,6 +328,56 @@
     }
   };
 
+  // ---------- VICTORY (weapon tucked away, fist pump, then back to rest) ----------
+  Anims.victory = {
+    name: 'Victory',
+    frames: 24,
+    fps: 14,
+    loop: false,
+    get: function (i) {
+      const d = mark(defaults(), 'victory', i);
+      const seq = [
+        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
+        { hx:  0, hy: -3, ex: -2, ey: -4, bob: -0.2, bend: 0.2 },
+        { hx: -2, hy: -9, ex: -5, ey: -7, bob: -0.5, bend: 0.5 },
+        { hx: -3, hy:-15, ex: -6, ey:-10, bob: -0.9, bend: 0.8 },
+        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -1.3, bend: 1.1 },
+        { hx: -3, hy:-17, ex: -7, ey: -9, bob: -0.4, bend: 0.7 },
+        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -1.4, bend: 1.2 },
+        { hx: -3, hy:-17, ex: -7, ey: -9, bob: -0.4, bend: 0.7 },
+        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -1.4, bend: 1.2 },
+        { hx: -3, hy:-17, ex: -7, ey: -9, bob: -0.4, bend: 0.7 },
+        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -1.4, bend: 1.2 },
+        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -0.8, bend: 1.0 },
+        { hx: -3, hy:-18, ex: -7, ey:-10, bob: -0.5, bend: 0.8 },
+        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -0.7, bend: 0.9 },
+        { hx: -3, hy:-18, ex: -7, ey:-10, bob: -0.4, bend: 0.8 },
+        { hx: -3, hy:-16, ex: -7, ey: -9, bob: -0.2, bend: 0.7 },
+        { hx: -2, hy:-11, ex: -6, ey: -7, bob: -0.2, bend: 0.5 },
+        { hx:  0, hy: -6, ex: -4, ey: -5, bob: -0.1, bend: 0.3 },
+        { hx:  2, hy: -1, ex: -2, ey: -3, bob:  0.0, bend: 0.1 },
+        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
+        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
+        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
+        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
+        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 }
+      ];
+      const p = seq[i] || seq[seq.length - 1];
+      d.showWeapon = false;
+      d.bodyDY = p.bob;
+      d.headDY = p.bob * 0.25;
+      d.legs = {
+        front: 0,
+        back: 0,
+        frontBend: p.bend,
+        backBend: -p.bend * 0.45
+      };
+      d.frontArm = { hx: p.hx, hy: p.hy, ex: p.ex, ey: p.ey };
+      d.backArm = { hx: 8, hy: 5, ex: 7, ey: -1 };
+      return d;
+    }
+  };
+
   // ---------- DRAW WEAPON (appear from the body silhouette, lift from the back) ----------
   Anims.drawWeapon = {
     name: 'Draw Weapon',
@@ -348,64 +406,109 @@
     }
   };
 
-  // ---------- RELOAD (kneel, then load round-by-round) ----------
+  // ---------- RELOAD (kneel, vertical weapon, load N rounds, return idle) ----------
+  const RELOAD_INTRO_FRAMES = 8;
+  const RELOAD_ROUND_FRAMES = 7;
+  const RELOAD_OUTRO_FRAMES = 8;
+  const RELOAD_DEFAULT_ROUNDS = 4;
+  const RELOAD_MAX_ROUNDS = 12;
+
+  function reloadRoundCount(meta) {
+    meta = meta || {};
+    const raw = meta.reloadRounds != null ? meta.reloadRounds
+      : (meta.roundCount != null ? meta.roundCount
+      : (meta.missingRounds != null ? meta.missingRounds : RELOAD_DEFAULT_ROUNDS));
+    const n = Math.round(raw);
+    return Math.max(1, Math.min(RELOAD_MAX_ROUNDS, Number.isFinite(n) ? n : RELOAD_DEFAULT_ROUNDS));
+  }
+
+  function reloadFramesForRounds(rounds) {
+    return RELOAD_INTRO_FRAMES + reloadRoundCount({ reloadRounds: rounds }) * RELOAD_ROUND_FRAMES + RELOAD_OUTRO_FRAMES;
+  }
+
   Anims.reload = {
     name: 'Reload',
-    frames: 32,
+    frames: reloadFramesForRounds(RELOAD_DEFAULT_ROUNDS),
     fps: 12,
     loop: false,
-    get: function (i) {
-      const d = mark(defaults(), 'reload', i);
-      const kneelFrames = 6;
-      const roundFrames = 6;
-      const roundCount = 4;
-      const kneel = i < kneelFrames ? easeOutCubic(i / (kneelFrames - 1)) : 1;
-      const settle = Math.sin(Math.min(1, i / (kneelFrames - 1)) * Math.PI);
+    framesForRounds: reloadFramesForRounds,
+    durationForRounds: function (rounds) { return reloadFramesForRounds(rounds) / this.fps; },
+    get: function (i, meta) {
+      const roundCount = reloadRoundCount(meta);
+      const totalFrames = reloadFramesForRounds(roundCount);
 
+      if (i <= 0 || i >= totalFrames - 1) {
+        const idle = mark(defaults(), 'idle', i);
+        idle.aimAngle = 0.15;
+        return idle;
+      }
+
+      const d = mark(defaults(), 'reload', i);
+      const workStart = RELOAD_INTRO_FRAMES;
+      const workEnd = workStart + roundCount * RELOAD_ROUND_FRAMES;
+
+      let kneel = 1;
+      let verticalT = 1;
+      let gripX = 2;
+      let gripY = 7.5;
+      d.reloadRoundCount = roundCount;
+
+      if (i < workStart) {
+        const t = easeInOutSine(i / (RELOAD_INTRO_FRAMES - 1));
+        kneel = easeOutCubic(t);
+        verticalT = t;
+        gripX = lerp(0, 2, t);
+        gripY = lerp(0, 7.5, t);
+        d.reloadPhase = 'kneel';
+      } else if (i < workEnd) {
+        const workFrame = i - workStart;
+        const roundIdx = Math.floor(workFrame / RELOAD_ROUND_FRAMES);
+        const cycleT = (workFrame % RELOAD_ROUND_FRAMES) / (RELOAD_ROUND_FRAMES - 1);
+        const seatPulse = Math.sin(clamp01((cycleT - 0.42) / 0.34) * Math.PI);
+        let handT;
+
+        if (cycleT < 0.18) {
+          handT = 0;
+        } else if (cycleT < 0.58) {
+          handT = easeOutCubic((cycleT - 0.18) / 0.4);
+        } else if (cycleT < 0.76) {
+          handT = 1;
+        } else {
+          handT = 1 - easeInOutSine((cycleT - 0.76) / 0.24) * 0.78;
+        }
+
+        d.reloadPhase = cycleT < 0.5 ? 'fetch-round' : (cycleT < 0.76 ? 'seat-round' : 'reach-round');
+        d.reloadHandT = handT;
+        d.reloadRoundT = handT;
+        d.reloadRoundVisible = cycleT >= 0.08 && cycleT <= 0.76;
+        d.reloadRoundIndex = roundIdx + 1;
+        d.weaponDX = -0.25 * seatPulse;
+        d.weaponDY = 0.35 * seatPulse;
+      } else {
+        const t = easeInOutSine((i - workEnd) / (RELOAD_OUTRO_FRAMES - 1));
+        kneel = 1 - t;
+        verticalT = 1 - t;
+        gripX = lerp(2, 0, t);
+        gripY = lerp(7.5, 0, t);
+        d.reloadPhase = t < 0.45 ? 'check' : 'stand';
+        d.reloadHandT = 1 - t;
+      }
+
+      const settle = Math.sin(kneel * Math.PI);
       d.stance = 'kneel';
       d.legs = { pose: 'kneel', kneel };
-      d.bodyDY = 2.15 * kneel - 0.15 * settle;
-      d.torsoStretch = 0.1 * kneel;
-      d.headDY = -0.08 * kneel;
-      d.forwardLean = 0.22 * kneel;
-      d.aimAngle = 0.16;
-      d.weaponAngle = 0.28 + 0.2 * kneel + Math.sin(i * 0.7) * 0.018;
+      d.bodyDY = 2.35 * kneel - 0.12 * settle;
+      d.torsoStretch = 0.08 * kneel;
+      d.headDY = -0.06 * kneel;
+      d.forwardLean = 0.18 * kneel;
+      d.lowCarryT = 1 - verticalT;
+      d.aimAngle = lerp(0.15, -0.3, verticalT);
+      d.barrelAngle = lerp(0.46, -Math.PI / 2, verticalT);
+      d.barrelLocked = true;
       d.gripOffset = {
-        x: -2.5 * kneel,
-        y: 3.5 * kneel
+        x: gripX,
+        y: gripY
       };
-
-      if (i < kneelFrames) {
-        d.reloadPhase = 'kneel';
-        return d;
-      }
-
-      const workFrame = i - kneelFrames;
-      const roundIdx = Math.floor(workFrame / roundFrames);
-      if (roundIdx >= roundCount) {
-        d.reloadPhase = 'check';
-        d.reloadHandT = 1;
-        d.gripOffset.y += 0.4;
-        return d;
-      }
-
-      const cycleT = (workFrame % roundFrames) / (roundFrames - 1);
-      let handT;
-      if (cycleT < 0.18) {
-        handT = 0;
-      } else if (cycleT < 0.62) {
-        handT = easeOutCubic((cycleT - 0.18) / 0.44);
-      } else if (cycleT < 0.82) {
-        handT = 1;
-      } else {
-        handT = 1 - easeInOutSine((cycleT - 0.82) / 0.18) * 0.72;
-      }
-
-      d.reloadPhase = cycleT < 0.55 ? 'fetch-round' : (cycleT < 0.82 ? 'seat-round' : 'reach-round');
-      d.reloadHandT = handT;
-      d.reloadRoundT = handT;
-      d.reloadRoundVisible = cycleT >= 0.08 && cycleT <= 0.82;
-      d.reloadRoundIndex = roundIdx + 1;
       return d;
     }
   };
@@ -584,5 +687,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
 })();

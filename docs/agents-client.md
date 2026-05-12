@@ -13,7 +13,7 @@
 | `sprite-engine.js` | Helpers canvas bas niveau (px, rect, stamp, outlineRegion) | `Engine` |
 | `parts.js` | Dessin pixel-art de chaque membre du soldat | `Parts` |
 | `weapons.js` | Manifeste visuel armes (bboxes sprite sheet, grip, muzzle) | `Weapon` |
-| `animations.js` | 8 animations définies par clé (idle, walk, run, shoot, aim, hurt, dead, …) | `Anims` |
+| `animations.js` | Animations par clé (idle, walk, run, shoot, aim, reload, hurt, dead, …) | `Anims` |
 | `renderer.js` | Compose le soldat complet depuis `cfg` → frames canvas | `Renderer` |
 | `app.jsx` | UI éditeur de personnage (mode dev) + composants partagés | `SquadronUI` |
 | `combat-sim.js` | Simulateur de combat pur JS (turn-based, déterministe) | `CombatSim` |

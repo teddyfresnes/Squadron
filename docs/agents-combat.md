@@ -137,10 +137,15 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 | `'aim'` | Début d'un tir (si pas encore aimed) |
 | `'shoot'` | Tir en cours |
 | `'unaim'` | Baisse l'arme après la fin d'une action de tir |
+| `'reload'` | Recharge : genou à terre, arme verticale, boucle `reloadRounds` balles, puis retour idle |
+| `'holster'` | Fin de combat : les survivants gagnants rangent leur arme avant la célébration |
+| `'victory'` | Fin de combat : les survivants gagnants lèvent le poing, puis reviennent à `idle` |
 | `'hurt'` | Vient d'être touché (dure `Anims.hurt.frames/fps`, puis → idle) |
 | `'dead'` | HP ≤ 0, animation finale |
 
 `stateT` = temps écoulé dans l'état courant (en secondes), passé à `frameForState()` dans combat-view.
+
+`Anims.reload` expose `framesForRounds(n)` et `durationForRounds(n)` pour câbler plus tard une durée dépendante du nombre de balles rechargées.
 
 `burst` dans `weapon-config.json` est la source de vérité du nombre de coups dans une action de tir. Chaque coup a son propre jet d'accuracy, sa propre zone visée/touchée, ses dégâts, son trail et peut relancer l'animation `hurt` de la cible.
 
@@ -162,7 +167,7 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 - Sélection en pause : tout l'arène reste en effet VHS (grayscale), mais le soldat sélectionné garde ses couleurs et reçoit un halo doré (CSS `.cv-soldier.is-selected` dans `.cv-arena.is-paused`)
 - `SoldierInspectMenu` : panneau contextuel structuré en 3 sections — header (nom + niveau), liste de toutes les armes débloquées (icône + nom + barre de munitions), puis vitals (jauge de vie verticale + silhouette SVG du corps) et icônes skills d'armes en bas avec tooltip. La vie s'affiche uniquement en tooltip suiveur de curseur sur la jauge ou la silhouette (pas d'affichage statique 10/10)
 - `TrailsLayer` : SVG overlay, trails disparaissent en 300 ms
-- `ResultOverlay` : affiché quand `battle.done && battle.endHoldT >= 1.2`
+- `ResultOverlay` : affiché quand `battle.done` et que le délai de fin est écoulé ; pour une victoire/défaite, ce délai couvre `holster + victory + marge`, et reste `1.2s` sur un match nul
 
 ---
 

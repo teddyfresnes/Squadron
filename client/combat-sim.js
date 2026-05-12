@@ -357,9 +357,7 @@
     function planAction() {
       const aA = alive('A'), aB = alive('B');
       if (aA === 0 || aB === 0) {
-        done = true;
-        winner = aA > 0 ? 'A' : (aB > 0 ? 'B' : 'draw');
-        events.push({ t: worldT, type: 'end', winner });
+        finishBattle(winnerForAliveCounts(aA, aB));
         return null;
       }
 
@@ -498,14 +496,69 @@
       return activeActions.some(a => a.type === 'shoot' && a.elapsed < a.aimDur);
     }
 
+    function winnerForAliveCounts(aA, aB) {
+      return aA > 0 ? 'A' : (aB > 0 ? 'B' : 'draw');
+    }
+
+    function startWinnerAnimation(s) {
+      s.aimed = false;
+      s.animState = null;
+      s.victoryPhase = 'holster';
+      s.state = animDur('holster') > 0 ? 'holster' : 'victory';
+      s.stateT = 0;
+      if (s.state === 'victory') s.victoryPhase = 'victory';
+    }
+
+    function finishBattle(nextWinner) {
+      if (done) return true;
+      done = true;
+      winner = nextWinner;
+      activeActions = [];
+      for (const s of all) {
+        if (s.hp <= 0) continue;
+        if (winner !== 'draw' && s.team === winner) {
+          startWinnerAnimation(s);
+        } else {
+          s.aimed = false;
+          s.animState = null;
+          s.victoryPhase = null;
+          if (s.state !== 'idle') { s.state = 'idle'; s.stateT = 0; }
+        }
+      }
+      events.push({ t: worldT, type: 'end', winner });
+      return true;
+    }
+
     function finishBattleIfNeeded() {
       const aA = alive('A'), aB = alive('B');
       if (aA > 0 && aB > 0) return false;
-      done = true;
-      winner = aA > 0 ? 'A' : (aB > 0 ? 'B' : 'draw');
-      activeActions = [];
-      events.push({ t: worldT, type: 'end', winner });
-      return true;
+      return finishBattle(winnerForAliveCounts(aA, aB));
+    }
+
+    function driveBattleEndAnimations(dt) {
+      for (const s of all) {
+        if (s.state === 'dead') { s.stateT += dt; continue; }
+        if (s.victoryPhase === 'holster') {
+          s.stateT += dt;
+          if (s.stateT >= animDur('holster')) {
+            s.state = 'victory';
+            s.stateT = 0;
+            s.victoryPhase = 'victory';
+          }
+          continue;
+        }
+        if (s.victoryPhase === 'victory') {
+          s.stateT += dt;
+          if (s.stateT >= animDur('victory')) {
+            s.state = 'idle';
+            s.stateT = 0;
+            s.victoryPhase = null;
+          }
+          continue;
+        }
+        if (s.state !== 'idle') { s.state = 'idle'; s.stateT = 0; }
+        else s.stateT += dt;
+      }
     }
 
     function startAction(action) {
@@ -678,7 +731,7 @@
       if (phase === 'entry') { stepEntry(dt); return; }
       if (done) {
         endHoldT += dt;
-        for (const s of all) if (s.state === 'dead') s.stateT += dt;
+        driveBattleEndAnimations(dt);
         return;
       }
 

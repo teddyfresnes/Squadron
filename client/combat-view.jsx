@@ -19,12 +19,27 @@
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
   const SHADOW_FOOT_Y = STAGE_H * 0.82;
+  const RESULT_OVERLAY_BASE_DELAY = 1.2;
+  const RESULT_OVERLAY_VICTORY_PAD = 0.3;
 
   function frameForState(state, stateT) {
     const anim = window.Anims[state] || window.Anims.idle;
     const idx = stateT * anim.fps;
     if (anim.loop === false) return Math.min(Math.floor(idx), anim.frames - 1);
     return Math.floor(idx) % anim.frames;
+  }
+
+  function animDuration(state) {
+    const anim = window.Anims && window.Anims[state];
+    return anim ? anim.frames / anim.fps : 0;
+  }
+
+  function resultOverlayDelay(winner) {
+    if (winner === 'draw') return RESULT_OVERLAY_BASE_DELAY;
+    return Math.max(
+      RESULT_OVERLAY_BASE_DELAY,
+      animDuration('holster') + animDuration('victory') + RESULT_OVERLAY_VICTORY_PAD
+    );
   }
 
   function clamp(v, lo, hi) {
@@ -796,7 +811,7 @@
         });
         setTick(n => (n + 1) % 1000000);
 
-        if (battle.done && battle.endHoldT >= 1.2 && !resultShownRef.current) {
+        if (battle.done && battle.endHoldT >= resultOverlayDelay(battle.winner) && !resultShownRef.current) {
           resultShownRef.current = true;
           setResultShown(true);
         }
