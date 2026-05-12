@@ -84,6 +84,7 @@ const FEMALE_NAMES = [
 ];
 
 const WEAPON_TYPE_LABELS = {
+  melee:'Corps a corps',
   pistol:'Pistolet', smg:"Mitraillette", shotgun:"Fusil à pompe",
   rifle:"Fusil d'assaut", sniper:"Fusil de précision", heavy:"Arme lourde"
 };
@@ -152,7 +153,7 @@ function getWeaponByName(name) {
 }
 function pickSkills() {
   const skill1Name = pick(SKILL1_NAMES);
-  const allNames = (window.Weapons.list || []).map(w => w.name).filter(n => n !== skill1Name);
+  const allNames = (window.Weapons.list || []).map(w => w.name).filter(n => n !== skill1Name && n !== 'Main nue');
   return { skill1Name, skill2Name: pick(allNames) };
 }
 function randomHomeConfig(skill1Name) {

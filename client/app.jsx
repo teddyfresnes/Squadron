@@ -3,8 +3,8 @@
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
 // Default rifle index in the new sheet-driven list. The list order is
-// [smg×11, rifle×10, heavy×14, shotgun×8, sniper×10, pistol×8] — index 11 is
-// the first rifle (RIFLE-01).
+// [smg×11, rifle×10, heavy×14, shotgun×8, sniper×10, pistol×8, melee×1]
+// — index 11 is the first rifle (RIFLE-01), index 61 is Main nue.
 const DEFAULT_WEAPON_IDX = 11;
 
 const DEFAULT_CFG = {
@@ -664,8 +664,9 @@ function WeaponGameIcon({ weapon }) {
 // Categorised list — Pistol / SMG / Rifle / Shotgun / Sniper / Heavy. Each
 // weapon shows its sprite-sheet thumbnail plus its name. Rendering is cheap
 // because canvases just blit from the active sheet.
-const TYPE_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'sniper', 'heavy'];
+const TYPE_ORDER = ['melee', 'pistol', 'smg', 'shotgun', 'rifle', 'sniper', 'heavy'];
 const TYPE_LABELS = {
+  melee:   'Melee',
   pistol:  'Pistols',
   smg:     'SMGs',
   shotgun: 'Shotguns',

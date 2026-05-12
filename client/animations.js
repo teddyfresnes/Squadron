@@ -292,6 +292,62 @@
     }
   };
 
+  // ---------- HOLSTER (up, behind the shoulder, then into the body silhouette) ----------
+  Anims.holster = {
+    name: 'Holster',
+    frames: 7,
+    fps: 24,
+    loop: false,
+    get: function (i) {
+      const d = mark(defaults(), 'holster', i);
+      const seq = [
+        { x: 0,   y: 0,   a: 0.15,  w: 0,     c: 1,    s: 1,    show: true },
+        { x: 0,   y: -10, a: -0.35, w: -0.2,  c: 0.8,  s: 0.96, show: true },
+        { x: -7,  y: -13, a: -0.9,  w: -0.65, c: 0.55, s: 0.86, show: true },
+        { x: -15, y: -6,  a: -1.25, w: -0.95, c: 0.45, s: 0.68, show: true },
+        { x: -13, y: 3,   a: -1.05, w: -0.9,  c: 0.58, s: 0.48, show: true },
+        { x: -8,  y: 8,   a: -0.7,  w: -0.7,  c: 0.75, s: 0.32, show: true },
+        { x: -5,  y: 9,   a: -0.5,  w: -0.5,  c: 0.9,  s: 0.25, show: false }
+      ][i] || {};
+      d.lowCarryT = seq.c || 0;
+      d.aimAngle = seq.a || 0;
+      d.weaponAngle = seq.w || 0;
+      d.bodyDY = -0.05;
+      d.gripOffset = { x: seq.x || 0, y: seq.y || 0 };
+      d.weaponScale = seq.s || 1;
+      d.showWeapon = seq.show !== false;
+      return d;
+    }
+  };
+
+  // ---------- DRAW WEAPON (appear from the body silhouette, lift from the back) ----------
+  Anims.drawWeapon = {
+    name: 'Draw Weapon',
+    frames: 7,
+    fps: 24,
+    loop: false,
+    get: function (i) {
+      const d = mark(defaults(), 'drawWeapon', i);
+      const seq = [
+        { x: -5,  y: 9,   a: -0.5,  w: -0.5,  c: 0.9,  s: 0.25, show: false },
+        { x: -8,  y: 8,   a: -0.7,  w: -0.7,  c: 0.75, s: 0.32, show: true },
+        { x: -13, y: 3,   a: -1.05, w: -0.9,  c: 0.58, s: 0.48, show: true },
+        { x: -15, y: -6,  a: -1.25, w: -0.95, c: 0.45, s: 0.68, show: true },
+        { x: -7,  y: -13, a: -0.9,  w: -0.65, c: 0.55, s: 0.86, show: true },
+        { x: 0,   y: -10, a: -0.35, w: -0.2,  c: 0.8,  s: 0.96, show: true },
+        { x: 0,   y: 0,   a: 0.15,  w: 0,     c: 1,    s: 1,    show: true }
+      ][i] || {};
+      d.lowCarryT = seq.c || 0;
+      d.aimAngle = seq.a || 0;
+      d.weaponAngle = seq.w || 0;
+      d.bodyDY = -0.05;
+      d.gripOffset = { x: seq.x || 0, y: seq.y || 0 };
+      d.weaponScale = seq.s || 1;
+      d.showWeapon = seq.show !== false;
+      return d;
+    }
+  };
+
   // ---------- RELOAD (kneel, then load round-by-round) ----------
   Anims.reload = {
     name: 'Reload',
@@ -528,5 +584,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
 })();

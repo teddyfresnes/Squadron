@@ -109,8 +109,9 @@ La formation verticale est assignée par équipe après la création des combatt
 
 ```
 sniper             → 'back'  (lane Y la plus haute à l'écran)
-rifle, pistol      → 'mid'
-smg, heavy, shotgun → 'front'
+rifle, pistol        → 'mid'
+smg, heavy, shotgun  → 'front'
+melee                → 'front' par défaut (catalogue seulement pour l'instant)
 ```
 
 ---

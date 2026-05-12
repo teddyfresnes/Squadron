@@ -17,7 +17,7 @@ const HAIR_STYLES = {
 };
 
 // ── Weapon list — order must match weapon-config.json / weapons.js ──────────
-// [smg×11, rifle×10, heavy×14, shotgun×8, sniper×10, pistol×8] = 61 total
+// [smg×11, rifle×10, heavy×14, shotgun×8, sniper×10, pistol×8, melee×1] = 62 total
 const WEAPON_NAMES = [
   // SMG 0-10
   'M3 Grease Goon','TEK-9','MAK-11','Skorpian vz. 61','HX MP7','PN P90','PN F2001','Ozi','Kolt SCAMP','TPX','MPX9',
@@ -31,6 +31,8 @@ const WEAPON_NAMES = [
   'AWQ','AWN','SVD Dragunof','HX PSG1','CheyTak M200','Barret M82A2','Steir HS .50','PGM Hekate II','Steir Scout','Compact Marksman Rifl',
   // Pistol 53-60
   'Makarovv PM','Ruger Mark I Silenst','Sovyet PB 6P9 Silenced','High Standart HDM','Beretta 93','Revolvair','Gold M1912','Makarovv PM Mk.II',
+  // Melee 61
+  'Main nue',
 ];
 
 // Primary skill pool indices (Beretta 93=57, M3 Grease Goon=0, Mossburg 500=38, AKS-74V=12, Steir Scout=51)
@@ -100,7 +102,7 @@ function generateOneTrooper(idx, rng) {
   const skill1Name = WEAPON_NAMES[skill1Idx];
 
   // Any weapon except skill1
-  const pool2      = WEAPON_NAMES.filter((_, i) => i !== skill1Idx);
+  const pool2      = WEAPON_NAMES.filter((name, i) => i !== skill1Idx && name !== 'Main nue');
   const skill2Name = seededPick(pool2, rng);
 
   const bodyType    = rng() < 0.5 ? 'male' : 'female';

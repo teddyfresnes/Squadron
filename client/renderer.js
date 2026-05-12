@@ -170,6 +170,28 @@
       reloadAngle: 0.08,
       hurtGrip: { x: -6, y: 5 },
       deadGrip: { x: -10, y: 6 }
+    },
+    melee: {
+      support: true,
+      grip: { x: 18, y: -13 },
+      baseAngle: 0,
+      aimWeight: 0.45,
+      rearElbow: { x: 10, y: 11 },
+      supportElbow: { x: 7, y: 11 },
+      foregripOffset: { x: 0, y: 0 },
+      lowCarryGrip: { x: 0, y: 0 },
+      lowCarryAngle: 0,
+      lowCarryRearElbow: { x: 10, y: 12 },
+      lowCarrySupportElbow: { x: 7, y: 12 },
+      recoilBack: 0.25,
+      recoilLift: -0.1,
+      recoilAngleScale: 0.35,
+      runGrip: { x: -1, y: 1 },
+      runAngle: 0,
+      reloadGrip: { x: -2, y: 3 },
+      reloadAngle: 0.08,
+      hurtGrip: { x: -4, y: 3 },
+      deadGrip: { x: -7, y: 4 }
     }
   };
 
@@ -906,7 +928,8 @@
         ctx.save();
         ctx.translate(weaponGrip.x, weaponGrip.y);
         ctx.rotate(aim);
-        ctx.scale(WEAPON_SCALE, WEAPON_SCALE);
+        const frameWeaponScale = frame.weaponScale == null ? 1 : frame.weaponScale;
+        ctx.scale(WEAPON_SCALE * frameWeaponScale, WEAPON_SCALE * frameWeaponScale);
         weapon.draw(ctx, 0, 0, false);
         drawReloadRound(ctx, weapon, frame);
         if (frame.muzzleSmoke) drawMuzzleSmoke(ctx, weapon, frame);

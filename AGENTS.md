@@ -80,7 +80,7 @@ Ces correspondances **doivent rester cohérentes** entre plusieurs fichiers :
 | Ce qui doit rester en sync | Fichiers concernés |
 |---|---|
 | Indices de hairstyles par bodyType | `client/app.jsx` (HAIRSTYLES_BY_BODY) ↔ `server/utils/generateTroopers.js` (HAIR_STYLES) |
-| Ordre et indices des armes (0–60) | `client/weapon-config.json` ↔ `client/weapons.js` ↔ `server/utils/generateTroopers.js` (WEAPON_NAMES) |
+| Ordre et indices des armes (0–61) | `client/weapon-config.json` ↔ `client/weapons.js` ↔ `server/utils/generateTroopers.js` (WEAPON_NAMES) |
 | Tailles palette (SKIN, HAIR, EYE, UNIFORM) | `client/palette.js` ↔ `server/utils/generateTroopers.js` |
 | SKILL1_NAMES / SKILL1_INDICES | `client/game.jsx` ↔ `server/utils/generateTroopers.js` |
 | Animations référencées par le sim | `client/animations.js` (Anims) ↔ `client/combat-sim.js` (clés 'aim','shoot','unaim','hurt','run','idle','dead') |

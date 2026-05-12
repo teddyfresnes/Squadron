@@ -52,7 +52,7 @@ Tous les composants (renderer, SpriteCanvas, combat-sim, DB) échangent ce même
   vestOn:        bool,
   backpackOn:    bool,
   hatIdx:        0–7,
-  weaponIdx:     0–60,      // index dans weapon-config.json / weapons.js
+  weaponIdx:     0–61,      // index dans weapon-config.json / weapons.js
   weaponSkinIdx: 0–33,      // quel sprite sheet arme utiliser
 }
 ```
@@ -83,7 +83,7 @@ Défini dans `app.jsx` (`HAIRSTYLES_BY_BODY`) et répliqué dans `server/utils/g
 
 ---
 
-## Armes (indices 0–60)
+## Armes (indices 0–61)
 
 ```
 smg×11      : 0–10   (M3 Grease Goon, TEK-9, MAK-11, Skorpian, HX MP7, PN P90, PN F2001, Ozi, Kolt SCAMP, TPX, MPX9)
@@ -92,6 +92,7 @@ heavy×14    : 21–34  (Infernal Toob, Lazor, Karl Gustov, XM26, RPG-8, Recoill
 shotgun×8   : 35–42  (SPAX-12, Stooger, Ithaka, Mossburg, Dbl-Barrel, Blunderbus, Flintlok, O/U)
 sniper×10   : 43–52  (AWQ, AWN, SVD, HX PSG1, M200, M82A2, HS50, Hekate, Scout, CMR)
 pistol×8    : 53–60  (Makarovv, Ruger Silenst, Sovyet PB, Standart HDM, Beretta 93, Revolvair, M1912, Makarovv Mk.II)
+melee×1     : 61     (Main nue — catalogue seulement pour l'instant)
 ```
 
 Stats gameplay dans `weapon-config.json` ; rendu visuel dans `weapons.js`. Depuis `schemaVersion: 2`, les dégâts utilisent `damageMin`/`damageMax` par balle, et `damage` reste une moyenne/fallback d'affichage.

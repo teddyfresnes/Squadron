@@ -596,7 +596,7 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
 
   // Group weapons by type
   const grouped = useMemo(() => {
-    const g = { smg: [], rifle: [], heavy: [], shotgun: [], sniper: [], pistol: [] };
+    const g = { melee: [], smg: [], rifle: [], heavy: [], shotgun: [], sniper: [], pistol: [] };
     for (const w of allWeapons) {
       if (g[w.type]) g[w.type].push(w);
     }
@@ -604,6 +604,7 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
   }, [allWeapons.length]);
 
   const types = [
+    { key: 'melee',   label: 'Corps a corps' },
     { key: 'pistol',  label: 'Pistolets' },
     { key: 'smg',     label: 'Mitraillettes' },
     { key: 'shotgun', label: 'Fusils à pompe' },

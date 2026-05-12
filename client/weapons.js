@@ -393,7 +393,11 @@
   function makeWeapon(def) {
     return {
       name: def.name,
+      id: def.id || def.name,
       type: def.type,
+      holdStyle: def.holdStyle,
+      holdVariant: def.holdVariant || 'standard',
+      aliases: def.aliases || [],
       twoHanded: def.twoHanded || false,
       width: def.width,
       height: def.height,
@@ -418,6 +422,21 @@
       }
     };
   }
+
+  const bareHands = makeWeapon({
+    id: 'MELEE-01', name: 'Main nue', type: 'melee', holdStyle: 'melee', twoHanded: true,
+    width: 9, height: 9, gripX: 2, gripY: 6, foregripX: 7, foregripY: 2, muzzleX: 7, muzzleY: 2,
+    draw: function (ctx, x, y) {
+      rect(ctx, x + 0, y + 4, 3, 3, '#d7a06e');
+      px(ctx, x + 1, y + 3, '#f0bd87');
+      px(ctx, x + 2, y + 3, '#f0bd87');
+      px(ctx, x + 3, y + 5, '#8b5a3c');
+      rect(ctx, x + 6, y + 0, 3, 3, '#d7a06e');
+      px(ctx, x + 7, y + 3, '#8b5a3c');
+      px(ctx, x + 7, y + 4, '#8b5a3c');
+      E.outlineRegion(ctx, ctx.canvas.width, ctx.canvas.height, O);
+    }
+  });
 
   const knife = makeWeapon({
     name: 'Knife', type: 'melee', twoHanded: false,
@@ -456,15 +475,17 @@
     heavy:   sheetList.filter(w => w.type === 'heavy'),
     shotgun: sheetList.filter(w => w.type === 'shotgun'),
     sniper:  sheetList.filter(w => w.type === 'sniper'),
-    pistol:  sheetList.filter(w => w.type === 'pistol')
+    pistol:  sheetList.filter(w => w.type === 'pistol'),
+    melee:   [bareHands]
   };
+  const weaponList = sheetList.concat([bareHands]);
 
   // First weapon of each type — keeps legacy `Weapons.rifle` etc. accessors alive
   // (animations reference them as fallbacks).
   const first = (t) => sheetList.find(w => w.type === t);
 
   window.Weapons = {
-    list: sheetList,
+    list: weaponList,
     byType,
     pistol:  first('pistol'),
     smg:     first('smg'),
@@ -472,6 +493,7 @@
     shotgun: first('shotgun'),
     sniper:  first('sniper'),
     rocket:  first('heavy'),
+    bareHands,
     knife,
     grenade,
     // Skin (sheet) management
