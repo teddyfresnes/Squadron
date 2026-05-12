@@ -20,7 +20,6 @@
   const HP_FLASH_MS = 1700;
   const SHADOW_FOOT_Y = STAGE_H * 0.82;
   const RESULT_OVERLAY_BASE_DELAY = 1.2;
-  const RESULT_OVERLAY_VICTORY_PAD = 0.3;
 
   function frameForState(state, stateT) {
     const anim = window.Anims[state] || window.Anims.idle;
@@ -36,10 +35,7 @@
 
   function resultOverlayDelay(winner) {
     if (winner === 'draw') return RESULT_OVERLAY_BASE_DELAY;
-    return Math.max(
-      RESULT_OVERLAY_BASE_DELAY,
-      animDuration('holster') + animDuration('victory') + RESULT_OVERLAY_VICTORY_PAD
-    );
+    return Math.max(RESULT_OVERLAY_BASE_DELAY, animDuration('holster'));
   }
 
   function clamp(v, lo, hi) {

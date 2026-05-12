@@ -328,56 +328,6 @@
     }
   };
 
-  // ---------- VICTORY (weapon tucked away, fist pump, then back to rest) ----------
-  Anims.victory = {
-    name: 'Victory',
-    frames: 24,
-    fps: 14,
-    loop: false,
-    get: function (i) {
-      const d = mark(defaults(), 'victory', i);
-      const seq = [
-        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
-        { hx:  0, hy: -3, ex: -2, ey: -4, bob: -0.2, bend: 0.2 },
-        { hx: -2, hy: -9, ex: -5, ey: -7, bob: -0.5, bend: 0.5 },
-        { hx: -3, hy:-15, ex: -6, ey:-10, bob: -0.9, bend: 0.8 },
-        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -1.3, bend: 1.1 },
-        { hx: -3, hy:-17, ex: -7, ey: -9, bob: -0.4, bend: 0.7 },
-        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -1.4, bend: 1.2 },
-        { hx: -3, hy:-17, ex: -7, ey: -9, bob: -0.4, bend: 0.7 },
-        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -1.4, bend: 1.2 },
-        { hx: -3, hy:-17, ex: -7, ey: -9, bob: -0.4, bend: 0.7 },
-        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -1.4, bend: 1.2 },
-        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -0.8, bend: 1.0 },
-        { hx: -3, hy:-18, ex: -7, ey:-10, bob: -0.5, bend: 0.8 },
-        { hx: -3, hy:-20, ex: -7, ey:-11, bob: -0.7, bend: 0.9 },
-        { hx: -3, hy:-18, ex: -7, ey:-10, bob: -0.4, bend: 0.8 },
-        { hx: -3, hy:-16, ex: -7, ey: -9, bob: -0.2, bend: 0.7 },
-        { hx: -2, hy:-11, ex: -6, ey: -7, bob: -0.2, bend: 0.5 },
-        { hx:  0, hy: -6, ex: -4, ey: -5, bob: -0.1, bend: 0.3 },
-        { hx:  2, hy: -1, ex: -2, ey: -3, bob:  0.0, bend: 0.1 },
-        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
-        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
-        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
-        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 },
-        { hx:  3, hy:  3, ex:  0, ey: -1, bob:  0.0, bend: 0.0 }
-      ];
-      const p = seq[i] || seq[seq.length - 1];
-      d.showWeapon = false;
-      d.bodyDY = p.bob;
-      d.headDY = p.bob * 0.25;
-      d.legs = {
-        front: 0,
-        back: 0,
-        frontBend: p.bend,
-        backBend: -p.bend * 0.45
-      };
-      d.frontArm = { hx: p.hx, hy: p.hy, ex: p.ex, ey: p.ey };
-      d.backArm = { hx: 8, hy: 5, ex: 7, ey: -1 };
-      return d;
-    }
-  };
-
   // ---------- DRAW WEAPON (appear from the body silhouette, lift from the back) ----------
   Anims.drawWeapon = {
     name: 'Draw Weapon',
@@ -687,5 +637,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
 })();
