@@ -878,8 +878,8 @@
     const relaxedCarry = lowCarryT(motion, frame) > 0.5;
 
     // Empty-hand walk/run: replace HOLD_PROFILES.melee's raised-fist guard with
-    // compact runner arms. Keep the elbows visibly bent; a straight pendulum
-    // makes bare-handed soldiers read like rigid block characters.
+    // relaxed arm swings. Hands stay around hip height so bare-handed soldiers
+    // do not look like they are sprinting with tiny clenched guard arms.
     if (
       weapon.id === 'MELEE-01' &&
       (motion === 'walk' || motion === 'run') &&
@@ -887,7 +887,11 @@
     ) {
       const stepAxis = (frame.legs && frame.legs.frontStep) || 0;
       const isRun = motion === 'run';
-      const swingT = clamp(0.5 + stepAxis / (isRun ? 3.45 : 1.5), 0, 1);
+      const walkPhase = (typeof frame.motionFrame === 'number' ? frame.motionFrame : 0) / 16 * Math.PI * 2;
+      const walkSwing = Math.sin(walkPhase) + Math.sin(walkPhase * 2) * 0.18;
+      const swingT = isRun
+        ? clamp(0.5 + stepAxis / 3.45, 0, 1)
+        : clamp(0.5 + walkSwing * 0.42, 0, 1);
       const invSwingT = 1 - swingT;
       function mixPose(a, b, t) {
         return {
@@ -897,16 +901,21 @@
           ey: lerp(a.ey, b.ey, t)
         };
       }
-      const frontBack = { hx: -6.0, hy: -3.0, ex: -5.4, ey: -6.1 };
-      const frontForward = { hx: 3.2, hy: -5.8, ex: -1.2, ey: -4.0 };
-      const backBack = { hx: -0.8, hy: -2.4, ex: 0.0, ey: -6.0 };
-      const backForward = { hx: 8.0, hy: -6.4, ex: 5.2, ey: -4.0 };
-      frame.frontArm = {
-        ...mixPose(frontBack, frontForward, swingT)
-      };
-      frame.backArm = {
-        ...mixPose(backBack, backForward, invSwingT)
-      };
+      const poses = isRun
+        ? {
+            frontBack:    { hx: -5.0, hy:  1.6, ex: -5.0, ey: -2.5 },
+            frontForward: { hx:  2.8, hy: -0.4, ex: -0.6, ey: -3.6 },
+            backBack:     { hx:  1.8, hy:  1.6, ex:  1.8, ey: -2.6 },
+            backForward:  { hx:  8.2, hy: -0.3, ex:  5.4, ey: -3.5 }
+          }
+        : {
+            frontBack:    { hx: -4.6, hy:  1.3, ex: -4.6, ey: -2.8 },
+            frontForward: { hx:  1.3, hy: -0.1, ex: -1.4, ey: -3.6 },
+            backBack:     { hx:  2.3, hy:  1.2, ex:  2.2, ey: -2.8 },
+            backForward:  { hx:  7.2, hy:  0.0, ex:  4.8, ey: -3.4 }
+          };
+      frame.frontArm = mixPose(poses.frontBack, poses.frontForward, swingT);
+      frame.backArm = mixPose(poses.backBack, poses.backForward, invSwingT);
       frame.showWeapon = false;
     }
 
