@@ -876,6 +876,40 @@
     const weaponGrip = computeGrip(originX, originY, hold, frame, upperBodyDXLocal, bodyProfile);
     const aim = computeAngle(hold, frame);
     const relaxedCarry = lowCarryT(motion, frame) > 0.5;
+
+    // Empty-hand walk/run: replace HOLD_PROFILES.melee's raised-fist guard with
+    // compact runner arms. Keep the elbows visibly bent; a straight pendulum
+    // makes bare-handed soldiers read like rigid block characters.
+    if (
+      weapon.id === 'MELEE-01' &&
+      (motion === 'walk' || motion === 'run') &&
+      !frame.frontArm && !frame.backArm
+    ) {
+      const stepAxis = (frame.legs && frame.legs.frontStep) || 0;
+      const isRun = motion === 'run';
+      const swingT = clamp(0.5 + stepAxis / (isRun ? 3.45 : 1.5), 0, 1);
+      const invSwingT = 1 - swingT;
+      function mixPose(a, b, t) {
+        return {
+          hx: lerp(a.hx, b.hx, t),
+          hy: lerp(a.hy, b.hy, t),
+          ex: lerp(a.ex, b.ex, t),
+          ey: lerp(a.ey, b.ey, t)
+        };
+      }
+      const frontBack = { hx: -6.0, hy: -3.0, ex: -5.4, ey: -6.1 };
+      const frontForward = { hx: 3.2, hy: -5.8, ex: -1.2, ey: -4.0 };
+      const backBack = { hx: -0.8, hy: -2.4, ex: 0.0, ey: -6.0 };
+      const backForward = { hx: 8.0, hy: -6.4, ex: 5.2, ey: -4.0 };
+      frame.frontArm = {
+        ...mixPose(frontBack, frontForward, swingT)
+      };
+      frame.backArm = {
+        ...mixPose(backBack, backForward, invSwingT)
+      };
+      frame.showWeapon = false;
+    }
+
     const showWeapon = frame.showWeapon !== false && !frame.weaponDropped;
     const backArmPose = customArmPose(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, frame.backArm, shoulderBack);
     const frontArmPose = customArmPose(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, frame.frontArm, shoulderFront);
