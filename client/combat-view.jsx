@@ -21,9 +21,8 @@
   const SHADOW_FOOT_Y = STAGE_H * 0.82;
   const BANNER_DURATION_MS = 3200;          // matches CSS @keyframes cv-banner-slide
   const RESULT_POPUP_DELAY_MS = 2600;       // time after battle.done before the reward popup opens
-  const TOKEN_REWARD_BASE = 30;
-  const TOKEN_REWARD_PER_KILL = 10;
-  const TOKEN_REWARD_DRAW = 10;
+  const TOKEN_REWARD_WIN = 2;
+  const TOKEN_REWARD_LOSE = 1;
 
   function frameForState(state, stateT) {
     const anim = window.Anims[state] || window.Anims.idle;
@@ -37,14 +36,11 @@
     return anim ? anim.frames / anim.fps : 0;
   }
 
-  function computeBattleReward(battle, mySquadSize) {
+  function computeBattleReward(battle) {
     if (!battle) return 0;
-    if (battle.winner === 'A') {
-      const enemiesDown = battle.all.filter(s => s.team === 'B' && s.hp <= 0).length;
-      return TOKEN_REWARD_BASE + enemiesDown * TOKEN_REWARD_PER_KILL;
-    }
-    if (battle.winner === 'draw') return TOKEN_REWARD_DRAW;
-    return 0;
+    if (battle.winner === 'A') return TOKEN_REWARD_WIN;
+    if (battle.winner === 'B') return TOKEN_REWARD_LOSE;
+    return TOKEN_REWARD_LOSE;
   }
 
   function clamp(v, lo, hi) {
@@ -666,11 +662,11 @@
     const title = isWin ? 'VICTOIRE' : (isDraw ? 'ÉGALITÉ' : 'DÉFAITE');
     let message;
     if (isWin) {
-      message = `Vous avez gagné en battant la squad ${oppSquad.name}. ${survivors}/${mySquad.soldiers.length} soldats survivants, ${enemiesDown} ennemis abattus.`;
+      message = `Vous avez gagné ${tokensWon} token${tokensWon > 1 ? 's' : ''} en battant la squad ${oppSquad.name}.`;
     } else if (isDraw) {
-      message = `Aucun camp ne l'emporte face à la squad ${oppSquad.name}.`;
+      message = `Match nul face à la squad ${oppSquad.name}.`;
     } else {
-      message = `La squad ${oppSquad.name} a survécu — ${enemiesDown}/${oppSquad.soldiers.length} ennemis abattus.`;
+      message = `La squad ${oppSquad.name} l'emporte. Vous gagnez quand même ${tokensWon} token.`;
     }
 
     return (
@@ -679,15 +675,12 @@
              onClick={(ev) => ev.stopPropagation()}>
           <div className="cv-result-title">{title}</div>
           <div className="cv-result-sub">{message}</div>
-          {tokensWon > 0 && (
-            <div className="cv-result-tokens" aria-label={tokensWon + ' tokens gagnés'}>
-              <img src="assets/images/icons/coin.png" alt="" aria-hidden="true" />
-              <span>+{tokensWon}</span>
-            </div>
-          )}
+          <div className="cv-result-tokens" aria-label={tokensWon + ' tokens gagnés'}>
+            <img src="assets/images/icons/coin.png" alt="" aria-hidden="true" />
+            <span>+{tokensWon}</span>
+          </div>
           <button type="button" className="sq-btn cv-result-btn"
                   onClick={onContinue}>CONTINUER</button>
-          <div className="cv-result-hint">Entrée / Espace pour continuer</div>
         </div>
       </div>
     );
@@ -986,9 +979,9 @@
             mySquad={mySquad}
             oppSquad={oppSquad}
             battle={battle}
-            tokensWon={computeBattleReward(battle, mySquad.soldiers.length)}
+            tokensWon={computeBattleReward(battle)}
             onContinue={() => {
-              const tokensWon = computeBattleReward(battle, mySquad.soldiers.length);
+              const tokensWon = computeBattleReward(battle);
               onDone({ winner: battle.winner, tokensWon, oppName: oppSquad.name });
             }}
           />

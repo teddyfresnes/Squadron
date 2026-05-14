@@ -590,10 +590,9 @@
           continue;
         }
         if (s.endPhase === 'celebrateWalk' || s.endPhase === 'celebrateRun') {
-          // Stroll forward (in facing direction), bare-handed, until the popup hides the arena.
           const dir = s.facing || 1;
           const speed = s.celebrateSpeed || SPEED_TILES_PER_SEC * 0.5;
-          s.x = clamp(s.x + dir * speed * dt, 0, ARENA_TILES);
+          s.x += dir * speed * dt;  // no clamp — walk/run off-screen
           s.stateT += dt;
           continue;
         }
