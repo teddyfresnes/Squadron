@@ -19,7 +19,11 @@
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
   const SHADOW_FOOT_Y = STAGE_H * 0.82;
-  const RESULT_OVERLAY_BASE_DELAY = 1.2;
+  const BANNER_DURATION_MS = 3200;          // matches CSS @keyframes cv-banner-slide
+  const RESULT_POPUP_DELAY_MS = 2600;       // time after battle.done before the reward popup opens
+  const TOKEN_REWARD_BASE = 30;
+  const TOKEN_REWARD_PER_KILL = 10;
+  const TOKEN_REWARD_DRAW = 10;
 
   function frameForState(state, stateT) {
     const anim = window.Anims[state] || window.Anims.idle;
@@ -33,9 +37,14 @@
     return anim ? anim.frames / anim.fps : 0;
   }
 
-  function resultOverlayDelay(winner) {
-    if (winner === 'draw') return RESULT_OVERLAY_BASE_DELAY;
-    return Math.max(RESULT_OVERLAY_BASE_DELAY, animDuration('holster') + animDuration('victory'));
+  function computeBattleReward(battle, mySquadSize) {
+    if (!battle) return 0;
+    if (battle.winner === 'A') {
+      const enemiesDown = battle.all.filter(s => s.team === 'B' && s.hp <= 0).length;
+      return TOKEN_REWARD_BASE + enemiesDown * TOKEN_REWARD_PER_KILL;
+    }
+    if (battle.winner === 'draw') return TOKEN_REWARD_DRAW;
+    return 0;
   }
 
   function clamp(v, lo, hi) {
@@ -621,22 +630,64 @@
     );
   }
 
-  // ── Result overlay shown when a winner is decided ─────────────────────────
-  function ResultOverlay({ winner, mySquad, oppSquad, battle, onContinue }) {
+  // ── Big sliding banner shown the moment a winner is decided ───────────────
+  function ResultBanner({ winner }) {
+    const cls = winner === 'A' ? 'cv-banner-win'
+              : winner === 'B' ? 'cv-banner-lose'
+              : 'cv-banner-draw';
+    const text = winner === 'A' ? 'VICTOIRE !'
+               : winner === 'B' ? 'DÉFAITE !'
+               : 'ÉGALITÉ';
+    return (
+      <div className={'cv-banner ' + cls} aria-live="polite">
+        <span className="cv-banner-text">{text}</span>
+      </div>
+    );
+  }
+
+  // ── Reward popup (dim overlay + tokens + Continue, Enter/Space to skip) ───
+  function ResultOverlay({ winner, mySquad, oppSquad, battle, tokensWon, onContinue }) {
     const isWin = winner === 'A';
+    const isDraw = winner === 'draw';
     const survivors = battle.all.filter(s => s.team === 'A' && s.hp > 0).length;
     const enemiesDown = battle.all.filter(s => s.team === 'B' && s.hp <= 0).length;
+
+    useEffect(() => {
+      function onKey(ev) {
+        if (ev.key === 'Enter' || ev.key === ' ' || ev.code === 'Space') {
+          ev.preventDefault();
+          onContinue();
+        }
+      }
+      window.addEventListener('keydown', onKey);
+      return () => window.removeEventListener('keydown', onKey);
+    }, [onContinue]);
+
+    const title = isWin ? 'VICTOIRE' : (isDraw ? 'ÉGALITÉ' : 'DÉFAITE');
+    let message;
+    if (isWin) {
+      message = `Vous avez gagné en battant la squad ${oppSquad.name}. ${survivors}/${mySquad.soldiers.length} soldats survivants, ${enemiesDown} ennemis abattus.`;
+    } else if (isDraw) {
+      message = `Aucun camp ne l'emporte face à la squad ${oppSquad.name}.`;
+    } else {
+      message = `La squad ${oppSquad.name} a survécu — ${enemiesDown}/${oppSquad.soldiers.length} ennemis abattus.`;
+    }
+
     return (
-      <div className="cv-result">
-        <div className={'cv-result-card ' + (isWin ? 'cv-win' : 'cv-lose')}>
-          <div className="cv-result-title">{isWin ? 'VICTOIRE' : 'DÉFAITE'}</div>
-          <div className="cv-result-sub">
-            {isWin
-              ? `${survivors}/${mySquad.soldiers.length} soldats survivants — ${enemiesDown} ennemis abattus`
-              : `${oppSquad.name} a survécu — ${enemiesDown}/${oppSquad.soldiers.length} ennemis abattus`}
-          </div>
+      <div className="cv-result" onClick={onContinue}>
+        <div className={'cv-result-card ' + (isWin ? 'cv-win' : 'cv-lose')}
+             onClick={(ev) => ev.stopPropagation()}>
+          <div className="cv-result-title">{title}</div>
+          <div className="cv-result-sub">{message}</div>
+          {tokensWon > 0 && (
+            <div className="cv-result-tokens" aria-label={tokensWon + ' tokens gagnés'}>
+              <img src="assets/images/icons/coin.png" alt="" aria-hidden="true" />
+              <span>+{tokensWon}</span>
+            </div>
+          )}
           <button type="button" className="sq-btn cv-result-btn"
                   onClick={onContinue}>CONTINUER</button>
+          <div className="cv-result-hint">Entrée / Espace pour continuer</div>
         </div>
       </div>
     );
@@ -646,11 +697,14 @@
   function HQBattleScreen({ mySquad, oppSquad, onDone }) {
     const containerRef = useRef(null);
     const pausedRef = useRef(false);
+    const bannerShownRef = useRef(false);
     const resultShownRef = useRef(false);
+    const popupTimerRef = useRef(null);
     const [arenaSize, setArenaSize] = useState({ w: 1200, h: 320 });
     const [, setTick] = useState(0);
     const [trails, setTrails] = useState([]);
     const [hpFlashes, setHpFlashes] = useState({});
+    const [bannerShown, setBannerShown] = useState(false);
     const [resultShown, setResultShown] = useState(false);
     const [selectedSoldierId, setSelectedSoldierId] = useState(null);
     const [pauseMode, setPauseMode] = useState(null);
@@ -671,11 +725,23 @@
         setPauseMode(null);
         setHpFlashes({});
         setTrails([]);
+        bannerShownRef.current = false;
         resultShownRef.current = false;
+        if (popupTimerRef.current) {
+          clearTimeout(popupTimerRef.current);
+          popupTimerRef.current = null;
+        }
+        setBannerShown(false);
         setResultShown(false);
         setBattle(b);
       });
-      return () => { alive = false; };
+      return () => {
+        alive = false;
+        if (popupTimerRef.current) {
+          clearTimeout(popupTimerRef.current);
+          popupTimerRef.current = null;
+        }
+      };
     }, [mySquad, oppSquad]);
 
     useEffect(() => {
@@ -807,9 +873,14 @@
         });
         setTick(n => (n + 1) % 1000000);
 
-        if (battle.done && battle.endHoldT >= resultOverlayDelay(battle.winner) && !resultShownRef.current) {
-          resultShownRef.current = true;
-          setResultShown(true);
+        if (battle.done && !bannerShownRef.current) {
+          bannerShownRef.current = true;
+          setBannerShown(true);
+          popupTimerRef.current = setTimeout(() => {
+            if (resultShownRef.current) return;
+            resultShownRef.current = true;
+            setResultShown(true);
+          }, RESULT_POPUP_DELAY_MS);
         }
 
         raf = requestAnimationFrame(loop);
@@ -896,6 +967,7 @@
               onClose={closeInspect}
             />
           )}
+          {bannerShown && <ResultBanner winner={battle.winner} />}
         </div>
         <div className="cv-hud">
           <div className="cv-team cv-team-a">
@@ -914,7 +986,11 @@
             mySquad={mySquad}
             oppSquad={oppSquad}
             battle={battle}
-            onContinue={onDone}
+            tokensWon={computeBattleReward(battle, mySquad.soldiers.length)}
+            onContinue={() => {
+              const tokensWon = computeBattleReward(battle, mySquad.soldiers.length);
+              onDone({ winner: battle.winner, tokensWon, oppName: oppSquad.name });
+            }}
           />
         )}
       </div>

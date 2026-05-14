@@ -138,7 +138,7 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 | `'shoot'` | Tir en cours |
 | `'unaim'` | Baisse l'arme après la fin d'une action de tir |
 | `'reload'` | Recharge : genou à terre, arme verticale, boucle `reloadRounds` balles, puis retour idle |
-| `'holster'` | Fin de combat : les survivants gagnants rangent leur arme, puis reviennent à `idle` |
+| `'holster'` | Fin de combat : les survivants gagnants rangent leur arme (puis `victory`, puis `walk`/`run` mains nues) |
 | `'hurt'` | Vient d'être touché (dure `Anims.hurt.frames/fps`, puis → idle) |
 | `'dead'` | HP ≤ 0, animation finale |
 
@@ -166,7 +166,8 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 - Sélection en pause : tout l'arène reste en effet VHS (grayscale), mais le soldat sélectionné garde ses couleurs et reçoit un halo doré (CSS `.cv-soldier.is-selected` dans `.cv-arena.is-paused`)
 - `SoldierInspectMenu` : panneau contextuel structuré en 3 sections — header (nom + niveau), liste de toutes les armes débloquées (icône + nom + barre de munitions), puis vitals (jauge de vie verticale + silhouette SVG du corps) et icônes skills d'armes en bas avec tooltip. La vie s'affiche uniquement en tooltip suiveur de curseur sur la jauge ou la silhouette (pas d'affichage statique 10/10)
 - `TrailsLayer` : SVG overlay, trails disparaissent en 300 ms
-- `ResultOverlay` : affiché quand `battle.done` et que le délai de fin est écoulé ; pour une victoire/défaite, ce délai couvre `holster`, et reste `1.2s` sur un match nul
+- `ResultBanner` : grand label `VICTOIRE` / `DÉFAITE` / `ÉGALITÉ` qui glisse de la gauche, s'arrête au centre puis sort vers la droite (CSS `cv-banner-slide`, 3.2s). Police `SairaStencilOne` chargée via `@font-face` depuis `assets/fonts/`. Affiché dès que `battle.done`
+- `ResultOverlay` : popup de récompense, fond légèrement assombri (rgba alpha 0.42), apparaît `RESULT_POPUP_DELAY_MS` (2.6s) après `battle.done` — laisse le temps au banner de défiler et aux survivants gagnants d'enchaîner `holster → victory → walk/run mains nues` (combat-sim.js `startCelebrateWalk`, chance 1/2 walk vs run, vitesse jitter). Le popup est skippable via le bouton Continuer, clic backdrop, touche `Entrée` ou `Espace`. `onDone` reçoit `{ winner, tokensWon, oppName }` et `hq.jsx` crédite les tokens (base 30 + 10 par ennemi abattu, 10 sur égalité, 0 sur défaite)
 
 ---
 

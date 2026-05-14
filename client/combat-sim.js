@@ -500,6 +500,30 @@
       return aA > 0 ? 'A' : (aB > 0 ? 'B' : 'draw');
     }
 
+    function bareHandsWeaponIdx() {
+      const list = window.Weapons && window.Weapons.list;
+      if (!list) return null;
+      for (let i = 0; i < list.length; i++) {
+        if (list[i] && list[i].id === 'MELEE-01') return i;
+      }
+      return null;
+    }
+
+    function startCelebrateWalk(s) {
+      const idx = bareHandsWeaponIdx();
+      if (idx != null && s.cfg && s.cfg.weaponIdx !== idx) {
+        s.cfg = Object.assign({}, s.cfg, { weaponIdx: idx });
+      }
+      // 1 in 2 chance: walk or run, bare-handed, forward in facing direction.
+      const isRun = rng() < 0.5;
+      s.endPhase = isRun ? 'celebrateRun' : 'celebrateWalk';
+      s.state = isRun ? 'run' : 'walk';
+      s.stateT = 0;
+      s.animState = null;
+      // Slight speed jitter so the line doesn't move as a perfect block.
+      s.celebrateSpeed = (isRun ? SPEED_TILES_PER_SEC * 0.85 : SPEED_TILES_PER_SEC * 0.42) * (0.85 + rng() * 0.3);
+    }
+
     function startWinnerAnimation(s) {
       s.aimed = false;
       s.animState = null;
@@ -510,8 +534,8 @@
         s.endPhase = 'victory';
         s.state = 'victory';
       } else {
-        s.endPhase = null;
-        s.state = 'idle';
+        startCelebrateWalk(s);
+        return;
       }
       s.stateT = 0;
     }
@@ -553,9 +577,7 @@
               s.stateT = 0;
               s.endPhase = 'victory';
             } else {
-              s.state = 'idle';
-              s.stateT = 0;
-              s.endPhase = null;
+              startCelebrateWalk(s);
             }
           }
           continue;
@@ -563,10 +585,16 @@
         if (s.endPhase === 'victory') {
           s.stateT += dt;
           if (s.stateT >= animDur('victory')) {
-            s.state = 'idle';
-            s.stateT = 0;
-            s.endPhase = null;
+            startCelebrateWalk(s);
           }
+          continue;
+        }
+        if (s.endPhase === 'celebrateWalk' || s.endPhase === 'celebrateRun') {
+          // Stroll forward (in facing direction), bare-handed, until the popup hides the arena.
+          const dir = s.facing || 1;
+          const speed = s.celebrateSpeed || SPEED_TILES_PER_SEC * 0.5;
+          s.x = clamp(s.x + dir * speed * dt, 0, ARENA_TILES);
+          s.stateT += dt;
           continue;
         }
         if (s.state !== 'idle') { s.state = 'idle'; s.stateT = 0; }

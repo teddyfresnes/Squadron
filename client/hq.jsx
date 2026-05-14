@@ -901,7 +901,11 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
     );
   } else if (subpage === 'battle' && battleTarget) {
     const BattleScreen = window.HQBattleScreen;
-    const handleBattleDone = () => {
+    const handleBattleDone = (result) => {
+      const tokensWon = (result && Number(result.tokensWon)) || 0;
+      if (tokensWon > 0) {
+        setHQ(prev => ({ ...prev, tokens: (prev.tokens || 0) + tokensWon }));
+      }
       markOpponentPackRefreshable(hq.name);
       setSubpage(null);
       setBattleTarget(null);
