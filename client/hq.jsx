@@ -14,10 +14,16 @@ const RECRUIT_KEY = (sname) => 'squadron-recruit-' + sname;
 const MATCH_KEY   = (sname) => 'squadron-matchmaking-' + sname;
 const SQUADS_KEY  = 'squadron-squads';
 
-const RECRUIT_COST_BASE = 100;
-const UPGRADE_COST_BASE = 80;
+// Upgrade cost per current level (cost to level 1→2, 2→3, …)
+const UPGRADE_COSTS  = [4, 8, 16, 32, 48, 64, 96, 128];
+// Recruit cost per number of soldiers already owned (1st recruit, 2nd recruit, …)
+const RECRUIT_COSTS  = [15, 35, 80, 150, 220, 325, 450, 600, 790];
 const STARTING_TOKENS   = 250;
 const OPPONENT_COUNT    = 8;
+const SIX_MONTHS_MS     = 6 * 30 * 24 * 60 * 60 * 1000; // approx 6 months
+const HIDDEN_WEAPON_NAMES = new Set(['Main nue']);
+const MAX_PERK_TIER       = 2;   // highest perk tier currently implemented
+const PERK_HINT_TIER      = 3;   // one greyed "???" tier shown above implemented ones
 const TOKEN_ICON_SRC    = 'assets/images/icons/coin.png';
 const POWER_ICON_SRC    = 'assets/images/icons/power.png';
 
@@ -112,7 +118,69 @@ function calcSquadLevel(soldiers) {
   return Math.max(1, 1 + Math.floor((total + soldiers.length) / 4));
 }
 function calcUpgradeCost(soldier) {
-  return UPGRADE_COST_BASE * (soldier.level || 1);
+  const lvl = Math.max(1, (soldier && soldier.level) || 1);
+  if (lvl - 1 < UPGRADE_COSTS.length) return UPGRADE_COSTS[lvl - 1];
+  // Continue with ×1.5 growth past the hardcoded list, rounded to multiples of 8
+  let cost = UPGRADE_COSTS[UPGRADE_COSTS.length - 1];
+  for (let i = UPGRADE_COSTS.length; i <= lvl - 1; i++) {
+    cost = Math.round((cost * 1.5) / 8) * 8;
+  }
+  return cost;
+}
+function calcRecruitCost(currentCount) {
+  const idx = Math.max(0, currentCount | 0);
+  if (idx < RECRUIT_COSTS.length) return RECRUIT_COSTS[idx];
+  // Continue with +30% growth past the hardcoded list, rounded to multiples of 10
+  let cost = RECRUIT_COSTS[RECRUIT_COSTS.length - 1];
+  for (let i = RECRUIT_COSTS.length; i <= idx; i++) {
+    cost = Math.round((cost * 1.3) / 10) * 10;
+  }
+  return cost;
+}
+function renameCooldownMs(renameCount) {
+  if (!renameCount || renameCount < 1) return 0;
+  return SIX_MONTHS_MS * Math.pow(2, renameCount - 1);
+}
+function formatRemainingCooldown(ms) {
+  if (ms <= 0) return '';
+  const sec = Math.ceil(ms / 1000);
+  const min = Math.ceil(sec / 60);
+  const hrs = Math.ceil(min / 60);
+  const days = Math.ceil(hrs / 24);
+  const months = Math.ceil(days / 30);
+  const years = Math.floor(months / 12);
+  if (years >= 1) {
+    const rem = months - years * 12;
+    return rem > 0 ? `${years} an${years > 1 ? 's' : ''} ${rem} mois` : `${years} an${years > 1 ? 's' : ''}`;
+  }
+  if (months >= 1) return `${months} mois`;
+  if (days >= 1) return `${days} j`;
+  if (hrs >= 1) return `${hrs} h`;
+  if (min >= 1) return `${min} min`;
+  return `${sec} s`;
+}
+
+// ── Upgrade-offer generation (deterministic per soldier + next level) ──────────
+function generateUpgradeOffer(soldier, squadName) {
+  const list = (window.Weapons && window.Weapons.list) || [];
+  const unlocked = new Set(soldier.unlockedWeapons || []);
+  const pool = list.filter(w => !HIDDEN_WEAPON_NAMES.has(w.name) && !unlocked.has(w.name));
+  if (pool.length === 0) return null;
+  const seed = hashStr(`${squadName || ''}:${soldier.id}:${(soldier.level || 1) + 1}`);
+  const rng = mulberry32(seed);
+  const i1 = Math.floor(rng() * pool.length);
+  let skill2Name = null;
+  if (pool.length >= 2) {
+    let i2 = Math.floor(rng() * (pool.length - 1));
+    if (i2 >= i1) i2 += 1;
+    skill2Name = pool[i2].name;
+  }
+  return { skill1Name: pool[i1].name, skill2Name };
+}
+function ensureUpgradeOffer(soldier, squadName) {
+  if (soldier.pendingUpgrade && soldier.pendingUpgrade.skill1Name) return soldier.pendingUpgrade;
+  const offer = generateUpgradeOffer(soldier, squadName);
+  return offer || null;
 }
 
 // ── Initial HQ state ─────────────────────────────────────────────────────────
@@ -531,18 +599,19 @@ function OpponentCard({ opp, myPower, onAttack }) {
 }
 
 // ── HQRecruit ───────────────────────────────────────────────────────────────
-function HQRecruit({ pool, tokens, onPick, onBack, onReroll, canAffordReroll }) {
+function HQRecruit({ pool, tokens, soldierCount, onPick, onBack }) {
+  const cost = calcRecruitCost(soldierCount);
   return (
     <div className="hq-recruit">
       <button type="button" className="hq-back-btn" onClick={onBack}>← Retour</button>
 
       <div className="hq-section-eyebrow">RECRUTEMENT</div>
       <h2 className="hq-section-title">5 soldats disponibles aujourd'hui</h2>
-      <p className="hq-section-hint">La sélection change chaque jour. Coût : {RECRUIT_COST_BASE} <TokenIcon className="hq-resource-icon-inline" /> par soldat.</p>
+      <p className="hq-section-hint">La sélection change chaque jour. Prochain soldat : {cost} <TokenIcon className="hq-resource-icon-inline" />.</p>
 
       <div className="hq-recruit-grid">
         {pool.map((s, i) => (
-          <RecruitCard key={s.id || i} soldier={s} tokens={tokens} cost={RECRUIT_COST_BASE} onPick={() => onPick(s)} />
+          <RecruitCard key={s.id || i} soldier={s} tokens={tokens} cost={cost} onPick={() => onPick(s)} />
         ))}
       </div>
     </div>
@@ -584,103 +653,283 @@ function RecruitCard({ soldier, tokens, cost, onPick }) {
   );
 }
 
-// ── HQSoldierDetail ─────────────────────────────────────────────────────────
-function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename }) {
-  const { AnimPreview, WeaponGameIcon } = UI;
+// ── Soldier-detail subcomponents ────────────────────────────────────────────
+function SoldierSkillGrid({ soldier }) {
+  const { WeaponGameIcon } = UI;
   const SkillTooltip = G.SkillTooltip;
   const allWeapons = (window.Weapons && window.Weapons.list) || [];
-  const upgradeCost = calcUpgradeCost(soldier);
-  const canUpgrade = tokens >= upgradeCost;
-  const unlockedWeapons = soldier.unlockedWeapons || [];
-  const preferredWeapon = soldier.preferredWeapon ? G.getWeaponByName(soldier.preferredWeapon) : null;
-
-  // Group weapons by type
-  const grouped = useMemo(() => {
-    const g = { melee: [], smg: [], rifle: [], heavy: [], shotgun: [], sniper: [], pistol: [] };
-    for (const w of allWeapons) {
-      if (g[w.type]) g[w.type].push(w);
-    }
-    return g;
-  }, [allWeapons.length]);
-
-  const types = [
-    { key: 'melee',   label: 'Corps a corps' },
-    { key: 'pistol',  label: 'Pistolets' },
-    { key: 'smg',     label: 'Mitraillettes' },
-    { key: 'shotgun', label: 'Fusils à pompe' },
-    { key: 'rifle',   label: "Fusils d'assaut" },
-    { key: 'sniper',  label: 'Snipers' },
-    { key: 'heavy',   label: 'Armes lourdes' },
-  ];
+  const visibleWeapons = useMemo(
+    () => allWeapons.filter(w => !HIDDEN_WEAPON_NAMES.has(w.name)),
+    [allWeapons.length]
+  );
+  const unlockedSet = useMemo(() => new Set(soldier.unlockedWeapons || []), [soldier.unlockedWeapons]);
 
   return (
+    <div className="hq-sd-skill-grid" aria-label="Compétences débloquées">
+      {visibleWeapons.map(w => {
+        const unlocked = unlockedSet.has(w.name);
+        const cell = (
+          <span className={'hq-sd-skill' + (unlocked ? '' : ' is-locked')}>
+            <WeaponGameIcon weapon={w} />
+          </span>
+        );
+        return unlocked
+          ? <SkillTooltip key={w.name} weapon={w} tipDir="below">{cell}</SkillTooltip>
+          : <React.Fragment key={w.name}>{cell}</React.Fragment>;
+      })}
+    </div>
+  );
+}
+
+function RenamePerk({ soldier, onRename }) {
+  const [open, setOpen]   = useState(false);
+  const [value, setValue] = useState(soldier.name || '');
+  const [tick, setTick]   = useState(0);
+
+  const renameCount = soldier.renameCount || 0;
+  const lastAt      = soldier.lastRenameAt || 0;
+  const cooldown    = renameCooldownMs(renameCount);
+  const remaining   = Math.max(0, (lastAt + cooldown) - Date.now());
+  const ready       = remaining <= 0;
+  const nextCooldown = renameCooldownMs(renameCount + 1);
+
+  useEffect(() => {
+    if (ready) return;
+    const id = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, [ready, lastAt, renameCount]);
+
+  useEffect(() => { setValue(soldier.name || ''); }, [soldier.id, soldier.name]);
+
+  const trimmed = value.trim();
+  const isValid = trimmed.length >= 2 && trimmed.length <= 24 && trimmed !== soldier.name;
+
+  return (
+    <div className={'hq-sd-perk' + (ready ? '' : ' is-cooldown')}>
+      <div className="hq-sd-perk-head">
+        <span className="hq-sd-perk-tier">NIV. 1</span>
+        <span className="hq-sd-perk-title">Renommer le soldat</span>
+      </div>
+      {!open && (
+        <div className="hq-sd-perk-body">
+          <div className="hq-sd-perk-value">{soldier.name}</div>
+          <button
+            type="button"
+            className={'sq-btn hq-sd-perk-btn' + (ready ? '' : ' is-disabled')}
+            disabled={!ready}
+            onClick={() => ready && setOpen(true)}
+            title={ready ? 'Choisir un nouveau nom' : 'Temps d\'attente avant le prochain renommage'}
+          >
+            {ready ? 'Renommer' : 'En attente : ' + formatRemainingCooldown(remaining)}
+          </button>
+        </div>
+      )}
+      {open && (
+        <form
+          className="hq-sd-perk-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!isValid) return;
+            onRename(trimmed);
+            setOpen(false);
+          }}
+        >
+          <input
+            type="text"
+            className="hq-sd-perk-input"
+            value={value}
+            maxLength={24}
+            autoFocus
+            onChange={(e) => setValue(e.target.value)}
+          />
+          <div className="hq-sd-perk-form-row">
+            <button type="button" className="sq-btn hq-sd-perk-btn-cancel" onClick={() => { setOpen(false); setValue(soldier.name || ''); }}>Annuler</button>
+            <button type="submit" className={'sq-btn sq-btn-primary hq-sd-perk-btn' + (isValid ? '' : ' is-disabled')} disabled={!isValid}>Valider</button>
+          </div>
+          {renameCount === 0
+            ? <div className="hq-sd-perk-hint">Premier renommage : gratuit. Ensuite, attente de 6 mois (doublée à chaque fois).</div>
+            : <div className="hq-sd-perk-hint">Prochaine attente après ce renommage : {formatRemainingCooldown(nextCooldown)}.</div>}
+        </form>
+      )}
+    </div>
+  );
+}
+
+function PreferredWeaponPerk({ soldier, onSetPreferred }) {
+  const { WeaponGameIcon } = UI;
+  const unlocked = (soldier.unlockedWeapons || []).filter(name => !HIDDEN_WEAPON_NAMES.has(name));
+  const preferredWeapon = soldier.preferredWeapon ? G.getWeaponByName(soldier.preferredWeapon) : null;
+  const unlockedReady = (soldier.level || 1) >= 2;
+
+  if (!unlockedReady) {
+    return (
+      <div className="hq-sd-perk is-locked">
+        <div className="hq-sd-perk-head">
+          <span className="hq-sd-perk-tier">NIV. 2</span>
+          <span className="hq-sd-perk-title hq-sd-perk-mystery">???</span>
+        </div>
+        <div className="hq-sd-perk-body">
+          <div className="hq-sd-perk-hint">Atteins le niveau 2 pour débloquer cette compétence.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hq-sd-perk">
+      <div className="hq-sd-perk-head">
+        <span className="hq-sd-perk-tier">NIV. 2</span>
+        <span className="hq-sd-perk-title">Arme préférée</span>
+      </div>
+      <div className="hq-sd-perk-body hq-sd-perk-weapon-row">
+        <div className="hq-sd-perk-weapon-icon">
+          {preferredWeapon
+            ? <WeaponGameIcon weapon={preferredWeapon} />
+            : <span className="hq-muted">—</span>}
+        </div>
+        <select
+          className="hq-sd-perk-select"
+          value={soldier.preferredWeapon || ''}
+          onChange={(e) => onSetPreferred(e.target.value || null)}
+        >
+          <option value="">Aucune</option>
+          {unlocked.map(name => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+function MysteryPerk({ tier }) {
+  return (
+    <div className="hq-sd-perk is-locked is-mystery">
+      <div className="hq-sd-perk-head">
+        <span className="hq-sd-perk-tier">NIV. {tier}</span>
+        <span className="hq-sd-perk-title hq-sd-perk-mystery">???</span>
+      </div>
+      <div className="hq-sd-perk-body">
+        <div className="hq-sd-perk-hint">Compétence à venir.</div>
+      </div>
+    </div>
+  );
+}
+
+function SoldierPerksPanel({ soldier, onRename, onSetPreferred }) {
+  const level = soldier.level || 1;
+  return (
+    <div className="hq-sd-perks">
+      <div className="hq-sd-perks-title">COMPÉTENCES</div>
+      <RenamePerk soldier={soldier} onRename={onRename} />
+      <PreferredWeaponPerk soldier={soldier} onSetPreferred={onSetPreferred} />
+      {level < PERK_HINT_TIER && <MysteryPerk tier={PERK_HINT_TIER} />}
+    </div>
+  );
+}
+
+function SoldierPortraitPanel({ soldier, tokens, onUpgrade }) {
+  const { AnimPreview } = UI;
+  const upgradeCost = calcUpgradeCost(soldier);
+  const canUpgrade  = tokens >= upgradeCost;
+  return (
+    <div className="hq-sd-portrait">
+      <div className="hq-sd-portrait-stage" title={soldier.name}>
+        <div className="hq-sd-portrait-level">NIV. {soldier.level}</div>
+        <div className="hq-sd-portrait-char">
+          <AnimPreview cfg={soldier.config} animKey="idle" scale={2.4} facing={1} running={true} />
+        </div>
+      </div>
+      <button
+        type="button"
+        className={'sq-btn sq-btn-primary hq-sd-upgrade-btn' + (canUpgrade ? '' : ' is-disabled')}
+        disabled={!canUpgrade}
+        onClick={() => canUpgrade && onUpgrade()}
+      >
+        <span className="hq-sd-upgrade-title">AMÉLIORER</span>
+        <span className="hq-sd-upgrade-cost">{upgradeCost} <TokenIcon className="hq-resource-icon-inline" /></span>
+      </button>
+    </div>
+  );
+}
+
+// ── HQSoldierDetail ─────────────────────────────────────────────────────────
+function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename }) {
+  return (
     <div className="hq-soldier-detail">
-      <div className="hq-sd-top">
-        <div className="hq-sd-skills">
-          <div className="hq-sd-skills-groups">
-            {types.map(({ key, label }) => grouped[key] && grouped[key].length > 0 && (
-              <div key={key} className="hq-sd-skill-group">
-                <div className="hq-sd-skill-group-title">{label}</div>
-                <div className="hq-sd-skill-grid">
-                  {grouped[key].map(w => {
-                    const unlocked = unlockedWeapons.some(name => G.getWeaponByName(name) === w);
-                    const preferred = preferredWeapon === w;
-                    return (
-                      <SkillTooltip key={w.name} weapon={w} tipDir="below">
-                        <button
-                          type="button"
-                          className={'hq-sd-skill' + (unlocked ? ' unlocked' : ' locked') + (preferred ? ' preferred' : '')}
-                          disabled={!unlocked}
-                          onClick={() => unlocked && onSetPreferred(w.name)}
-                          title={unlocked ? (preferred ? 'Arme préférée' : 'Définir comme arme préférée') : 'Non débloquée'}
-                        >
-                          <WeaponGameIcon weapon={w} />
-                          {!unlocked && <div className="hq-sd-skill-lock">🔒</div>}
-                          {preferred && <div className="hq-sd-skill-star">★</div>}
-                        </button>
-                      </SkillTooltip>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+      <div className="hq-sd-layout">
+        <div className="hq-sd-skills-cell">
+          <SoldierSkillGrid soldier={soldier} />
+        </div>
+        <div className="hq-sd-perks-cell">
+          <SoldierPerksPanel soldier={soldier} onRename={onRename} onSetPreferred={onSetPreferred} />
+        </div>
+        <div className="hq-sd-portrait-cell">
+          <SoldierPortraitPanel soldier={soldier} tokens={tokens} onUpgrade={onUpgrade} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── HQUpgradeChoice ─────────────────────────────────────────────────────────
+function HQUpgradeChoice({ soldier, squadName, tokens, onBack, onConfirm }) {
+  const { AnimPreview, WeaponGameIcon } = UI;
+  const SkillTooltip = G.SkillTooltip;
+  const cost = calcUpgradeCost(soldier);
+  const canAfford = tokens >= cost;
+
+  const offer = useMemo(() => ensureUpgradeOffer(soldier, squadName), [soldier.id, soldier.level, squadName, soldier.pendingUpgrade]);
+  const options = useMemo(() => {
+    if (!offer) return [];
+    const list = [];
+    if (offer.skill1Name) list.push(offer.skill1Name);
+    if (offer.skill2Name && offer.skill2Name !== offer.skill1Name) list.push(offer.skill2Name);
+    return list
+      .map(name => G.getWeaponByName(name))
+      .filter(Boolean);
+  }, [offer && offer.skill1Name, offer && offer.skill2Name]);
+
+  return (
+    <div className="hq-upgrade-choice">
+      <button type="button" className="hq-back-btn" onClick={onBack}>← Retour</button>
+
+      <div className="hq-section-eyebrow">AMÉLIORATION</div>
+      <h2 className="hq-section-title">{soldier.name} — Niveau {soldier.level} → {soldier.level + 1}</h2>
+      <p className="hq-section-hint">
+        Choisis l'une des deux compétences proposées. Coût : {cost} <TokenIcon className="hq-resource-icon-inline" />.
+      </p>
+
+      <div className="hq-upgrade-stage">
+        <div className="hq-upgrade-soldier">
+          <div className="hq-upgrade-soldier-stage">
+            <div className="hq-upgrade-soldier-level">NIV. {soldier.level}</div>
+            <AnimPreview cfg={soldier.config} animKey="idle" scale={1.6} facing={1} running={true} />
           </div>
+          <div className="hq-upgrade-soldier-name">{soldier.name}</div>
         </div>
 
-        <div className="hq-sd-params">
-          <div className="hq-sd-param">
-            <div className="hq-sd-param-key">Arme préférée</div>
-            <div className="hq-sd-param-val hq-sd-param-weapon">
-              {preferredWeapon
-                ? (
-                  <>
-                    <WeaponGameIcon weapon={preferredWeapon} />
-                    <span>{preferredWeapon.name}</span>
-                  </>
-                )
-                : <span className="hq-muted">Aucune</span>}
+        <div className="hq-upgrade-options">
+          {options.length === 0 && (
+            <div className="hq-upgrade-empty">Toutes les compétences sont déjà débloquées.</div>
+          )}
+          {options.map(w => (
+            <div key={w.name} className="hq-upgrade-option">
+              <SkillTooltip weapon={w} tipDir="below">
+                <span className="hq-upgrade-option-icon"><WeaponGameIcon weapon={w} /></span>
+              </SkillTooltip>
+              <div className="hq-upgrade-option-name">{w.name}</div>
+              <div className="hq-upgrade-option-type">{G.WEAPON_TYPE_LABELS[w.type] || w.type}</div>
+              <button
+                type="button"
+                className={'sq-btn sq-btn-primary hq-upgrade-pick-btn' + (canAfford ? '' : ' is-disabled')}
+                disabled={!canAfford}
+                onClick={() => canAfford && onConfirm(w.name)}
+              >
+                CHOISIR · <span className="hq-upgrade-pick-cost">{cost} <TokenIcon className="hq-resource-icon-inline" /></span>
+              </button>
             </div>
-          </div>
-        </div>
-
-        <div className="hq-sd-actions">
-          <div className="hq-sd-portrait">
-            <div className="hq-sd-portrait-stage" title={soldier.name}>
-              <div className="hq-sd-portrait-level">NIV. {soldier.level}</div>
-              <div className="hq-sd-portrait-char">
-                <AnimPreview cfg={soldier.config} animKey="idle" scale={2.4} facing={1} running={true} />
-              </div>
-            </div>
-            <button
-              type="button"
-              className={'sq-btn sq-btn-primary hq-sd-upgrade-btn' + (canUpgrade ? '' : ' is-disabled')}
-              disabled={!canUpgrade}
-              onClick={() => canUpgrade && onUpgrade()}
-            >
-              <span className="hq-sd-upgrade-title">AMÉLIORER</span>
-              <span className="hq-sd-upgrade-cost">{upgradeCost} <TokenIcon className="hq-resource-icon-inline" /></span>
-            </button>
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -767,12 +1016,13 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
   useEffect(() => { saveHQ(squadName, hq); }, [squadName, hq]);
 
   const [tab,            setTab]            = useState('play');
-  const [subpage,        setSubpage]        = useState(null);   // 'recruit' | 'opponents' | 'soldier' | 'battle'
+  const [subpage,        setSubpage]        = useState(null);   // 'recruit' | 'opponents' | 'soldier' | 'battle' | 'upgrade'
   const [selectedSldId,  setSelectedSldId]  = useState(null);
   const [recruitPool,    setRecruitPool]    = useState(() => getRecruitPool(squadName) || buildRecruitPool(squadName));
   const [battleTarget,   setBattleTarget]   = useState(null);
 
   const power = useMemo(() => calcSquadPower(hq.soldiers), [hq.soldiers]);
+  const recruitCost = calcRecruitCost(hq.soldiers.length);
 
   // Daily refresh check on mount + every minute
   useEffect(() => {
@@ -807,14 +1057,14 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
 
   const handlePickRecruit = useCallback((gen) => {
     setHQ(prev => {
-      if (prev.tokens < RECRUIT_COST_BASE) return prev;
+      const cost = calcRecruitCost(prev.soldiers.length);
+      if (prev.tokens < cost) return prev;
       const newSld = soldierFromGenerated(gen);
-      const next = {
+      return {
         ...prev,
-        tokens: prev.tokens - RECRUIT_COST_BASE,
+        tokens: prev.tokens - cost,
         soldiers: [...prev.soldiers, newSld],
       };
-      return next;
     });
     // Remove from recruit pool
     setRecruitPool(pool => {
@@ -827,17 +1077,54 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
     setSubpage(null);
   }, [squadName]);
 
-  const handleUpgrade = useCallback(() => {
+  // Open the upgrade-choice subpage (the actual level-up happens after the user picks a skill).
+  const handleOpenUpgrade = useCallback(() => {
+    setSubpage('upgrade');
+  }, []);
+
+  // Confirm an upgrade: spend tokens, +1 level, unlock the chosen skill, clear pending offer.
+  const handleConfirmUpgrade = useCallback((weaponName) => {
     setHQ(prev => {
       const idx = prev.soldiers.findIndex(s => s.id === selectedSldId);
       if (idx < 0) return prev;
       const sld  = prev.soldiers[idx];
       const cost = calcUpgradeCost(sld);
       if (prev.tokens < cost) return prev;
-      const updated = { ...sld, level: sld.level + 1 };
+      const currentUnlocked = sld.unlockedWeapons || [];
+      const unlockedWeapons = weaponName && !currentUnlocked.includes(weaponName)
+        ? [...currentUnlocked, weaponName]
+        : currentUnlocked;
+      const updated = {
+        ...sld,
+        level: (sld.level || 1) + 1,
+        unlockedWeapons,
+        pendingUpgrade: null,
+      };
       const list = prev.soldiers.slice();
       list[idx] = updated;
       return { ...prev, tokens: prev.tokens - cost, soldiers: list };
+    });
+    setSubpage('soldier');
+  }, [selectedSldId]);
+
+  const handleRename = useCallback((newName) => {
+    setHQ(prev => {
+      const idx = prev.soldiers.findIndex(s => s.id === selectedSldId);
+      if (idx < 0) return prev;
+      const sld = prev.soldiers[idx];
+      const trimmed = String(newName || '').trim().slice(0, 24);
+      if (trimmed.length < 2 || trimmed === sld.name) return prev;
+      const lastAt = sld.lastRenameAt || 0;
+      const cooldown = renameCooldownMs(sld.renameCount || 0);
+      if (Date.now() < lastAt + cooldown) return prev;
+      const list = prev.soldiers.slice();
+      list[idx] = {
+        ...sld,
+        name: trimmed,
+        renameCount: (sld.renameCount || 0) + 1,
+        lastRenameAt: Date.now(),
+      };
+      return { ...prev, soldiers: list };
     });
   }, [selectedSldId]);
 
@@ -846,7 +1133,13 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       const idx = prev.soldiers.findIndex(s => s.id === selectedSldId);
       if (idx < 0) return prev;
       const sld = prev.soldiers[idx];
-      // Update preferredWeapon and weaponIdx in config to match
+      if (!weaponName) {
+        const list = prev.soldiers.slice();
+        list[idx] = { ...sld, preferredWeapon: null };
+        return { ...prev, soldiers: list };
+      }
+      const unlocked = sld.unlockedWeapons || [];
+      if (!unlocked.includes(weaponName)) return prev;
       const w = G.getWeaponByName(weaponName);
       const wIdx = w ? (window.Weapons.list || []).indexOf(w) : null;
       const list = prev.soldiers.slice();
@@ -877,6 +1170,7 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       <HQRecruit
         pool={recruitPool}
         tokens={hq.tokens}
+        soldierCount={hq.soldiers.length}
         onPick={handlePickRecruit}
         onBack={() => setSubpage(null)}
       />
@@ -886,8 +1180,19 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       <HQSoldierDetail
         soldier={selectedSoldier}
         tokens={hq.tokens}
-        onUpgrade={handleUpgrade}
+        onUpgrade={handleOpenUpgrade}
         onSetPreferred={handleSetPreferred}
+        onRename={handleRename}
+      />
+    );
+  } else if (subpage === 'upgrade' && selectedSoldier) {
+    main = (
+      <HQUpgradeChoice
+        soldier={selectedSoldier}
+        squadName={hq.name}
+        tokens={hq.tokens}
+        onBack={() => setSubpage('soldier')}
+        onConfirm={handleConfirmUpgrade}
       />
     );
   } else if (subpage === 'opponents') {
@@ -945,7 +1250,7 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       <div className="hq-body">
         <HQSidebar
           soldiers={hq.soldiers}
-          selectedId={subpage === 'soldier' ? selectedSldId : null}
+          selectedId={(subpage === 'soldier' || subpage === 'upgrade') ? selectedSldId : null}
           onSelect={handleSelectSoldier}
           onAdd={handleAddRecruit}
           isRecruiting={subpage === 'recruit'}

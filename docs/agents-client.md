@@ -70,6 +70,27 @@ La sélection Armée vs Armée est persistée par squad dans `localStorage` (`sq
 
 ---
 
+## Soldat HQ — champs persistés (`squadron-hq-<squad>`)
+
+```js
+{
+  id, name, config, level, xp,
+  unlockedWeapons:  [string],   // noms d'armes
+  preferredWeapon:  string|null,
+  renameCount:      0+,         // nombre de renommages effectués
+  lastRenameAt:     ms,         // Date.now() au dernier renommage
+  pendingUpgrade:   null|{ skill1Name, skill2Name }, // offre en attente (option future)
+}
+```
+
+- Coût d'amélioration (cost to level → level+1) : `UPGRADE_COSTS = [4, 8, 16, 32, 48, 64, 96, 128]` puis ×1.5 arrondi à 8.
+- Coût de recrutement (Nème soldat) : `RECRUIT_COSTS = [15, 35, 80, 150, 220, 325, 450, 600, 790]` puis ×1.3 arrondi à 10.
+- Cooldown renommage : 0 pour le 1er, puis `6 mois × 2^(renameCount-1)` (≈6 mois → 1 an → 2 ans → 4 ans …).
+- L'offre d'amélioration (2 skills proposés) est dérivée d'un seed déterministe `hash(squadName + soldierId + (level+1))` → reproductible à l'identique tant que le soldat n'a pas changé de niveau, ce qui implémente la persistance "tu retrouves le même choix si tu quittes l'écran".
+- "Main nue" (`Weapons.list[61]`, type `melee`) reste catalogué côté gameplay mais n'apparaît pas dans la grille de skills de la fiche soldat (filtré via `HIDDEN_WEAPON_NAMES`).
+
+---
+
 ## Hairstyles par bodyType
 
 Les indices de `hairStyleIdx` sont globaux (0–15). Chaque bodyType n'utilise qu'un sous-ensemble :

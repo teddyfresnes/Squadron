@@ -2243,12 +2243,23 @@ html, body {
 }
 
 /* ── Soldier detail ────────────────────────────────────────────────────── */
-.hq-soldier-detail .hq-sd-top {
+/* Wide screens (>1100px): [skills | perks | portrait] */
+/* Medium / mobile: stacked vertically — portrait → perks → skills */
+.hq-soldier-detail .hq-sd-layout {
   display: grid;
-  grid-template-columns: minmax(18rem, 1fr) clamp(12rem, 16vw, 17rem) clamp(14rem, 20vw, 21rem);
+  grid-template-columns:
+    minmax(0, 1fr)
+    clamp(14rem, 18vw, 18rem)
+    clamp(14rem, 20vw, 21rem);
+  grid-template-areas: "skills perks portrait";
   gap: clamp(0.8rem, 1.2vw, 1.25rem);
   align-items: start;
 }
+.hq-sd-skills-cell   { grid-area: skills;   min-width: 0; }
+.hq-sd-perks-cell    { grid-area: perks;    min-width: 0; }
+.hq-sd-portrait-cell { grid-area: portrait; min-width: 0; }
+
+/* Portrait + level-up button */
 .hq-sd-portrait {
   background: rgba(8, 9, 12, 0.45);
   border: 1px solid var(--border-2);
@@ -2286,139 +2297,6 @@ html, body {
   border-radius: 4px;
 }
 .hq-sd-portrait-char { line-height: 0; transform: translateY(10px); }
-.hq-sd-portrait-name {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--text);
-  text-align: center;
-  letter-spacing: 0.04em;
-  padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 8px;
-}
-
-.hq-sd-skills-head { margin-bottom: 12px; }
-.hq-sd-skills-groups {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(0.7rem, 1vw, 1rem);
-}
-.hq-sd-skill-group-title {
-  font-size: clamp(0.62rem, 0.72vw, 0.76rem);
-  letter-spacing: 0;
-  font-weight: 700;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.hq-sd-skill-group-title span { color: var(--text-dimmer); font-size: 9px; font-weight: 500; }
-.hq-sd-skill-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(clamp(2.75rem, 3.2vw, 3.35rem), 1fr));
-  gap: clamp(0.35rem, 0.55vw, 0.55rem);
-  justify-content: start;
-}
-.hq-sd-weapon-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(clamp(5.5rem, 7.4vw, 7.8rem), 1fr));
-  gap: clamp(0.4rem, 0.6vw, 0.65rem);
-  justify-content: start;
-}
-.hq-sd-weapon {
-  all: unset;
-  cursor: pointer;
-  position: relative;
-  min-width: 0;
-  height: clamp(2.5rem, 3vw, 3rem);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015)),
-    rgba(8, 9, 12, 0.58);
-  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
-  overflow: hidden;
-}
-.hq-sd-weapon:hover {
-  transform: translateY(-2px);
-  border-color: rgba(217, 150, 80, 0.7);
-  box-shadow: 0 0 18px rgba(217, 150, 80, 0.24);
-}
-.hq-sd-weapon.preferred {
-  border-color: var(--accent);
-  background: rgba(217, 150, 80, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(217, 150, 80, 0.24), 0 0 20px rgba(217, 150, 80, 0.32);
-}
-.hq-sd-weapon-art {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100%;
-  overflow: hidden;
-}
-.hq-sd-skill {
-  all: unset;
-  cursor: pointer;
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: rgba(8, 9, 12, 0.4);
-  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
-}
-.hq-sd-skill .game-icon { width: 36px; height: 36px; flex: 0 0 36px; }
-.hq-sd-skill .weapon-game-icon { margin: 0; }
-.hq-sd-skill.unlocked {
-  border-color: rgba(217, 150, 80, 0.4);
-  box-shadow: inset 0 0 0 1px rgba(217, 150, 80, 0.15), 0 0 14px rgba(217, 150, 80, 0.18);
-  background: rgba(217, 150, 80, 0.05);
-}
-.hq-sd-skill.unlocked:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent);
-  box-shadow: 0 0 18px rgba(217, 150, 80, 0.4);
-}
-.hq-sd-skill.locked {
-  cursor: not-allowed;
-  opacity: 0.35;
-  filter: grayscale(0.85);
-}
-.hq-sd-skill.preferred {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(217, 150, 80, 0.55), 0 0 22px rgba(217, 150, 80, 0.45);
-  background: rgba(217, 150, 80, 0.12);
-}
-.hq-sd-skill-lock {
-  position: absolute;
-  bottom: 2px;
-  right: 4px;
-  font-size: 10px;
-  pointer-events: none;
-}
-.hq-sd-skill-star {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  font-size: 14px;
-  color: var(--accent);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
-  pointer-events: none;
-}
-
-.hq-sd-actions {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(0.65rem, 1vw, 0.9rem);
-}
 .hq-sd-upgrade-btn {
   display: flex;
   flex-direction: row;
@@ -2438,82 +2316,302 @@ html, body {
   align-items: center;
   gap: 0.18em;
 }
-.hq-sd-upgrade-sub,
-.hq-sd-upgrade-hint { display: none; }
 
-.hq-sd-params {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
+/* Skill grid — minitroopers-style: flat icons, no frame/lock, no rounding */
+.hq-sd-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.25rem, 1fr));
+  gap: 4px;
+  justify-content: start;
+  align-content: start;
+  padding: clamp(0.5rem, 0.9vw, 0.85rem);
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 6px;
 }
-.hq-sd-param {
-  background: rgba(8, 9, 12, 0.5);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: clamp(0.65rem, 0.9vw, 0.85rem);
-}
-.hq-sd-param.locked { opacity: 0.55; }
-.hq-sd-param-key {
-  font-size: clamp(0.58rem, 0.68vw, 0.7rem);
-  letter-spacing: 0;
-  font-weight: 700;
-  color: var(--text-dimmer);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-.hq-sd-param-val {
-  font-size: clamp(0.74rem, 0.85vw, 0.9rem);
-  font-weight: 700;
-  color: var(--text);
-}
-.hq-sd-param-weapon {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  min-width: 0;
-}
-.hq-sd-param-weapon .game-icon {
-  width: 2.2rem;
-  height: 2.2rem;
-  flex: 0 0 2.2rem;
-}
-.hq-sd-param-weapon-art {
-  width: 4.8rem;
-  height: 2rem;
-  flex: 0 0 4.8rem;
+.hq-sd-skill {
+  width: 100%;
+  aspect-ratio: 1 / 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.24);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  cursor: default;
 }
-.hq-sd-param-weapon span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.hq-sd-skill .game-icon,
+.hq-sd-skill .weapon-game-icon {
+  width: 100%;
+  height: 100%;
+  margin: 0;
 }
-.hq-sd-param-hint {
-  font-size: 9px;
-  color: var(--text-dimmer);
-  margin-top: 6px;
-  letter-spacing: 0.04em;
+.hq-sd-skill.is-locked {
+  filter: grayscale(1) brightness(0.62);
+  opacity: 0.55;
+  pointer-events: none;
 }
-.hq-lock-pill {
-  font-size: 8px;
+
+/* Perks panel — "Compétences" */
+.hq-sd-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.hq-sd-perks-title {
+  font-size: clamp(0.62rem, 0.72vw, 0.76rem);
   letter-spacing: 0.12em;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.hq-sd-perk {
+  background: rgba(8, 9, 12, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: clamp(0.6rem, 0.85vw, 0.8rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.hq-sd-perk.is-locked { opacity: 0.6; }
+.hq-sd-perk.is-mystery { border-style: dashed; }
+.hq-sd-perk.is-cooldown .hq-sd-perk-value { opacity: 0.75; }
+.hq-sd-perk-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hq-sd-perk-tier {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  font-weight: 800;
   background: rgba(217, 150, 80, 0.15);
   color: var(--accent);
   border: 1px solid var(--border);
   padding: 1px 6px;
   border-radius: 999px;
+}
+.hq-sd-perk-title {
+  font-size: clamp(0.78rem, 0.9vw, 0.95rem);
   font-weight: 700;
+  color: var(--text);
+}
+.hq-sd-perk-mystery {
+  letter-spacing: 0.32em;
+  color: var(--text-dimmer);
+}
+.hq-sd-perk-body {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.hq-sd-perk-value {
+  font-size: clamp(0.85rem, 0.95vw, 1rem);
+  font-weight: 700;
+  color: var(--text);
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: break-word;
+}
+.hq-sd-perk-btn {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: 0.45rem 0.75rem;
+}
+.hq-sd-perk-btn-cancel {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: 0.45rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+.hq-sd-perk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.hq-sd-perk-form-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.hq-sd-perk-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0.5rem 0.7rem;
+  font-family: inherit;
+}
+.hq-sd-perk-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(217, 150, 80, 0.25);
+}
+.hq-sd-perk-hint {
+  font-size: 10px;
+  color: var(--text-dimmer);
+  letter-spacing: 0.04em;
+  width: 100%;
+  flex-basis: 100%;
+}
+.hq-sd-perk-weapon-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: nowrap;
+}
+.hq-sd-perk-weapon-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: 0 0 2.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hq-sd-perk-weapon-icon .game-icon,
+.hq-sd-perk-weapon-icon .weapon-game-icon {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+.hq-sd-perk-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0.45rem 0.55rem;
+  font-family: inherit;
+}
+.hq-sd-perk-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(217, 150, 80, 0.25);
+}
+
+/* ── Upgrade choice screen ─────────────────────────────────────────────── */
+.hq-upgrade-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.hq-upgrade-stage {
+  display: grid;
+  grid-template-columns: clamp(11rem, 18vw, 16rem) minmax(0, 1fr);
+  gap: clamp(0.9rem, 1.4vw, 1.4rem);
+  align-items: start;
+}
+.hq-upgrade-soldier {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+  background: rgba(8, 9, 12, 0.45);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: clamp(0.6rem, 0.9vw, 0.85rem);
+}
+.hq-upgrade-soldier-stage {
+  position: relative;
+  height: clamp(12rem, 30vh, 20rem);
+  background:
+    radial-gradient(70% 70% at 50% 40%, rgba(255, 240, 220, 0.25), transparent 75%),
+    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.05)),
+    #2a2d3e;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hq-upgrade-soldier-level {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  background: rgba(0, 0, 0, 0.45);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.hq-upgrade-soldier-name {
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.hq-upgrade-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.8rem;
+}
+.hq-upgrade-option {
+  background: rgba(8, 9, 12, 0.55);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: clamp(0.75rem, 1.1vw, 1rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+.hq-upgrade-option-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hq-upgrade-option-icon .game-icon,
+.hq-upgrade-option-icon .weapon-game-icon {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+.hq-upgrade-option-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+.hq-upgrade-option-type {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+}
+.hq-upgrade-pick-btn {
+  margin-top: auto;
+  width: 100%;
+  letter-spacing: 0.06em;
+}
+.hq-upgrade-pick-cost {
+  font-weight: 800;
+  color: oklch(0.85 0.14 85);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18em;
+}
+.hq-upgrade-empty {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 1.5rem 0;
 }
 
 /* ── Squad page ────────────────────────────────────────────────────────── */
@@ -3359,11 +3457,20 @@ html, body {
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
-  .hq-soldier-detail .hq-sd-top {
+  .hq-soldier-detail .hq-sd-layout {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "portrait"
+      "perks"
+      "skills";
   }
+  .hq-sd-portrait-stage { height: clamp(13rem, 38vh, 22rem); }
   .hq-stat { min-width: 0; }
   .hq-stat-key { display: none; }
+
+  .hq-upgrade-stage {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 900px) {
   .hq-page {
@@ -3414,10 +3521,7 @@ html, body {
     gap: 0.4rem;
   }
   .hq-sd-skill-grid {
-    grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr));
-  }
-  .hq-sd-weapon-grid {
-    grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr));
   }
 }
 
