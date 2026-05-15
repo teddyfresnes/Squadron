@@ -1,6 +1,7 @@
 'use strict';
 const express = require('express');
 const db      = require('../db');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -50,6 +51,22 @@ router.get('/opponents/list', (req, res) => {
     .slice(0, 50);
 
   return res.json({ squads });
+});
+
+// POST /api/squad/soldier-upgrade — authed: notify server that a soldier paid to
+// level up. The server doesn't yet hold per-soldier state, so this is a hook
+// for future ledger logic. We accept the event, log it, and acknowledge.
+router.post('/soldier-upgrade', requireAuth, (req, res) => {
+  const body = req.body || {};
+  const soldierId = String(body.soldierId || '').slice(0, 64);
+  const fromLevel = Number(body.fromLevel) | 0;
+  const toLevel   = Number(body.toLevel) | 0;
+  const cost      = Number(body.cost) | 0;
+  if (!soldierId || toLevel <= fromLevel || cost < 0) {
+    return res.status(400).json({ error: 'Paramètres invalides.' });
+  }
+  console.log(`[squadron-server] upgrade ack squad="${req.squadName}" soldier="${soldierId}" ${fromLevel}→${toLevel} cost=${cost}`);
+  return res.json({ ok: true });
 });
 
 // GET /api/squad/:name — public: does this squad exist? does it have a password?

@@ -124,11 +124,15 @@ function verifySquadPassword(name, password) {
 async function apiFetch(path, opts = {}) {
   const ctrl = new AbortController();
   const tid  = setTimeout(() => ctrl.abort(), 8000);
+  let token  = null;
+  try { token = sessionStorage.getItem('sq-token'); } catch (_) {}
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (token && !headers.Authorization) headers.Authorization = 'Bearer ' + token;
   try {
     const res  = await fetch(SERVER_URL + path, {
       ...opts,
       signal: ctrl.signal,
-      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      headers,
     });
     const data = await res.json();
     return { ok: res.ok, status: res.status, data };

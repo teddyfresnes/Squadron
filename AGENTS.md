@@ -47,9 +47,12 @@ GET  /api/health                 → {status:'ok', version:'1.0.0'}
 GET  /api/troopers               → {troopers:[8 soldats], date}
 GET  /api/squad/:name            → {exists, hasPassword}
 GET  /api/squad/opponents/list   → {squads:[armées joueurs]} (fondateur seul tant que le HQ complet n'est pas sync serveur)
+POST /api/squad/soldier-upgrade  auth · body:{soldierId,fromLevel,toLevel,cost} → {ok:true} (ack — hook future ledger)
 POST /api/auth/register          body:{squadName,password,founder}  → {token,squadName}
 POST /api/auth/login             body:{squadName,password}           → {token,squadName}
 ```
+
+`apiFetch` ajoute automatiquement `Authorization: Bearer <sq-token>` si présent en `sessionStorage`.
 
 Auth : `Authorization: Bearer <jwt>` · JWT exp=7j · Rate-limit auth 15req/15min · Global 120req/min
 

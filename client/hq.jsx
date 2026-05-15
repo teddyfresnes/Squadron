@@ -873,11 +873,9 @@ function HQSoldierDetail({ soldier, tokens, onUpgrade, onSetPreferred, onRename 
 }
 
 // ── HQUpgradeChoice ─────────────────────────────────────────────────────────
-function HQUpgradeChoice({ soldier, squadName, tokens, onBack, onConfirm }) {
+function HQUpgradeChoice({ soldier, squadName, onBack, onConfirm }) {
   const { AnimPreview, WeaponGameIcon } = UI;
   const SkillTooltip = G.SkillTooltip;
-  const cost = calcUpgradeCost(soldier);
-  const canAfford = tokens >= cost;
 
   const offer = useMemo(() => ensureUpgradeOffer(soldier, squadName), [soldier.id, soldier.level, squadName, soldier.pendingUpgrade]);
   const options = useMemo(() => {
@@ -893,12 +891,6 @@ function HQUpgradeChoice({ soldier, squadName, tokens, onBack, onConfirm }) {
   return (
     <div className="hq-upgrade-choice">
       <button type="button" className="hq-back-btn" onClick={onBack}>← Retour</button>
-
-      <div className="hq-section-eyebrow">AMÉLIORATION</div>
-      <h2 className="hq-section-title">{soldier.name} — Niveau {soldier.level} → {soldier.level + 1}</h2>
-      <p className="hq-section-hint">
-        Choisis l'une des deux compétences proposées. Coût : {cost} <TokenIcon className="hq-resource-icon-inline" />.
-      </p>
 
       <div className="hq-upgrade-stage">
         <div className="hq-upgrade-soldier">
@@ -922,11 +914,10 @@ function HQUpgradeChoice({ soldier, squadName, tokens, onBack, onConfirm }) {
               <div className="hq-upgrade-option-type">{G.WEAPON_TYPE_LABELS[w.type] || w.type}</div>
               <button
                 type="button"
-                className={'sq-btn sq-btn-primary hq-upgrade-pick-btn' + (canAfford ? '' : ' is-disabled')}
-                disabled={!canAfford}
-                onClick={() => canAfford && onConfirm(w.name)}
+                className="sq-btn sq-btn-primary hq-upgrade-pick-btn"
+                onClick={() => onConfirm(w.name)}
               >
-                CHOISIR · <span className="hq-upgrade-pick-cost">{cost} <TokenIcon className="hq-resource-icon-inline" /></span>
+                CHOISIR
               </button>
             </div>
           ))}
@@ -1047,8 +1038,12 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
   const handleSelectSoldier = useCallback((id) => {
     setTab('squad');
     setSelectedSldId(id);
-    setSubpage('soldier');
-  }, []);
+    // If the soldier has a pending upgrade (paid but skill not yet chosen),
+    // send them straight to the skill-choice page instead of the detail page.
+    const sld = hq.soldiers.find(s => s.id === id);
+    const hasPending = sld && sld.pendingUpgrade && sld.pendingUpgrade.skill1Name;
+    setSubpage(hasPending ? 'upgrade' : 'soldier');
+  }, [hq.soldiers]);
 
   const handleAddRecruit = useCallback(() => {
     setSubpage('recruit');
@@ -1077,19 +1072,41 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
     setSubpage(null);
   }, [squadName]);
 
-  // Open the upgrade-choice subpage (the actual level-up happens after the user picks a skill).
+  // Start an upgrade: pay the cost immediately and record the skill offer.
+  // The actual level-up + skill unlock happens after the user picks a skill.
+  // If a pending upgrade already exists, just re-open the choice page (no extra charge).
   const handleOpenUpgrade = useCallback(() => {
+    let serverNotice = null;
+    setHQ(prev => {
+      const idx = prev.soldiers.findIndex(s => s.id === selectedSldId);
+      if (idx < 0) return prev;
+      const sld = prev.soldiers[idx];
+      if (sld.pendingUpgrade && sld.pendingUpgrade.skill1Name) return prev;
+      const cost = calcUpgradeCost(sld);
+      if (prev.tokens < cost) return prev;
+      const offer = generateUpgradeOffer(sld, prev.name);
+      if (!offer) return prev;
+      const list = prev.soldiers.slice();
+      list[idx] = { ...sld, pendingUpgrade: offer };
+      serverNotice = { soldierId: sld.id, fromLevel: sld.level || 1, toLevel: (sld.level || 1) + 1, cost };
+      return { ...prev, tokens: prev.tokens - cost, soldiers: list };
+    });
     setSubpage('upgrade');
-  }, []);
+    if (serverNotice && serverOnline && G.apiFetch) {
+      G.apiFetch('/api/squad/soldier-upgrade', {
+        method: 'POST',
+        body: JSON.stringify(serverNotice),
+      });
+    }
+  }, [selectedSldId, serverOnline]);
 
-  // Confirm an upgrade: spend tokens, +1 level, unlock the chosen skill, clear pending offer.
+  // Confirm an upgrade: cost was already paid in handleOpenUpgrade.
+  // Just +1 level, unlock the chosen skill, and clear the pending offer.
   const handleConfirmUpgrade = useCallback((weaponName) => {
     setHQ(prev => {
       const idx = prev.soldiers.findIndex(s => s.id === selectedSldId);
       if (idx < 0) return prev;
       const sld  = prev.soldiers[idx];
-      const cost = calcUpgradeCost(sld);
-      if (prev.tokens < cost) return prev;
       const currentUnlocked = sld.unlockedWeapons || [];
       const unlockedWeapons = weaponName && !currentUnlocked.includes(weaponName)
         ? [...currentUnlocked, weaponName]
@@ -1102,7 +1119,7 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       };
       const list = prev.soldiers.slice();
       list[idx] = updated;
-      return { ...prev, tokens: prev.tokens - cost, soldiers: list };
+      return { ...prev, soldiers: list };
     });
     setSubpage('soldier');
   }, [selectedSldId]);
@@ -1175,26 +1192,30 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
         onBack={() => setSubpage(null)}
       />
     );
-  } else if (subpage === 'soldier' && selectedSoldier) {
-    main = (
-      <HQSoldierDetail
-        soldier={selectedSoldier}
-        tokens={hq.tokens}
-        onUpgrade={handleOpenUpgrade}
-        onSetPreferred={handleSetPreferred}
-        onRename={handleRename}
-      />
-    );
-  } else if (subpage === 'upgrade' && selectedSoldier) {
-    main = (
-      <HQUpgradeChoice
-        soldier={selectedSoldier}
-        squadName={hq.name}
-        tokens={hq.tokens}
-        onBack={() => setSubpage('soldier')}
-        onConfirm={handleConfirmUpgrade}
-      />
-    );
+  } else if ((subpage === 'soldier' || subpage === 'upgrade') && selectedSoldier) {
+    // A paid-but-unchosen upgrade always wins: the soldier detail page is
+    // locked until the player picks a skill (which is what they paid for).
+    const hasPending = selectedSoldier.pendingUpgrade && selectedSoldier.pendingUpgrade.skill1Name;
+    if (subpage === 'upgrade' || hasPending) {
+      main = (
+        <HQUpgradeChoice
+          soldier={selectedSoldier}
+          squadName={hq.name}
+          onBack={() => { setSubpage(null); setSelectedSldId(null); }}
+          onConfirm={handleConfirmUpgrade}
+        />
+      );
+    } else {
+      main = (
+        <HQSoldierDetail
+          soldier={selectedSoldier}
+          tokens={hq.tokens}
+          onUpgrade={handleOpenUpgrade}
+          onSetPreferred={handleSetPreferred}
+          onRename={handleRename}
+        />
+      );
+    }
   } else if (subpage === 'opponents') {
     main = (
       <HQOpponentSelect

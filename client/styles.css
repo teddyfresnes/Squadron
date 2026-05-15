@@ -2317,39 +2317,54 @@ html, body {
   gap: 0.18em;
 }
 
-/* Skill grid — minitroopers-style: flat icons, no frame/lock, no rounding */
+/* Skill grid — minitroopers-style: flat icons, no frame/lock, no rounding.
+   Fixed-size cells (columns AND rows) guarantee every icon is perfectly
+   square regardless of how the wrap/canvas sub-elements behave. */
 .hq-sd-skill-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(2.25rem, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(auto-fill, 3.25rem);
+  grid-auto-rows: 3.25rem;
+  gap: 2px;
   justify-content: start;
   align-content: start;
-  padding: clamp(0.5rem, 0.9vw, 0.85rem);
+  padding: 0.25rem;
   background: rgba(0, 0, 0, 0.18);
   border-radius: 6px;
 }
+.hq-sd-skill-grid > .sq-skill-wrap,
+.hq-sd-skill-grid > .hq-sd-skill {
+  width: 3.25rem;
+  height: 3.25rem;
+  display: flex;
+}
 .hq-sd-skill {
   width: 100%;
-  aspect-ratio: 1 / 1;
-  display: inline-flex;
+  height: 100%;
   align-items: center;
   justify-content: center;
   border: 0;
   background: transparent;
   box-shadow: none;
   padding: 0;
-  cursor: default;
+  cursor: pointer;
 }
 .hq-sd-skill .game-icon,
 .hq-sd-skill .weapon-game-icon {
   width: 100%;
   height: 100%;
+  flex: 0 0 auto;
   margin: 0;
+  box-sizing: border-box;
+}
+.hq-sd-skill .game-icon canvas,
+.hq-sd-skill .weapon-game-icon canvas {
+  cursor: inherit;
 }
 .hq-sd-skill.is-locked {
   filter: grayscale(1) brightness(0.62);
   opacity: 0.55;
   pointer-events: none;
+  cursor: default;
 }
 
 /* Perks panel — "Compétences" */
@@ -2479,6 +2494,7 @@ html, body {
 .hq-sd-perk-weapon-icon .weapon-game-icon {
   width: 100%;
   height: 100%;
+  flex: 0 0 auto;
   margin: 0;
 }
 .hq-sd-perk-select {
@@ -2571,17 +2587,27 @@ html, body {
   text-align: center;
 }
 .hq-upgrade-option-icon {
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  aspect-ratio: 1 / 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
+}
+.hq-upgrade-option .sq-skill-wrap {
+  width: 4.5rem;
+  height: 4.5rem;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
 }
 .hq-upgrade-option-icon .game-icon,
 .hq-upgrade-option-icon .weapon-game-icon {
   width: 100%;
   height: 100%;
+  flex: 0 0 auto;
   margin: 0;
+  box-sizing: border-box;
 }
 .hq-upgrade-option-name {
   font-size: 14px;
@@ -3521,7 +3547,14 @@ html, body {
     gap: 0.4rem;
   }
   .hq-sd-skill-grid {
-    grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr));
+    grid-template-columns: repeat(auto-fill, 2.75rem);
+    grid-auto-rows: 2.75rem;
+    gap: 4px;
+  }
+  .hq-sd-skill-grid > .sq-skill-wrap,
+  .hq-sd-skill-grid > .hq-sd-skill {
+    width: 2.75rem;
+    height: 2.75rem;
   }
 }
 
