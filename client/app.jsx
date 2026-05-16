@@ -557,6 +557,8 @@ function WeaponGameIcon({ weapon }) {
     if (!c || !weapon) return;
     const ctx = c.getContext('2d');
     const size = c.width;
+    // 1 unit = 1 logical pixel relative to the legacy 32px design.
+    const k = size / 32;
 
     function drawBackground() {
       ctx.imageSmoothingEnabled = false;
@@ -564,42 +566,94 @@ function WeaponGameIcon({ weapon }) {
       ctx.fillStyle = '#101014';
       ctx.fillRect(0, 0, size, size);
       ctx.fillStyle = '#c91f2b';
-      ctx.fillRect(2, 2, size - 4, size - 4);
+      ctx.fillRect(2 * k, 2 * k, size - 4 * k, size - 4 * k);
       ctx.fillStyle = '#e3363b';
-      ctx.fillRect(4, 4, size - 8, 5);
+      ctx.fillRect(4 * k, 4 * k, size - 8 * k, 5 * k);
     }
 
     function drawFallback() {
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(6, 14, 20, 5);
-      ctx.fillRect(10, 19, 5, 7);
+      ctx.fillRect(6 * k, 14 * k, 20 * k, 5 * k);
+      ctx.fillRect(10 * k, 19 * k, 5 * k, 7 * k);
       ctx.fillStyle = '#101014';
-      ctx.fillRect(7, 15, 18, 3);
-      ctx.fillRect(11, 18, 3, 6);
+      ctx.fillRect(7 * k, 15 * k, 18 * k, 3 * k);
+      ctx.fillRect(11 * k, 18 * k, 3 * k, 6 * k);
+    }
+
+    function strokeStar(cx, cy, rOuter) {
+      const rInner = rOuter * 0.45;
+      const spikes = 5;
+      const step = Math.PI / spikes;
+      let rot = -Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(rot) * rOuter, cy + Math.sin(rot) * rOuter);
+      for (let i = 0; i < spikes; i++) {
+        rot += step;
+        ctx.lineTo(cx + Math.cos(rot) * rInner, cy + Math.sin(rot) * rInner);
+        rot += step;
+        ctx.lineTo(cx + Math.cos(rot) * rOuter, cy + Math.sin(rot) * rOuter);
+      }
+      ctx.closePath();
+    }
+
+    function drawBaseBadge() {
+      // Tier-0 indicator: a small muted dash centered where the stars would sit.
+      const rOuter = 3.1 * k;
+      const cy = size - rOuter - 3.2 * k;
+      const w = 7 * k;
+      const h = 1.6 * k;
+      const x = (size - w) / 2;
+      const y = cy - h / 2;
+      const r = h / 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(x + r, y + h);
+      ctx.arc(x + r, y + r, r, Math.PI / 2, -Math.PI / 2);
+      ctx.closePath();
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(1, 1 * k);
+      ctx.strokeStyle = '#101014';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 220, 170, 0.78)';
+      ctx.fill();
+      ctx.restore();
     }
 
     function drawMkStars() {
       const count = Math.max(0, Math.min(2, weapon.mkLevel || 0));
-      if (!count) return;
-      const starW = 5;
-      const gap = 2;
-      const startX = Math.floor((size - count * starW - (count - 1) * gap) / 2);
-      const y = size - 7;
-      const pixels = [[2,0],[1,1],[2,1],[3,1],[0,2],[1,2],[2,2],[3,2],[4,2],[1,3],[3,3],[0,4],[4,4]];
-      for (let i = 0; i < count; i++) {
-        const x = startX + i * (starW + gap);
-        ctx.fillStyle = '#101014';
-        for (const p of pixels) {
-          for (let oy = -1; oy <= 1; oy++) {
-            for (let ox = -1; ox <= 1; ox++) {
-              if (Math.abs(ox) + Math.abs(oy) > 1) continue;
-              ctx.fillRect(x + p[0] + ox, y + p[1] + oy, 1, 1);
-            }
-          }
-        }
-        ctx.fillStyle = '#ffd65a';
-        for (const p of pixels) ctx.fillRect(x + p[0], y + p[1], 1, 1);
+      if (!count) {
+        drawBaseBadge();
+        return;
       }
+      const rOuter = 3.1 * k;
+      const gap = 1.8 * k;
+      const totalW = count * (rOuter * 2) + (count - 1) * gap;
+      const startX = (size - totalW) / 2 + rOuter;
+      // Pushed upward (was size - 7) so the stars sit clearly inside the panel.
+      const cy = size - rOuter - 3.2 * k;
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = Math.max(1, 1.6 * k);
+      for (let i = 0; i < count; i++) {
+        const cx = startX + i * (rOuter * 2 + gap);
+        strokeStar(cx, cy, rOuter);
+        ctx.strokeStyle = '#101014';
+        ctx.stroke();
+        ctx.fillStyle = '#ffd65a';
+        ctx.fill();
+        // Soft inner highlight for a subtle 3D feel.
+        const grad = ctx.createRadialGradient(cx - rOuter * 0.3, cy - rOuter * 0.3, 0, cx, cy, rOuter);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+        grad.addColorStop(0.6, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+      ctx.restore();
     }
 
     drawBackground();
@@ -639,19 +693,23 @@ function WeaponGameIcon({ weapon }) {
       const angle = -Math.PI / 12;
       const cos = Math.abs(Math.cos(angle));
       const sin = Math.abs(Math.sin(angle));
-      const maxW = weapon.type === 'sniper' ? 23 : 22;
-      const maxH = weapon.type === 'heavy' ? 18 : 17;
+      // Target footprint expressed in real canvas pixels.
+      const maxW = (weapon.type === 'sniper' ? 23 : 22) * k;
+      const maxH = (weapon.type === 'heavy' ? 18 : 17) * k;
       const rotW = cropW * cos + cropH * sin;
       const rotH = cropW * sin + cropH * cos;
-      const scale = Math.min(maxW / cropW, maxH / cropH);
-      const rotatedScale = Math.min(maxW / rotW, maxH / rotH);
-      const finalScale = Math.min(scale, rotatedScale);
-      const drawW = Math.max(8, Math.round(cropW * finalScale));
-      const drawH = Math.max(5, Math.round(cropH * finalScale));
+      const scaleFit = Math.min(maxW / cropW, maxH / cropH);
+      const rotScaleFit = Math.min(maxW / rotW, maxH / rotH);
+      const finalScale = Math.min(scaleFit, rotScaleFit);
+      const drawW = Math.max(8 * k, cropW * finalScale);
+      const drawH = Math.max(5 * k, cropH * finalScale);
+
+      // High-res mask of the rotated, smoothly-scaled weapon. We keep the
+      // alpha gradient (no binary threshold) for an HD look at large sizes.
       const mask = document.createElement('canvas');
-      const maskPad = 5;
-      mask.width = drawW + maskPad * 2;
-      mask.height = drawH + maskPad * 2;
+      const maskPad = Math.ceil(5 * k);
+      mask.width = Math.ceil(drawW) + maskPad * 2;
+      mask.height = Math.ceil(drawH) + maskPad * 2;
       const mctx = mask.getContext('2d');
       mctx.imageSmoothingEnabled = true;
       mctx.imageSmoothingQuality = 'high';
@@ -659,53 +717,62 @@ function WeaponGameIcon({ weapon }) {
       mctx.rotate(angle);
       mctx.drawImage(src, minX, minY, cropW, cropH, -drawW / 2, -drawH / 2, drawW, drawH);
 
+      // Compute the visible bbox so we can center the silhouette.
       const maskData = mctx.getImageData(0, 0, mask.width, mask.height).data;
-      const solid = new Uint8Array(mask.width * mask.height);
-      let solidMinX = mask.width, solidMinY = mask.height, solidMaxX = -1, solidMaxY = -1;
-      for (let i = 0; i < solid.length; i++) {
-        if (maskData[i * 4 + 3] > 28) {
-          solid[i] = 1;
+      let sMinX = mask.width, sMinY = mask.height, sMaxX = -1, sMaxY = -1;
+      for (let i = 0; i < mask.width * mask.height; i++) {
+        if (maskData[i * 4 + 3] > 20) {
           const x = i % mask.width;
           const y = (i / mask.width) | 0;
-          if (x < solidMinX) solidMinX = x;
-          if (y < solidMinY) solidMinY = y;
-          if (x > solidMaxX) solidMaxX = x;
-          if (y > solidMaxY) solidMaxY = y;
+          if (x < sMinX) sMinX = x;
+          if (y < sMinY) sMinY = y;
+          if (x > sMaxX) sMaxX = x;
+          if (y > sMaxY) sMaxY = y;
         }
       }
-
-      if (solidMaxX < solidMinX || solidMaxY < solidMinY) {
+      if (sMaxX < sMinX || sMaxY < sMinY) {
         drawFallback();
         drawMkStars();
         return;
       }
+      const solidW = sMaxX - sMinX + 1;
+      const solidH = sMaxY - sMinY + 1;
+      // Leave a bottom band for the stars; center weapon in the usable area.
+      const bottomReserve = 7 * k;
+      const dx = Math.round((size - solidW) / 2) - sMinX;
+      const dy = Math.round((size - bottomReserve - solidH) / 2) - sMinY;
 
-      const solidW = solidMaxX - solidMinX + 1;
-      const solidH = solidMaxY - solidMinY + 1;
-      const ox = Math.floor((size - solidW) / 2) - solidMinX;
-      const oy = Math.floor((size - solidH) / 2) - solidMinY + 1;
-      ctx.fillStyle = '#ffffff';
-      for (let y = 0; y < mask.height; y++) {
-        for (let x = 0; x < mask.width; x++) {
-          if (!solid[y * mask.width + x]) continue;
-          for (let dy = -2; dy <= 2; dy++) {
-            for (let dx = -2; dx <= 2; dx++) {
-              if (Math.abs(dx) + Math.abs(dy) > 2) continue;
-              const nx = x + dx, ny = y + dy;
-              if (nx < 0 || ny < 0 || nx >= mask.width || ny >= mask.height || !solid[ny * mask.width + nx]) {
-                ctx.fillRect(ox + nx, oy + ny, 1, 1);
-              }
-            }
-          }
+      // White outline: stamp a recolored copy of the mask in a small disc around
+      // the silhouette. Smooth alpha + slight feather → crisp HD edge.
+      const outline = document.createElement('canvas');
+      outline.width = mask.width;
+      outline.height = mask.height;
+      const octx = outline.getContext('2d');
+      octx.drawImage(mask, 0, 0);
+      octx.globalCompositeOperation = 'source-in';
+      octx.fillStyle = '#ffffff';
+      octx.fillRect(0, 0, outline.width, outline.height);
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      const outlineRadius = Math.max(1, Math.round(1.7 * k));
+      for (let oy = -outlineRadius; oy <= outlineRadius; oy++) {
+        for (let ox = -outlineRadius; ox <= outlineRadius; ox++) {
+          if (ox * ox + oy * oy > outlineRadius * outlineRadius) continue;
+          ctx.drawImage(outline, dx + ox, dy + oy);
         }
       }
 
-      ctx.fillStyle = '#101014';
-      for (let y = 0; y < mask.height; y++) {
-        for (let x = 0; x < mask.width; x++) {
-          if (solid[y * mask.width + x]) ctx.fillRect(ox + x, oy + y, 1, 1);
-        }
-      }
+      // Dark silhouette on top, in full smooth alpha (no chunky pixel art).
+      const fill = document.createElement('canvas');
+      fill.width = mask.width;
+      fill.height = mask.height;
+      const fctx = fill.getContext('2d');
+      fctx.drawImage(mask, 0, 0);
+      fctx.globalCompositeOperation = 'source-in';
+      fctx.fillStyle = '#101014';
+      fctx.fillRect(0, 0, fill.width, fill.height);
+      ctx.drawImage(fill, dx, dy);
     } catch (e) {
       drawFallback();
     }
@@ -714,7 +781,7 @@ function WeaponGameIcon({ weapon }) {
 
   return (
     <span className="game-icon weapon-game-icon" title={`${weapon.name} icon`} aria-hidden="true">
-      <canvas ref={ref} width="32" height="32" />
+      <canvas ref={ref} width="96" height="96" />
     </span>
   );
 }
