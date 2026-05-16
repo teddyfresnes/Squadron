@@ -237,7 +237,7 @@
     const life = hpPct(s);
     const hpLabel = hpText(s);
     const shadowTop = Math.round(SHADOW_FOOT_Y * spriteScale);
-    const hpTop = Math.round(STAGE_H * 0.12 * spriteScale);
+    const hpTop = Math.round(STAGE_H * 0.04 * spriteScale);
 
     function handleClick(ev) {
       ev.stopPropagation();
@@ -268,7 +268,31 @@
             <div className="cv-hpbar-fill" style={{ width: life + '%' }} />
           </div>
         )}
+        {s.state === 'reload' && s.reloadProgress && (
+          <ReloadIndicator progress={s.reloadProgress} top={hpTop} />
+        )}
       </button>
+    );
+  }
+
+  // Mini magazine shown above the soldier while reloading: total = rounds being
+  // loaded this action, filled = rounds already chambered. One new yellow bullet
+  // pops in each time the reload animation completes a seating motion.
+  function ReloadIndicator({ progress, top }) {
+    const total = Math.max(1, Math.round(progress.total || 1));
+    const filled = clamp(Math.round(progress.seated || 0), 0, total);
+    const bullets = [];
+    for (let i = 0; i < total; i++) bullets.push(i);
+    return (
+      <div className="cv-reload-indicator" style={{ top }} aria-hidden="true">
+        <div className="cv-reload-count">{filled}/{total}</div>
+        <div className="cv-reload-bullets">
+          {bullets.map(i => (
+            <span key={i}
+                  className={'cv-reload-bullet' + (i < filled ? ' is-full' : ' is-empty')} />
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -437,9 +461,10 @@
             const reserveCap = reserveAmmoForWeaponName(w.name);
             const state = ammoStateForWeapon(s, w.name);
             const isActive = w.name === s.weaponName;
+            const isReloading = isActive && s.state === 'reload' && s.reloadProgress;
             return (
               <div key={w.name}
-                   className={'cv-inspect-weapon-card' + (isActive ? ' is-active' : '')}
+                   className={'cv-inspect-weapon-card' + (isActive ? ' is-active' : '') + (isReloading ? ' is-reloading' : '')}
                    aria-label={w.name}
                    onMouseMove={(ev) => trackCursor(ev, w.name)}
                    onMouseLeave={clearCursor}>
@@ -448,6 +473,12 @@
                 </div>
                 <AmmoStack magSize={mag} reserveSize={reserveCap}
                            loaded={state.loaded} reserveCur={state.reserve} />
+                {isReloading && (
+                  <div className="cv-inspect-reload-badge"
+                       aria-label={'Recharge ' + s.reloadProgress.seated + ' sur ' + s.reloadProgress.total}>
+                    RECHARGE {s.reloadProgress.seated}/{s.reloadProgress.total}
+                  </div>
+                )}
               </div>
             );
           })}

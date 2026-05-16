@@ -92,6 +92,16 @@ Quand le magasin courant atteint 0 lors du planning :
 
 L'animation `Anims.reload` reçoit `animState.reloadRounds` ; `combat-view.frameForState` lit `framesForRounds(rounds)` pour clipper correctement sur la dernière frame quand le nombre de balles diffère du défaut.
 
+### Reload progressif et interruption
+
+Chaque cycle de l'anim reload (`RELOAD_ROUND_FRAMES = 7 frames @ 12 fps`) transfère **une** balle de la réserve vers le chargeur (et incrémente `actor.reloadProgress = { seated, total }`, lu par `combat-view.ReloadIndicator` pour afficher un mini-chargeur au-dessus du soldat, à la même hauteur que la barre de vie).
+
+`isUnderThreat(actor)` retourne `true` si :
+- `actor.state === 'hurt'` (vient d'être touché), OU
+- une action `shoot` active vise cet actor (`a.targetId === actor.id`).
+
+Tant que `seated < 1`, le reload est insécable. Dès que **≥ 1 balle est chambrée** ET `isUnderThreat()` est vrai, l'action est coupée (`a.aborted = true`, `a.duration = a.elapsed`) — le soldat repart immédiatement avec ses munitions partielles et peut planifier un tir au prochain tour.
+
 ---
 
 ## Tunables (combat-sim.js)

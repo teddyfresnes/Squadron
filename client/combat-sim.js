@@ -479,11 +479,26 @@
       const action = {
         actorId: actor.id, type: 'reload',
         startT: worldT, duration,
-        rounds, transferred: false
+        rounds, seated: 0, aborted: false
       };
       actor.aimed = false;
       actor.cooldown = worldT + duration + TURN_GAP;
       return action;
+    }
+
+    // Reload abort: triggered when at least 1 round is chambered AND somebody
+    // is currently aiming at this actor (shoot action in progress targeting us)
+    // OR we just took a hit. Mirrors the gameplay rule "stop reloading the
+    // moment you have one usable bullet under threat".
+    function isUnderThreat(actor) {
+      if (actor.state === 'hurt') return true;
+      for (const a of activeActions) {
+        if (a.type !== 'shoot') continue;
+        if (a.targetId !== actor.id) continue;
+        const shooter = all.find(s => s.id === a.actorId);
+        if (shooter && shooter.hp > 0) return true;
+      }
+      return false;
     }
 
     function planBareHandsAction(actor) {
@@ -939,6 +954,32 @@
         if (!actor.animState || actor.animState.reloadRounds !== a.rounds) {
           actor.animState = { reloadRounds: a.rounds };
         }
+        // Per-cycle bullet seating: each completed round cycle of the reload
+        // animation transfers one round from reserve into the magazine. This
+        // drives the live progress indicator above the soldier and lets the
+        // action be cut short with a partial transfer if interrupted.
+        const reloadAnim = window.Anims && window.Anims.reload;
+        const fps = (reloadAnim && reloadAnim.fps) || 12;
+        const introDur = 8 / fps;
+        const roundDur = 7 / fps;
+        const elapsedWork = a.elapsed - introDur;
+        const expectedSeated = Math.max(0, Math.min(a.rounds, Math.floor(elapsedWork / roundDur)));
+        if (expectedSeated > a.seated) {
+          const state = actor.ammo[actor.weaponName];
+          if (state && state.reserve > 0) {
+            const toAdd = Math.min(expectedSeated - a.seated, state.reserve);
+            state.loaded += toAdd;
+            state.reserve -= toAdd;
+          }
+          a.seated = expectedSeated;
+        }
+        actor.reloadProgress = { seated: a.seated, total: a.rounds };
+        // Abort early once we have at least one chambered round and someone is
+        // either aiming at us or just hit us.
+        if (!a.aborted && a.seated >= 1 && a.seated < a.rounds && isUnderThreat(actor)) {
+          a.aborted = true;
+          a.duration = a.elapsed;  // forces completion on this tick
+        }
       } else if (a.type === 'idle') {
         if (actor.state !== 'idle') { actor.state = 'idle'; actor.stateT = 0; }
         else actor.stateT += dt;
@@ -949,14 +990,8 @@
         if (a.type === 'shoot') {
           actor.aimed = false;
           actor.animState = null;
-        } else if (a.type === 'reload' && !a.transferred) {
-          const state = actor.ammo[actor.weaponName];
-          if (state) {
-            const transfer = Math.min(a.rounds, state.reserve);
-            state.loaded += transfer;
-            state.reserve -= transfer;
-          }
-          a.transferred = true;
+        } else if (a.type === 'reload') {
+          actor.reloadProgress = null;
           actor.aimed = false;
           actor.animState = null;
           actor.state = 'idle'; actor.stateT = 0;
