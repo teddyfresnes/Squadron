@@ -1501,7 +1501,18 @@ html, body {
   color: var(--text-dim);
   border-radius: 999px;
   transition: background 120ms ease, color 120ms ease, transform 80ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
+.hq-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+.hq-tab.active .hq-tab-icon { opacity: 1; }
 .hq-tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
 .hq-tab.active {
   background: linear-gradient(180deg, rgba(217, 150, 80, 0.3), rgba(217, 150, 80, 0.12));
@@ -2460,6 +2471,20 @@ html, body {
   flex: 1 1 auto;
   min-width: 0;
   word-break: break-word;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.hq-sd-perk-cooldown-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 220, 170, 0.7);
+  cursor: help;
+  flex: 0 0 auto;
+}
+.hq-sd-perk-cooldown-icon:hover {
+  color: rgba(255, 220, 170, 1);
 }
 .hq-sd-perk-btn {
   font-size: 11px;
@@ -2480,7 +2505,7 @@ html, body {
 .hq-sd-perk-form-row {
   display: flex;
   gap: 0.5rem;
-  justify-content: flex-end;
+  justify-content: center;
 }
 .hq-sd-perk-input {
   width: 100%;

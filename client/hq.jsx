@@ -128,7 +128,9 @@ function calcUpgradeCost(soldier) {
   return cost;
 }
 function calcRecruitCost(currentCount) {
-  const idx = Math.max(0, currentCount | 0);
+  // currentCount includes the founder, so the first recruited trooper means
+  // currentCount = 1 → index 0 (cost 15), the second → index 1 (cost 35), …
+  const idx = Math.max(0, (currentCount | 0) - 1);
   if (idx < RECRUIT_COSTS.length) return RECRUIT_COSTS[idx];
   // Continue with +30% growth past the hardcoded list, rounded to multiples of 10
   let cost = RECRUIT_COSTS[RECRUIT_COSTS.length - 1];
@@ -377,6 +379,34 @@ function markOpponentPackRefreshable(squadName) {
 }
 
 // ── HQHeader ─────────────────────────────────────────────────────────────────
+const TAB_ICONS = {
+  play: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M4 3.2v9.6a.6.6 0 0 0 .9.52l8-4.8a.6.6 0 0 0 0-1.04l-8-4.8A.6.6 0 0 0 4 3.2z" fill="currentColor" />
+    </svg>
+  ),
+  squad: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <circle cx="5.5" cy="5" r="2.2" fill="currentColor" />
+      <circle cx="11" cy="6" r="1.8" fill="currentColor" />
+      <path d="M1.5 13c0-2 1.8-3.4 4-3.4s4 1.4 4 3.4v.5h-8V13z" fill="currentColor" />
+      <path d="M9.5 13.5c0-1.4.7-2.5 1.8-3.1 1.6.1 3.2 1.2 3.2 3.1v.5h-5v-.5z" fill="currentColor" />
+    </svg>
+  ),
+  market: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M3.5 5h9l-.7 7.4a1 1 0 0 1-1 .9H5.2a1 1 0 0 1-1-.9L3.5 5z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M5.5 5V4a2.5 2.5 0 0 1 5 0v1" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  ),
+  settings: (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M8 1.6l1.1 1.6 1.9-.4.4 1.9 1.6 1.1-1 1.6 1 1.6-1.6 1.1-.4 1.9-1.9-.4L8 13.4l-1.1-1.6-1.9.4-.4-1.9L3 9.2 4 7.6 3 6l1.6-1.1.4-1.9 1.9.4L8 1.6z" fill="currentColor" />
+      <circle cx="8" cy="7.6" r="1.7" fill="#101014" />
+    </svg>
+  ),
+};
+
 const TABS = [
   { id: 'play',     label: 'Jouer' },
   { id: 'squad',    label: 'Ma squad' },
@@ -397,7 +427,8 @@ function HQHeader({ tab, onTab }) {
             className={'hq-tab' + (tab === t.id ? ' active' : '')}
             onClick={() => onTab(t.id)}
           >
-            {t.label}
+            <span className="hq-tab-icon">{TAB_ICONS[t.id]}</span>
+            <span className="hq-tab-label">{t.label}</span>
           </button>
         ))}
       </nav>
@@ -645,7 +676,7 @@ function HQRecruit({ pool, tokens, soldierCount, onPick, onBack }) {
 
       <div className="hq-section-eyebrow">RECRUTEMENT</div>
       <h2 className="hq-section-title">5 soldats disponibles aujourd'hui</h2>
-      <p className="hq-section-hint">La sélection change chaque jour. Prochain soldat : {cost} <TokenIcon className="hq-resource-icon-inline" />.</p>
+      <p className="hq-section-hint">La sélection change chaque jour. Reviens demain pour de nouvelle recrues !</p>
 
       <div className="hq-recruit-grid">
         {pool.map((s, i) => (
@@ -695,11 +726,21 @@ function RecruitCard({ soldier, tokens, cost, onPick }) {
 function SoldierSkillGrid({ soldier }) {
   const { WeaponGameIcon } = UI;
   const SkillTooltip = G.SkillTooltip;
-  const allWeapons = (window.Weapons && window.Weapons.list) || [];
-  const visibleWeapons = useMemo(
-    () => allWeapons.filter(w => !HIDDEN_WEAPON_NAMES.has(w.name)),
-    [allWeapons.length]
-  );
+  const baseList = (window.Weapons && window.Weapons.baseList) || [];
+  const getVariant = window.Weapons && window.Weapons.getVariant;
+  // Order: weapon1-base, weapon1-mk1, weapon1-mk2, weapon2-base, weapon2-mk1, …
+  const visibleWeapons = useMemo(() => {
+    const out = [];
+    for (const base of baseList) {
+      if (HIDDEN_WEAPON_NAMES.has(base.name)) continue;
+      out.push(base);
+      for (let lvl = 1; lvl <= 2; lvl++) {
+        const v = getVariant ? getVariant(base, lvl) : null;
+        if (v) out.push(v);
+      }
+    }
+    return out;
+  }, [baseList.length]);
   const unlockedSet = useMemo(() => soldierOwnedWeaponIds(soldier), [soldier]);
 
   return (
@@ -712,8 +753,8 @@ function SoldierSkillGrid({ soldier }) {
           </span>
         );
         return unlocked
-          ? <SkillTooltip key={w.name} weapon={w} tipDir="below">{cell}</SkillTooltip>
-          : <React.Fragment key={w.name}>{cell}</React.Fragment>;
+          ? <SkillTooltip key={w.id} weapon={w} tipDir="below">{cell}</SkillTooltip>
+          : <React.Fragment key={w.id}>{cell}</React.Fragment>;
       })}
     </div>
   );
@@ -729,7 +770,6 @@ function RenamePerk({ soldier, onRename }) {
   const cooldown    = renameCooldownMs(renameCount);
   const remaining   = Math.max(0, (lastAt + cooldown) - Date.now());
   const ready       = remaining <= 0;
-  const nextCooldown = renameCooldownMs(renameCount + 1);
 
   useEffect(() => {
     if (ready) return;
@@ -750,16 +790,31 @@ function RenamePerk({ soldier, onRename }) {
       </div>
       {!open && (
         <div className="hq-sd-perk-body">
-          <div className="hq-sd-perk-value">{soldier.name}</div>
-          <button
-            type="button"
-            className={'sq-btn hq-sd-perk-btn' + (ready ? '' : ' is-disabled')}
-            disabled={!ready}
-            onClick={() => ready && setOpen(true)}
-            title={ready ? 'Choisir un nouveau nom' : 'Temps d\'attente avant le prochain renommage'}
-          >
-            {ready ? 'Renommer' : 'En attente : ' + formatRemainingCooldown(remaining)}
-          </button>
+          <div className="hq-sd-perk-value">
+            <span>{soldier.name}</span>
+            {!ready && (
+              <span
+                className="hq-sd-perk-cooldown-icon"
+                title={formatRemainingCooldown(remaining)}
+                aria-label={'En attente : ' + formatRemainingCooldown(remaining)}
+              >
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                  <circle cx="8" cy="8.5" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M8 4.5v4l2.5 1.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M6 1.5h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+            )}
+          </div>
+          {ready && (
+            <button
+              type="button"
+              className="sq-btn hq-sd-perk-btn"
+              onClick={() => setOpen(true)}
+            >
+              Renommer
+            </button>
+          )}
         </div>
       )}
       {open && (
@@ -784,9 +839,6 @@ function RenamePerk({ soldier, onRename }) {
             <button type="button" className="sq-btn hq-sd-perk-btn-cancel" onClick={() => { setOpen(false); setValue(soldier.name || ''); }}>Annuler</button>
             <button type="submit" className={'sq-btn sq-btn-primary hq-sd-perk-btn' + (isValid ? '' : ' is-disabled')} disabled={!isValid}>Valider</button>
           </div>
-          {renameCount === 0
-            ? <div className="hq-sd-perk-hint">Premier renommage : gratuit. Ensuite, attente de 6 mois (doublée à chaque fois).</div>
-            : <div className="hq-sd-perk-hint">Prochaine attente après ce renommage : {formatRemainingCooldown(nextCooldown)}.</div>}
         </form>
       )}
     </div>
@@ -805,9 +857,6 @@ function PreferredWeaponPerk({ soldier, onSetPreferred }) {
         <div className="hq-sd-perk-head">
           <span className="hq-sd-perk-tier">NIV. 2</span>
           <span className="hq-sd-perk-title hq-sd-perk-mystery">???</span>
-        </div>
-        <div className="hq-sd-perk-body">
-          <div className="hq-sd-perk-hint">Atteins le niveau 2 pour débloquer cette compétence.</div>
         </div>
       </div>
     );
@@ -847,21 +896,20 @@ function MysteryPerk({ tier }) {
         <span className="hq-sd-perk-tier">NIV. {tier}</span>
         <span className="hq-sd-perk-title hq-sd-perk-mystery">???</span>
       </div>
-      <div className="hq-sd-perk-body">
-        <div className="hq-sd-perk-hint">Compétence à venir.</div>
-      </div>
     </div>
   );
 }
 
 function SoldierPerksPanel({ soldier, onRename, onSetPreferred }) {
   const level = soldier.level || 1;
+  // Only hint at the next locked tier so the list stays focused.
+  const preferredUnlocked = level >= 2;
   return (
     <div className="hq-sd-perks">
       <div className="hq-sd-perks-title">COMPÉTENCES</div>
       <RenamePerk soldier={soldier} onRename={onRename} />
       <PreferredWeaponPerk soldier={soldier} onSetPreferred={onSetPreferred} />
-      {level < PERK_HINT_TIER && <MysteryPerk tier={PERK_HINT_TIER} />}
+      {preferredUnlocked && level < PERK_HINT_TIER && <MysteryPerk tier={PERK_HINT_TIER} />}
     </div>
   );
 }
