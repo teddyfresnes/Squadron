@@ -28,7 +28,7 @@ Tous les scripts sont chargés dans `Squadron.html` dans cet ordre **exact** :
 | 1 | `palette.js` | `Palette` |
 | 2 | `sprite-engine.js` | `Engine` |
 | 3 | `parts.js` | `Parts` |
-| 4 | `weapons.js` | `Weapon` |
+| 4 | `weapons.js` | `Weapons` (list, baseList, mkList, getVariant, getBaseWeapon, expandWeaponStats) |
 | 5 | `animations.js` | `Anims` |
 | 6 | `renderer.js` | `Renderer` |
 | 7 | `app.jsx` | `SquadronUI` (App, SpriteCanvas, AnimPreview, WeaponGameIcon, WeaponIcon, DEFAULT_CFG, STAGE_W, STAGE_H, normalizeCharacterConfig, hairStyleOptionsForBody) |
@@ -83,7 +83,7 @@ Ces correspondances **doivent rester cohérentes** entre plusieurs fichiers :
 | Ce qui doit rester en sync | Fichiers concernés |
 |---|---|
 | Indices de hairstyles par bodyType | `client/app.jsx` (HAIRSTYLES_BY_BODY) ↔ `server/utils/generateTroopers.js` (HAIR_STYLES) |
-| Ordre et indices des armes (0–61) | `client/weapon-config.json` ↔ `client/weapons.js` ↔ `server/utils/generateTroopers.js` (WEAPON_NAMES) |
+| Ordre et indices des armes de base (0–61) + variantes mk append-only | `client/weapon-config.json` ↔ `client/weapons.js` ↔ `server/utils/generateTroopers.js` (WEAPON_NAMES pour bases seulement) |
 | Tailles palette (SKIN, HAIR, EYE, UNIFORM) | `client/palette.js` ↔ `server/utils/generateTroopers.js` |
 | SKILL1_NAMES / SKILL1_INDICES | `client/game.jsx` ↔ `server/utils/generateTroopers.js` |
 | Animations référencées par le sim | `client/animations.js` (Anims) ↔ `client/combat-sim.js` (clés 'aim','shoot','unaim','holster','victory','hurt','run','idle','dead') |

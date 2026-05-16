@@ -254,6 +254,35 @@ html, body {
   box-shadow: inset 0 0 0 1px rgba(80,150,217,0.25);
   background: linear-gradient(90deg, rgba(80,150,217,0.05), transparent 60%), var(--panel-2);
 }
+.weapon-level-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.weapon-level-chip {
+  all: unset;
+  cursor: pointer;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 5px 0;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  transition: all 0.12s;
+}
+.weapon-level-chip:hover { color: var(--text); border-color: var(--border-2); }
+.weapon-level-chip.selected {
+  background: rgba(80,150,217,0.12);
+  border-color: var(--accent-3);
+  color: var(--accent-3);
+  box-shadow: inset 0 0 0 1px rgba(80,150,217,0.3);
+}
+.weapon-level-chip:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
 .weapon-card-main {
   display: flex;
   align-items: center;

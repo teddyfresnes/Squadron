@@ -71,7 +71,10 @@
       .then(r => r.json())
       .then(data => {
         for (const key of Object.keys(statsByName)) delete statsByName[key];
-        for (const w of data.weapons) {
+        const statsList = window.Weapons && window.Weapons.expandWeaponStats
+          ? window.Weapons.expandWeaponStats(data)
+          : (data.weapons || []);
+        for (const w of statsList) {
           statsByName[w.name] = w;
           statsByName[w.id] = w;
           if (Array.isArray(w.aliases)) {

@@ -161,10 +161,48 @@ function formatRemainingCooldown(ms) {
 }
 
 // ── Upgrade-offer generation (deterministic per soldier + next level) ──────────
+function resolveWeapon(value) {
+  if (!value) return null;
+  if (window.Weapons && window.Weapons.resolveWeapon) return window.Weapons.resolveWeapon(value);
+  return G.getWeaponByName ? G.getWeaponByName(value) : null;
+}
+function addOwnedWeaponId(set, value) {
+  const weapon = resolveWeapon(value);
+  if (!weapon) return;
+  set.add(weapon.id);
+  if (weapon.baseWeaponId) set.add(weapon.baseWeaponId);
+  if (weapon.upgradeFromId) set.add(weapon.upgradeFromId);
+}
+function soldierOwnedWeaponIds(soldier) {
+  const owned = new Set();
+  if (!soldier) return owned;
+  if (Array.isArray(soldier.unlockedWeapons)) {
+    soldier.unlockedWeapons.forEach(name => addOwnedWeaponId(owned, name));
+  }
+  addOwnedWeaponId(owned, soldier.skill1Name);
+  addOwnedWeaponId(owned, soldier.skill2Name);
+  addOwnedWeaponId(owned, soldier.preferredWeapon);
+  return owned;
+}
+function upgradePoolForSoldier(soldier) {
+  const api = window.Weapons || {};
+  const list = api.list || [];
+  const baseList = api.baseList || list.filter(w => w && !w.mkLevel && w.name !== 'Main nue');
+  const owned = soldierOwnedWeaponIds(soldier);
+  const pool = [];
+  for (const base of baseList) {
+    if (!base || HIDDEN_WEAPON_NAMES.has(base.name)) continue;
+    if (!owned.has(base.id)) pool.push(base);
+    const mk1 = api.getVariant ? api.getVariant(base, 1) : null;
+    const mk2 = api.getVariant ? api.getVariant(base, 2) : null;
+    if (mk1 && owned.has(base.id) && !owned.has(mk1.id)) pool.push(mk1);
+    if (mk2 && mk1 && owned.has(mk1.id) && !owned.has(mk2.id)) pool.push(mk2);
+  }
+  return pool;
+}
+
 function generateUpgradeOffer(soldier, squadName) {
-  const list = (window.Weapons && window.Weapons.list) || [];
-  const unlocked = new Set(soldier.unlockedWeapons || []);
-  const pool = list.filter(w => !HIDDEN_WEAPON_NAMES.has(w.name) && !unlocked.has(w.name));
+  const pool = upgradePoolForSoldier(soldier);
   if (pool.length === 0) return null;
   const seed = hashStr(`${squadName || ''}:${soldier.id}:${(soldier.level || 1) + 1}`);
   const rng = mulberry32(seed);
@@ -662,12 +700,12 @@ function SoldierSkillGrid({ soldier }) {
     () => allWeapons.filter(w => !HIDDEN_WEAPON_NAMES.has(w.name)),
     [allWeapons.length]
   );
-  const unlockedSet = useMemo(() => new Set(soldier.unlockedWeapons || []), [soldier.unlockedWeapons]);
+  const unlockedSet = useMemo(() => soldierOwnedWeaponIds(soldier), [soldier]);
 
   return (
     <div className="hq-sd-skill-grid" aria-label="Compétences débloquées">
       {visibleWeapons.map(w => {
-        const unlocked = unlockedSet.has(w.name);
+        const unlocked = unlockedSet.has(w.id);
         const cell = (
           <span className={'hq-sd-skill' + (unlocked ? '' : ' is-locked')}>
             <WeaponGameIcon weapon={w} />

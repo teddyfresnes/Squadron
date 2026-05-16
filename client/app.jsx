@@ -262,13 +262,17 @@ function App({ onSwitchMode }) {
       .then(r => r.json())
       .then(config => {
         const metaById = {};
-        for (const w of config.weapons) metaById[w.id] = w;
+        const statsList = window.Weapons && window.Weapons.expandWeaponStats
+          ? window.Weapons.expandWeaponStats(config)
+          : (config.weapons || []);
+        for (const w of statsList) metaById[w.id] = w;
         for (const w of window.Weapons.list) {
           const meta = metaById[w.id];
           if (!meta) continue;
           w.name = meta.name;
           w.aliases = Array.isArray(meta.aliases) ? meta.aliases.slice() : [];
         }
+        if (window.Weapons && window.Weapons.rebuildLookup) window.Weapons.rebuildLookup();
         forceUpdate(n => n + 1);
       })
       .catch(err => console.error('[app] failed to sync weapon names:', err));
@@ -291,6 +295,26 @@ function App({ onSwitchMode }) {
   const setBodyType = (bodyType) => setCfg((c) => normalizeCharacterConfig({ ...c, bodyType }));
 
   const currentWeapon = window.Weapons.list[cfg.weaponIdx] || window.Weapons.list[0];
+  const currentBaseWeapon = window.Weapons.getBaseWeapon ? (window.Weapons.getBaseWeapon(currentWeapon) || currentWeapon) : currentWeapon;
+  const currentMkLevel = Math.max(0, currentWeapon && currentWeapon.mkLevel || 0);
+  const selectedBaseIdx = Math.max(0, window.Weapons.list.indexOf(currentBaseWeapon));
+  const setWeaponByObject = (weapon) => {
+    const idx = window.Weapons.list.indexOf(weapon);
+    if (idx >= 0) set('weaponIdx')(idx);
+  };
+  const setWeaponBaseIdx = (idx) => {
+    const base = window.Weapons.list[idx] || window.Weapons.list[0];
+    const variant = window.Weapons.getVariant
+      ? (window.Weapons.getVariant(base, currentMkLevel) || window.Weapons.getVariant(base, 0) || base)
+      : base;
+    setWeaponByObject(variant);
+  };
+  const setWeaponMkLevel = (mkLevel) => {
+    const variant = window.Weapons.getVariant
+      ? (window.Weapons.getVariant(currentBaseWeapon, mkLevel) || currentBaseWeapon)
+      : currentBaseWeapon;
+    setWeaponByObject(variant);
+  };
   const hairStyleOptions = useMemo(() => hairStyleOptionsForBody(cfg.bodyType || 'male'), [cfg.bodyType]);
   const selectedHairStyleOptionIdx = Math.max(0, hairStyleOptions.findIndex((style) => style.idx === cfg.hairStyleIdx));
   
@@ -329,12 +353,20 @@ function App({ onSwitchMode }) {
             onChange={set('weaponSkinIdx')}
           />
 
+          <div className="panel-title" style={{marginTop: 16}}>WEAPON LEVEL</div>
+          <WeaponLevelPicker
+            baseWeapon={currentBaseWeapon}
+            value={currentMkLevel}
+            onChange={setWeaponMkLevel}
+          />
+
           <div className="panel-title" style={{marginTop: 16}}>WEAPON</div>
           <WeaponPicker
             list={window.Weapons.list}
-            byType={window.Weapons.byType}
+            byType={window.Weapons.baseByType || window.Weapons.byType}
             selectedIdx={cfg.weaponIdx}
-            onPick={set('weaponIdx')}
+            selectedBaseIdx={selectedBaseIdx}
+            onPick={setWeaponBaseIdx}
           />
         </aside>
 
@@ -546,6 +578,30 @@ function WeaponGameIcon({ weapon }) {
       ctx.fillRect(11, 18, 3, 6);
     }
 
+    function drawMkStars() {
+      const count = Math.max(0, Math.min(2, weapon.mkLevel || 0));
+      if (!count) return;
+      const starW = 5;
+      const gap = 2;
+      const startX = Math.floor((size - count * starW - (count - 1) * gap) / 2);
+      const y = size - 7;
+      const pixels = [[2,0],[1,1],[2,1],[3,1],[0,2],[1,2],[2,2],[3,2],[4,2],[1,3],[3,3],[0,4],[4,4]];
+      for (let i = 0; i < count; i++) {
+        const x = startX + i * (starW + gap);
+        ctx.fillStyle = '#101014';
+        for (const p of pixels) {
+          for (let oy = -1; oy <= 1; oy++) {
+            for (let ox = -1; ox <= 1; ox++) {
+              if (Math.abs(ox) + Math.abs(oy) > 1) continue;
+              ctx.fillRect(x + p[0] + ox, y + p[1] + oy, 1, 1);
+            }
+          }
+        }
+        ctx.fillStyle = '#ffd65a';
+        for (const p of pixels) ctx.fillRect(x + p[0], y + p[1], 1, 1);
+      }
+    }
+
     drawBackground();
 
     const pad = 6;
@@ -574,6 +630,7 @@ function WeaponGameIcon({ weapon }) {
 
       if (maxX < minX || maxY < minY) {
         drawFallback();
+        drawMkStars();
         return;
       }
 
@@ -619,6 +676,7 @@ function WeaponGameIcon({ weapon }) {
 
       if (solidMaxX < solidMinX || solidMaxY < solidMinY) {
         drawFallback();
+        drawMkStars();
         return;
       }
 
@@ -651,6 +709,7 @@ function WeaponGameIcon({ weapon }) {
     } catch (e) {
       drawFallback();
     }
+    drawMkStars();
   }, [weapon, sheetVersion]);
 
   return (
@@ -675,13 +734,44 @@ const TYPE_LABELS = {
   heavy:   'Heavy'
 };
 
-function WeaponPicker({ list, byType, selectedIdx, onPick }) {
+function WeaponLevelPicker({ baseWeapon, value, onChange }) {
+  const levels = [
+    { label: 'Base', value: 0 },
+    { label: 'MK1', value: 1 },
+    { label: 'MK2', value: 2 }
+  ];
+  return (
+    <div className="weapon-level-picker" role="group" aria-label="Weapon level">
+      {levels.map(level => {
+        const variant = level.value === 0
+          ? baseWeapon
+          : (window.Weapons.getVariant ? window.Weapons.getVariant(baseWeapon, level.value) : null);
+        const disabled = !variant;
+        return (
+          <button
+            key={level.value}
+            type="button"
+            className={'weapon-level-chip' + (value === level.value ? ' selected' : '')}
+            onClick={() => !disabled && onChange(level.value)}
+            disabled={disabled}
+            title={disabled ? 'No variant' : level.label}
+          >
+            {level.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function WeaponPicker({ list, byType, selectedIdx, selectedBaseIdx, onPick }) {
   // Map weapon -> list index for stable keys / clicks.
   const idxOf = useMemo(() => {
     const m = new Map();
     list.forEach((w, i) => m.set(w, i));
     return m;
   }, [list]);
+  const activeIdx = selectedBaseIdx == null ? selectedIdx : selectedBaseIdx;
 
   return (
     <div className="weapon-picker">
@@ -697,7 +787,7 @@ function WeaponPicker({ list, byType, selectedIdx, onPick }) {
                 return (
                   <button
                     key={i}
-                    className={'weapon-card' + (selectedIdx === i ? ' selected' : '')}
+                    className={'weapon-card' + (activeIdx === i ? ' selected' : '')}
                     onClick={() => onPick(i)}
                     title={w.name}
                   >

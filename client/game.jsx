@@ -18,9 +18,16 @@ fetch('./weapon-config.json')
   .then(data => {
     const list = window.Weapons && window.Weapons.list || [];
     const byId = {};
-    for (const w of data.weapons) {
+    const statsList = window.Weapons && window.Weapons.expandWeaponStats
+      ? window.Weapons.expandWeaponStats(data)
+      : (data.weapons || []);
+    for (const w of statsList) {
       weaponStats[w.id] = w;
+      weaponStats[w.name] = w;
       byId[w.id] = w;
+      if (Array.isArray(w.aliases)) {
+        for (const alias of w.aliases) weaponStats[alias] = w;
+      }
     }
     for (const w of list) {
       const meta = byId[w.id];
@@ -28,6 +35,7 @@ fetch('./weapon-config.json')
       w.name = meta.name;
       w.aliases = Array.isArray(meta.aliases) ? meta.aliases.slice() : [];
     }
+    if (window.Weapons && window.Weapons.rebuildLookup) window.Weapons.rebuildLookup();
   })
   .catch(() => {});
 
@@ -148,6 +156,10 @@ async function apiFetch(path, opts = {}) {
 function randInt(n) { return Math.floor(Math.random() * n); }
 function pick(arr)  { return arr[randInt(arr.length)]; }
 function getWeaponByName(name) {
+  if (window.Weapons && window.Weapons.resolveWeapon) {
+    const resolved = window.Weapons.resolveWeapon(name);
+    if (resolved) return resolved;
+  }
   const needle = String(name || '');
   return (window.Weapons && window.Weapons.list || []).find(w => (
     w.name === needle ||
@@ -157,7 +169,8 @@ function getWeaponByName(name) {
 }
 function pickSkills() {
   const skill1Name = pick(SKILL1_NAMES);
-  const allNames = (window.Weapons.list || []).map(w => w.name).filter(n => n !== skill1Name && n !== 'Main nue');
+  const source = (window.Weapons && window.Weapons.baseList) || (window.Weapons && window.Weapons.list) || [];
+  const allNames = source.map(w => w.name).filter(n => n !== skill1Name && n !== 'Main nue');
   return { skill1Name, skill2Name: pick(allNames) };
 }
 function randomHomeConfig(skill1Name) {

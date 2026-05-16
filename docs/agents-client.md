@@ -12,7 +12,7 @@
 | `palette.js` | Palettes couleurs | `Palette` |
 | `sprite-engine.js` | Helpers canvas bas niveau (px, rect, stamp, outlineRegion) | `Engine` |
 | `parts.js` | Dessin pixel-art de chaque membre du soldat | `Parts` |
-| `weapons.js` | Manifeste visuel armes (bboxes sprite sheet, grip, muzzle) | `Weapon` |
+| `weapons.js` | Manifeste visuel armes (bboxes sprite sheet, grip, muzzle) + variantes mk générées | `Weapons` |
 | `animations.js` | Animations par clé (idle, walk, run, shoot, aim, reload, hurt, dead, …) | `Anims` |
 | `renderer.js` | Compose le soldat complet depuis `cfg` → frames canvas | `Renderer` |
 | `app.jsx` | UI éditeur de personnage (mode dev) + composants partagés | `SquadronUI` |
@@ -21,7 +21,7 @@
 | `combat-view.jsx` | Composant React battle : drive le sim + rendu arena | `HQBattleScreen` |
 | `hq.jsx` | Shell HQ après connexion : navigation, pages, sous-pages | — |
 | `root.jsx` | Switcher dev/prod, monte le rendu React | — |
-| `weapon-config.json` | Stats gameplay armes (damage, accuracy, range, burst…) — source de vérité | — |
+| `weapon-config.json` | Stats gameplay armes (damage, accuracy, range, burst…) + bonus mk — source de vérité | — |
 | `assets/weapons/0–33.png` | 34 sprite sheets armes (une par skin uniforme) | — |
 | `styles.css` | Tous les styles, variables CSS dans `:root` | — |
 
@@ -52,7 +52,7 @@ Tous les composants (renderer, SpriteCanvas, combat-sim, DB) échangent ce même
   vestOn:        bool,
   backpackOn:    bool,
   hatIdx:        0–7,
-  weaponIdx:     0–61,      // index dans weapon-config.json / weapons.js
+  weaponIdx:     0–61 base, 62+ mk générées, // index dans Weapons.list
   weaponSkinIdx: 0–33,      // quel sprite sheet arme utiliser
 }
 ```
@@ -88,6 +88,7 @@ La sélection Armée vs Armée est persistée par squad dans `localStorage` (`sq
 - Cooldown renommage : 0 pour le 1er, puis `6 mois × 2^(renameCount-1)` (≈6 mois → 1 an → 2 ans → 4 ans …).
 - L'offre d'amélioration (2 skills proposés) est dérivée d'un seed déterministe `hash(squadName + soldierId + (level+1))` → reproductible à l'identique tant que le soldat n'a pas changé de niveau, ce qui implémente la persistance "tu retrouves le même choix si tu quittes l'écran".
 - "Main nue" (`Weapons.list[61]`, type `melee`) reste catalogué côté gameplay mais n'apparaît pas dans la grille de skills de la fiche soldat (filtré via `HIDDEN_WEAPON_NAMES`).
+- Les variantes `mk1`/`mk2` sont append-only après l'index 61 et ne sont proposées en upgrade que si la progression base -> mk1 -> mk2 est respectée.
 
 ---
 
@@ -104,7 +105,7 @@ Défini dans `app.jsx` (`HAIRSTYLES_BY_BODY`) et répliqué dans `server/utils/g
 
 ---
 
-## Armes (indices 0–61)
+## Armes (indices 0–61 + mk append-only)
 
 ```
 smg×11      : 0–10   (M3 Grease Goon, TEK-9, MAK-11, Skorpian, HX MP7, PN P90, PN F2001, Ozi, Kolt SCAMP, TPX, MPX9)
@@ -114,13 +115,21 @@ shotgun×8   : 35–42  (SPAX-12, Stooger, Ithaka, Mossburg, Dbl-Barrel, Blunder
 sniper×10   : 43–52  (AWQ, AWN, SVD, HX PSG1, M200, M82A2, HS50, Hekate, Scout, CMR)
 pistol×8    : 53–60  (Makarovv, Ruger Silenst, Sovyet PB, Standart HDM, Beretta 93, Revolvair, M1912, Makarovv Mk.II)
 melee×1     : 61     (Main nue — catalogue seulement pour l'instant)
+mk générées : 62+    (`<arme> mk1`, `<arme> mk2`, append-only après Main nue)
 ```
 
-Stats gameplay dans `weapon-config.json` ; rendu visuel dans `weapons.js`. Depuis `schemaVersion: 2`, les dégâts utilisent `damageMin`/`damageMax` par balle, et `damage` reste une moyenne/fallback d'affichage.
+Stats gameplay dans `weapon-config.json` ; rendu visuel dans `weapons.js`. Depuis `schemaVersion: 3`, les dégâts utilisent `damageMin`/`damageMax` par balle, `damage` reste une moyenne/fallback d'affichage, et `mkUpgradeBonuses` génère les stats mk côté client via `Weapons.expandWeaponStats`.
 Les noms publics sont volontairement legerement fictifs ; `aliases` dans `weapon-config.json` garde les anciens noms pour les sauvegardes et les squads deja crees.
 IDs texte : `SMG-01`, `RIFLE-01`, etc. — doivent correspondre entre les deux fichiers.
+IDs mk : `<BASE-ID>-MK1` et `<BASE-ID>-MK2`; `server/utils/generateTroopers.js` garde uniquement les noms de base dans `WEAPON_NAMES`.
 
 ---
+
+### Variantes mk
+
+Les indices 0-61 restent stables pour les armes de base; `Weapons.list[61]` reste `Main nue`. Les variantes mk sont generees par `weapons.js` et ajoutees apres l'index 61 avec les IDs `<BASE-ID>-MK1` et `<BASE-ID>-MK2`.
+
+`weapon-config.json` est en `schemaVersion: 3` : `mkUpgradeBonuses` genere les stats mk cote client via `Weapons.expandWeaponStats`, sans ajouter ces variantes a `server/utils/generateTroopers.js` (`WEAPON_NAMES` reste base-only).
 
 ## Conventions de rendu
 

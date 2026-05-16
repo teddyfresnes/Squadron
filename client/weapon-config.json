@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "limits": {
     "magazineSizeMax": 20,
     "accuracyMin": 0,
@@ -20,6 +20,10 @@
     "rangeMax": "tiles",
     "damageMin": "hit_points",
     "damageMax": "hit_points"
+  },
+  "mkUpgradeBonuses": {
+    "mk1": { "accuracyAdd": 0.04, "rangeMaxAdd": 1, "shootSpeedMultiplier": 1.05, "recoveryMultiplier": 0.95, "damageMaxAdd": 0 },
+    "mk2": { "accuracyAdd": 0.08, "rangeMaxAdd": 2, "shootSpeedMultiplier": 1.1, "recoveryMultiplier": 0.9, "damageMaxAdd": 1 }
   },
   "weapons": [
     { "id": "SMG-01", "name": "M3 Grease Goon", "aliases": ["M3 Grease GUN"], "category": "smg", "weaponType": "automatic", "magazineSize": 20, "shootSpeed": 9.5, "damage": 1.5, "accuracy": 0.58, "criticalChance": 0.05, "recovery": 0.12, "burst": 4, "rangeMin": 1, "rangeMax": 14, "damageMin": 1, "damageMax": 2 },
