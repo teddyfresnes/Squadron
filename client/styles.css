@@ -3526,6 +3526,11 @@ html, body {
   55%      { transform: translateX(60%);  opacity: 0.8; }
   60%, 100%{ opacity: 0; }
 }
+/* Pause freezes both the slide and the shine sweep mid-animation. */
+.cv-banner.is-paused .cv-banner-text,
+.cv-banner.is-paused .cv-banner-text::before {
+  animation-play-state: paused;
+}
 
 /* ── End-of-battle reward popup ──────────────────────────────────────────── */
 .cv-result {

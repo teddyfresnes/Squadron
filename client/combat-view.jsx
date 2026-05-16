@@ -692,7 +692,7 @@
   }
 
   // ── Big sliding banner shown the moment a winner is decided ───────────────
-  function ResultBanner({ winner }) {
+  function ResultBanner({ winner, isPaused }) {
     const cls = winner === 'A' ? 'cv-banner-win'
               : winner === 'B' ? 'cv-banner-lose'
               : 'cv-banner-draw';
@@ -700,7 +700,7 @@
                : winner === 'B' ? 'DÉFAITE !'
                : 'ÉGALITÉ';
     return (
-      <div className={'cv-banner ' + cls} aria-live="polite">
+      <div className={'cv-banner ' + cls + (isPaused ? ' is-paused' : '')} aria-live="polite">
         <span className="cv-banner-text">{text}</span>
       </div>
     );
@@ -735,7 +735,7 @@
     }
 
     return (
-      <div className="cv-result" onClick={onContinue}>
+      <div className="cv-result">
         <div className={'cv-result-card ' + (isWin ? 'cv-win' : 'cv-lose')}
              onClick={(ev) => ev.stopPropagation()}>
           <div className="cv-result-title">{title}</div>
@@ -757,7 +757,6 @@
     const pausedRef = useRef(false);
     const bannerShownRef = useRef(false);
     const resultShownRef = useRef(false);
-    const popupTimerRef = useRef(null);
     const [arenaSize, setArenaSize] = useState({ w: 1200, h: 320 });
     const [, setTick] = useState(0);
     const [trails, setTrails] = useState([]);
@@ -785,20 +784,12 @@
         setTrails([]);
         bannerShownRef.current = false;
         resultShownRef.current = false;
-        if (popupTimerRef.current) {
-          clearTimeout(popupTimerRef.current);
-          popupTimerRef.current = null;
-        }
         setBannerShown(false);
         setResultShown(false);
         setBattle(b);
       });
       return () => {
         alive = false;
-        if (popupTimerRef.current) {
-          clearTimeout(popupTimerRef.current);
-          popupTimerRef.current = null;
-        }
       };
     }, [mySquad, oppSquad]);
 
@@ -934,11 +925,14 @@
         if (battle.done && !bannerShownRef.current) {
           bannerShownRef.current = true;
           setBannerShown(true);
-          popupTimerRef.current = setTimeout(() => {
-            if (resultShownRef.current) return;
-            resultShownRef.current = true;
-            setResultShown(true);
-          }, RESULT_POPUP_DELAY_MS);
+        }
+        // Popup countdown is driven by battle.endHoldT (sim time since the
+        // battle ended). The sim doesn't step while paused, so endHoldT stays
+        // frozen and the popup waits until the player un-pauses.
+        if (battle.done && !resultShownRef.current
+            && battle.endHoldT * 1000 >= RESULT_POPUP_DELAY_MS) {
+          resultShownRef.current = true;
+          setResultShown(true);
         }
 
         raf = requestAnimationFrame(loop);
@@ -1025,7 +1019,7 @@
               onClose={closeInspect}
             />
           )}
-          {bannerShown && <ResultBanner winner={battle.winner} />}
+          {bannerShown && <ResultBanner winner={battle.winner} isPaused={isPaused} />}
         </div>
         <div className="cv-hud">
           <div className="cv-team cv-team-a">
