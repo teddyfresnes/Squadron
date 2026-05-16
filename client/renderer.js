@@ -364,9 +364,12 @@
   function getHold(weapon) {
     const base = HOLD_PROFILES[weapon.holdStyle || weapon.type] || HOLD_PROFILES.rifle;
     const key = weapon.id || weapon.name;
+    const baseKey = weapon.baseWeaponId || key;
+    const baseOverride = baseKey !== key ? HOLD_OVERRIDES[baseKey] : null;
+    const specificOverride = HOLD_OVERRIDES[key] || HOLD_OVERRIDES[weapon.name] || null;
     return mergeHold(
       mergeHold(base, HOLD_VARIANTS[weapon.holdVariant] || null),
-      HOLD_OVERRIDES[key] || HOLD_OVERRIDES[weapon.name] || null
+      mergeHold(baseOverride, specificOverride)
     );
   }
 
@@ -515,9 +518,12 @@
       };
     }
 
+    const offsetX = (hold.foregripOffset && hold.foregripOffset.x) || 0;
+    const offsetY = (hold.foregripOffset && hold.foregripOffset.y) || 0;
+    const supportLift = offsetY >= 3 ? -4 : -1;
     return {
-      x: weapon.foregripX - weapon.gripX + ((hold.foregripOffset && hold.foregripOffset.x) || 0),
-      y: weapon.foregripY - weapon.gripY + ((hold.foregripOffset && hold.foregripOffset.y) || 0)
+      x: weapon.foregripX - weapon.gripX + offsetX,
+      y: weapon.foregripY - weapon.gripY + offsetY + supportLift
     };
   }
 

@@ -447,12 +447,61 @@
     shotgun: [2, 0, 1]
   };
 
+  const ANCHOR_TUNING_BY_TYPE = {
+    pistol:  { gripY: -2, foregripY: -2, maxGripY: 0.55, maxForegripY: 0.50 },
+    smg:     { gripY: -1, foregripY: -2, maxGripY: 0.68, maxForegripY: 0.58 },
+    rifle:   { gripY: -1, foregripY: -3, maxGripY: 0.65, maxForegripY: 0.52 },
+    shotgun: { gripY: -1, foregripY: -3, maxGripY: 0.68, maxForegripY: 0.56 },
+    sniper:  { gripY: -2, foregripY: -1, maxGripY: 0.68, maxForegripY: 0.62 },
+    heavy:   { gripY: -1, foregripY: -2, maxGripY: 0.72, maxForegripY: 0.62 }
+  };
+
+  const ANCHOR_OVERRIDES_BY_ID = {
+    // Heavy launchers/cannons: keep the support hand on the lower grip/body,
+    // not floating on the top of the barrel.
+    'HEAVY-02':     { foregripY: 9 },
+    'HEAVY-02-MK1': { foregripY: 10 },
+    'HEAVY-02-MK2': { foregripY: 13 },
+    'HEAVY-03':     { gripY: 11, foregripY: 11 },
+    'HEAVY-03-MK1': { gripY: 13, foregripY: 13 },
+    'HEAVY-03-MK2': { gripY: 16, foregripY: 16 },
+    'HEAVY-09':     { foregripY: 12 },
+    'HEAVY-09-MK1': { foregripY: 14 },
+    'HEAVY-09-MK2': { foregripY: 14 },
+
+    // Pump/odd shotguns need the support point on the pump/wood, not the barrel.
+    'SHOTGUN-03':     { foregripY: 10 },
+    'SHOTGUN-03-MK1': { foregripY: 10 },
+    'SHOTGUN-03-MK2': { foregripY: 13 },
+    'SHOTGUN-06':     { foregripY: 8 },
+    'SHOTGUN-06-MK1': { foregripY: 9 },
+    'SHOTGUN-06-MK2': { foregripY: 10 },
+
+    // Mk2 SMGs differ a lot from their base silhouettes, so their trigger and
+    // support points are hand-tuned instead of ratio-scaled from the base.
+    'SMG-01-MK2': { gripY: 10, foregripY: 10 },
+    'SMG-03-MK2': { gripX: 18, gripY: 13, foregripX: 26, foregripY: 10 },
+    'SMG-04-MK2': { gripX: 25, gripY: 11, foregripX: 31, foregripY: 10 },
+    'SMG-06-MK2': { gripX: 37, gripY: 13, foregripX: 50, foregripY: 11 },
+    'SMG-09-MK2': { gripX: 32, gripY: 11, foregripX: 44, foregripY: 9 },
+    'SMG-11-MK2': { gripX: 30, gripY: 11, foregripX: 38, foregripY: 9 }
+  };
+
   function clamp(n, lo, hi) {
     return Math.max(lo, Math.min(hi, n));
   }
 
   function scaledCoord(value, scale, max) {
     return clamp(Math.round(value * scale), 0, Math.max(0, max));
+  }
+
+  function tunedCoord(value, scale, max, delta) {
+    return clamp(Math.round(value * scale) + (delta || 0), 0, Math.max(0, max));
+  }
+
+  function capY(value, max, ratio) {
+    if (ratio == null) return value;
+    return clamp(value, 0, Math.min(Math.max(0, max), Math.round(Math.max(0, max) * ratio)));
   }
 
   function visualIndexFor(def, mkLevel) {
@@ -479,9 +528,15 @@
     const sh = crop ? crop[3] : baseDef.sh;
     const scaleX = sw / Math.max(1, baseDef.sw);
     const scaleY = sh / Math.max(1, baseDef.sh);
+    const tuning = ANCHOR_TUNING_BY_TYPE[baseDef.type] || {};
     const displayName = DISPLAY_NAMES_BY_ID[baseDef.id] || baseDef.name;
     const id = mkLevel ? baseDef.id + '-MK' + mkLevel : baseDef.id;
     const upgradeFromId = mkLevel === 1 ? baseDef.id : (mkLevel === 2 ? baseDef.id + '-MK1' : null);
+    const override = ANCHOR_OVERRIDES_BY_ID[id] || {};
+    const gripX = override.gripX == null ? tunedCoord(baseDef.gripX, scaleX, sw - 1, tuning.gripX) : clamp(override.gripX, 0, sw - 1);
+    const gripY = override.gripY == null ? capY(tunedCoord(baseDef.gripY, scaleY, sh - 1, tuning.gripY), sh - 1, tuning.maxGripY) : clamp(override.gripY, 0, sh - 1);
+    const foregripX = override.foregripX == null ? tunedCoord(baseDef.foregripX, scaleX, sw - 1, tuning.foregripX) : clamp(override.foregripX, 0, sw - 1);
+    const foregripY = override.foregripY == null ? capY(tunedCoord(baseDef.foregripY, scaleY, sh - 1, tuning.foregripY), sh - 1, tuning.maxForegripY) : clamp(override.foregripY, 0, sh - 1);
     return Object.assign({}, baseDef, {
       id,
       name: mkLevel ? displayName + ' mk' + mkLevel : displayName,
@@ -490,10 +545,10 @@
       sy,
       sw,
       sh,
-      gripX: scaledCoord(baseDef.gripX, scaleX, sw - 1),
-      gripY: scaledCoord(baseDef.gripY, scaleY, sh - 1),
-      foregripX: scaledCoord(baseDef.foregripX, scaleX, sw - 1),
-      foregripY: scaledCoord(baseDef.foregripY, scaleY, sh - 1),
+      gripX,
+      gripY,
+      foregripX,
+      foregripY,
       muzzleX: Math.max(0, sw - 1),
       muzzleY: scaledCoord(baseDef.muzzleY, scaleY, sh - 1),
       mkLevel,
