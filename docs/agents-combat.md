@@ -65,10 +65,32 @@ battle.aliveCount('A')  // soldats vivants de l'équipe A
 | Type | Condition | Durée |
 |---|---|---|
 | `move` | Cible trop loin (> rangeMax) ou trop proche (< rangeMin) | dist / SPEED_TILES_PER_SEC |
-| `shoot` | Dans la portée | aimDur + rafale visuelle + recovery + unaim |
-| `idle` | Pas de cible vivante | 0.4 s |
+| `shoot` | Dans la portée et magazine > 0 | aimDur + rafale visuelle + recovery + unaim |
+| `switch` | Arme courante vide et autre arme chargée disponible | animDur('holster') + animDur('drawWeapon') |
+| `reload` | Arme courante vide, pas d'autre arme chargée, mais réserve > 0 | `Anims.reload.durationForRounds(rounds)` |
+| `idle` | Pas de cible vivante, ou bare-handed (plus de balles nulle part) | 0.4 s (0.8 s pour bare-hands) |
 
 Après chaque action : `cooldown += duration + TURN_GAP (0.04s)`.
+
+---
+
+## Munitions et rechargement
+
+Chaque combattant porte une map `ammo[weaponName] = { loaded, reserve }` initialisée au début de la bataille via `rollInitialAmmo()`. Chargeur et réserve sont tirés indépendamment :
+
+- `loaded ∈ [1, magazineSize - 1]` (toujours au moins 1 round chambré, jamais plein)
+- `reserve ∈ [0, reserveCap - 1]` (jamais plein, peut être vide)
+
+Le cap effectif de la réserve est `reserveCap = min(weapon.reserveAmmo, reserveDisplayCap(magSize))` où `reserveDisplayCap(mag) = floor(5 * mag / 3)`. Cette borne garantit que la rangée de balles de réserve (slot 2 px + 1 px gap) ne dépasse jamais la largeur de la rangée du chargeur principal (slot 4 px + 1 px gap). `window.CombatSim.resolveAmmoLimits(name)` expose `{ magSize, reserveCap }` pour que `combat-view.jsx` rende le même nombre de slots que le sim génère.
+
+La rafale (`burst`) est cappée à la volée par `Math.min(burstCount, loaded)`, donc une rafale partielle peut se produire si le magasin se vide en cours d'action. Chaque coup tiré décrémente `loaded` de 1 (visible en temps réel dans le panneau d'inspection).
+
+Quand le magasin courant atteint 0 lors du planning :
+1. **Switch** vers une autre arme chargée (priorité : celle qui a le plus de balles).
+2. Sinon **Reload** depuis la réserve (arme courante si elle a de la réserve, sinon switch d'abord vers une arme qui en a).
+3. Sinon **bare-hands** : `cfg.weaponIdx` passe sur `MELEE-01`, `outOfAmmo = true`, le soldat enchaîne des `idle` jusqu'à la fin du combat (pas de mécanique mêlée pour l'instant).
+
+L'animation `Anims.reload` reçoit `animState.reloadRounds` ; `combat-view.frameForState` lit `framesForRounds(rounds)` pour clipper correctement sur la dernière frame quand le nombre de balles diffère du défaut.
 
 ---
 

@@ -130,6 +130,58 @@
     return Math.max(1, Math.round(stats && stats.burst || 1));
   }
 
+  function magSizeFor(stats) {
+    return Math.max(1, Math.round((stats && stats.magazineSize) || 1));
+  }
+  // Visual cap for the reserve: the reserve row must never be wider than the
+  // main magazine row. Slot stride is 5 px on the mag row vs 3 px on the
+  // reserve row, so the reserve fits floor(5 * mag / 3) bullets at most.
+  function reserveDisplayCap(magSize) {
+    return Math.max(0, Math.floor((5 * Math.max(1, magSize)) / 3));
+  }
+  function reserveCapFor(stats) {
+    const declared = Math.max(0, Math.round((stats && stats.reserveAmmo) || 0));
+    return Math.min(declared, reserveDisplayCap(magSizeFor(stats)));
+  }
+  function resolveAmmoLimits(name) {
+    const stats = getWeaponStats(name);
+    if (!stats) return { magSize: 0, reserveCap: 0 };
+    return { magSize: magSizeFor(stats), reserveCap: reserveCapFor(stats) };
+  }
+
+  // Initial ammo: magazine and reserve are rolled independently so each respects
+  // its own [min, cap-1] range — there is always at least one empty slot in the
+  // magazine (never quite full) and at least one round chambered (never empty).
+  // The reserve uses the same "never full" rule but is allowed to be empty.
+  function rollInitialAmmo(stats, rng) {
+    const mag = magSizeFor(stats);
+    const reserveCap = reserveCapFor(stats);
+    const roll = rng || Math.random;
+    // Magazine: 1 (or magSize if magSize==1) up to magSize-1.
+    const loadedMin = Math.min(1, mag);
+    const loadedMax = Math.max(loadedMin, mag - 1);
+    const loaded = loadedMin + Math.floor(roll() * (loadedMax - loadedMin + 1));
+    // Reserve: 0 up to reserveCap-1. (0 when reserveCap is 0 or 1.)
+    let reserve = 0;
+    if (reserveCap > 0) {
+      const reserveMax = Math.max(0, reserveCap - 1);
+      reserve = Math.floor(roll() * (reserveMax + 1));
+    }
+    return { loaded: loaded, reserve: reserve };
+  }
+
+  function weaponIdxForName(name) {
+    const list = window.Weapons && window.Weapons.list;
+    if (!list || !name) return -1;
+    for (let i = 0; i < list.length; i++) {
+      const w = list[i];
+      if (!w) continue;
+      if (w.name === name || w.id === name) return i;
+      if (Array.isArray(w.aliases) && w.aliases.indexOf(name) !== -1) return i;
+    }
+    return -1;
+  }
+
   function shotInterval(stats, count) {
     if (count <= 1) return 0;
     const bySpeed = stats && stats.shootSpeed > 0 ? 1 / stats.shootSpeed : null;
@@ -250,6 +302,17 @@
     const weaponName = soldier.preferredWeapon || soldier.skill1Name || unlockedWeapons[0] || 'Glock 17';
     const stats = getWeaponStats(weaponName) || defaultStats();
     const lane = laneForCategory(stats.category);
+    // Roll ammo for every weapon this soldier can carry. Equipped weapon is
+    // guaranteed at least 1 in the magazine so combat starts immediately.
+    const ammo = {};
+    for (const name of unlockedWeapons) {
+      const wStats = getWeaponStats(name);
+      if (!wStats) continue;
+      ammo[name] = rollInitialAmmo(wStats, rng);
+    }
+    if (!ammo[weaponName]) {
+      ammo[weaponName] = rollInitialAmmo(stats, rng);
+    }
     // Keep the nearest spawn at the side, then fan larger squads toward center
     // so the entry reads as a formation instead of a single column.
     const xSpawn = spawnXFor(team, idxInTeam, teamSize);
@@ -270,6 +333,8 @@
       preferredWeapon: soldier.preferredWeapon || null,
       weaponName,
       weapon: stats,
+      ammo,
+      outOfAmmo: false,
       bodyHits: emptyBodyHits(),
       lane,
       laneOffsetPx,
@@ -357,6 +422,85 @@
       return best;
     }
 
+    // Pick the alternative weapon with the most rounds chambered (excludes the
+    // currently equipped weapon). Used when out of ammo to switch to something
+    // that can fire immediately.
+    function pickLoadedAlternative(actor) {
+      let best = null, bestCount = 0;
+      for (const name in actor.ammo) {
+        if (name === actor.weaponName) continue;
+        const state = actor.ammo[name];
+        if (!state || state.loaded <= 0) continue;
+        if (!best || state.loaded > bestCount) { best = name; bestCount = state.loaded; }
+      }
+      return best;
+    }
+
+    // Pick a weapon to reload: prefer the current weapon if it has reserve,
+    // otherwise fall back to whichever weapon still has the most reserve rounds.
+    function pickReloadCandidate(actor) {
+      const current = actor.ammo[actor.weaponName];
+      if (current && current.reserve > 0) return actor.weaponName;
+      let best = null, bestReserve = 0;
+      for (const name in actor.ammo) {
+        const state = actor.ammo[name];
+        if (!state || state.reserve <= 0) continue;
+        if (!best || state.reserve > bestReserve) { best = name; bestReserve = state.reserve; }
+      }
+      return best;
+    }
+
+    function planSwitchAction(actor, newWeaponName) {
+      const newStats = getWeaponStats(newWeaponName) || defaultStats();
+      const holsterDur = Math.max(0.18, animDur('holster'));
+      const drawDur = Math.max(0.18, animDur('drawWeapon'));
+      const duration = holsterDur + drawDur;
+      const action = {
+        actorId: actor.id, type: 'switch',
+        startT: worldT, duration,
+        holsterDur, drawDur,
+        newWeaponName, newStats,
+        swapped: false
+      };
+      actor.aimed = false;
+      actor.cooldown = worldT + duration + TURN_GAP;
+      return action;
+    }
+
+    function planReloadAction(actor) {
+      const ammoState = actor.ammo[actor.weaponName] || { loaded: 0, reserve: 0 };
+      const magSize = magSizeFor(actor.weapon);
+      const need = Math.max(0, magSize - ammoState.loaded);
+      const rounds = Math.max(1, Math.min(need, ammoState.reserve));
+      const reloadAnim = window.Anims && window.Anims.reload;
+      const duration = (reloadAnim && reloadAnim.durationForRounds)
+        ? reloadAnim.durationForRounds(rounds)
+        : 2.0;
+      const action = {
+        actorId: actor.id, type: 'reload',
+        startT: worldT, duration,
+        rounds, transferred: false
+      };
+      actor.aimed = false;
+      actor.cooldown = worldT + duration + TURN_GAP;
+      return action;
+    }
+
+    function planBareHandsAction(actor) {
+      const meleeIdx = bareHandsWeaponIdx();
+      if (meleeIdx != null && actor.cfg && actor.cfg.weaponIdx !== meleeIdx) {
+        actor.cfg = Object.assign({}, actor.cfg, { weaponIdx: meleeIdx });
+      }
+      actor.outOfAmmo = true;
+      actor.aimed = false;
+      const action = {
+        actorId: actor.id, type: 'idle',
+        startT: worldT, duration: IDLE_TURN_DURATION * 2
+      };
+      actor.cooldown = worldT + action.duration + TURN_GAP;
+      return action;
+    }
+
     function planAction() {
       const aA = alive('A'), aB = alive('B');
       if (aA === 0 || aB === 0) {
@@ -390,6 +534,24 @@
       const tooFar   = d > w.rangeMax;
       const tooClose = (w.rangeMin || 0) > 0 && d < w.rangeMin;
 
+      // â”€â”€ AMMO check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Current weapon empty: try to switch to a loaded weapon, else reload the
+      // current weapon (or switch to a weapon that still has reserve), else go
+      // bare-handed and idle (no melee combat for now).
+      const ammoState = actor.ammo[actor.weaponName];
+      if (!ammoState || ammoState.loaded <= 0) {
+        const switchTo = pickLoadedAlternative(actor);
+        if (switchTo) return planSwitchAction(actor, switchTo);
+        const reloadTo = pickReloadCandidate(actor);
+        if (reloadTo) {
+          if (reloadTo !== actor.weaponName) return planSwitchAction(actor, reloadTo);
+          return planReloadAction(actor);
+        }
+        return planBareHandsAction(actor);
+      }
+      // Reset bare-hands flag in case the soldier somehow regained ammo.
+      if (actor.outOfAmmo) actor.outOfAmmo = false;
+
       // â”€â”€ MOVE turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (tooFar || tooClose) {
         const dir = tooFar ? sign(dx) : -sign(dx);
@@ -417,7 +579,10 @@
       }
 
       // â”€â”€ SHOOT turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      const burst = burstCount(w);
+      // Cap the burst by what's actually in the magazine so the soldier never
+      // fires phantom rounds; the next planning turn will trigger a reload or
+      // weapon switch via the ammo check above.
+      const burst = Math.max(1, Math.min(burstCount(w), ammoState.loaded));
       const hitChance = w.accuracy != null ? w.accuracy : 0.5;
       const aimDur = Math.max(AIM_DELAY_MIN, actor.aimed ? 0 : animDur('aim'));
       const shotAnim = animDur('shoot');
@@ -618,6 +783,12 @@
         actor.animState = null;
         if (action.aimDur > 0) { actor.state = 'aim'; actor.stateT = 0; }
         else { actor.state = 'shoot'; actor.stateT = 0; }
+      } else if (action.type === 'switch') {
+        actor.state = 'holster'; actor.stateT = 0;
+        actor.animState = null;
+      } else if (action.type === 'reload') {
+        actor.state = 'reload'; actor.stateT = 0;
+        actor.animState = { reloadRounds: action.rounds };
       } else {
         actor.state = 'idle';
         actor.animState = null;
@@ -672,6 +843,10 @@
         while (a.shotsFired < a.shots.length && a.elapsed >= a.shots[a.shotsFired].atT) {
           const shot = a.shots[a.shotsFired++];
           const target = all.find(s => s.id === a.targetId);
+          // Spend the round from the active magazine (decrement per shot fired
+          // for a smooth visual depletion in the inspect menu).
+          const magState = actor.ammo && actor.ammo[actor.weaponName];
+          if (magState && magState.loaded > 0) magState.loaded -= 1;
           actor.animState = {
             shotProfile: a.shotProfile,
             weaponCategory: a.weaponCategory,
@@ -735,6 +910,35 @@
         } else if (actor.state === 'shoot') {
           actor.stateT += dt;
         }
+      } else if (a.type === 'switch') {
+        // Holster the current weapon, swap at the halfway mark, then draw the new one.
+        if (a.elapsed < a.holsterDur) {
+          if (actor.state !== 'holster') { actor.state = 'holster'; actor.stateT = 0; }
+          else actor.stateT += dt;
+        } else {
+          if (!a.swapped) {
+            actor.weaponName = a.newWeaponName;
+            actor.weapon = a.newStats;
+            actor.lane = laneForCategory(a.newStats.category);
+            actor.aimed = false;
+            const newIdx = weaponIdxForName(a.newWeaponName);
+            if (newIdx >= 0 && actor.cfg) {
+              actor.cfg = Object.assign({}, actor.cfg, { weaponIdx: newIdx });
+            }
+            if (!actor.ammo[a.newWeaponName]) {
+              actor.ammo[a.newWeaponName] = { loaded: 0, reserve: 0 };
+            }
+            a.swapped = true;
+          }
+          if (actor.state !== 'drawWeapon') { actor.state = 'drawWeapon'; actor.stateT = 0; }
+          else actor.stateT += dt;
+        }
+      } else if (a.type === 'reload') {
+        if (actor.state !== 'reload') { actor.state = 'reload'; actor.stateT = 0; }
+        else actor.stateT += dt;
+        if (!actor.animState || actor.animState.reloadRounds !== a.rounds) {
+          actor.animState = { reloadRounds: a.rounds };
+        }
       } else if (a.type === 'idle') {
         if (actor.state !== 'idle') { actor.state = 'idle'; actor.stateT = 0; }
         else actor.stateT += dt;
@@ -745,6 +949,20 @@
         if (a.type === 'shoot') {
           actor.aimed = false;
           actor.animState = null;
+        } else if (a.type === 'reload' && !a.transferred) {
+          const state = actor.ammo[actor.weaponName];
+          if (state) {
+            const transfer = Math.min(a.rounds, state.reserve);
+            state.loaded += transfer;
+            state.reserve -= transfer;
+          }
+          a.transferred = true;
+          actor.aimed = false;
+          actor.animState = null;
+          actor.state = 'idle'; actor.stateT = 0;
+        } else if (a.type === 'switch') {
+          actor.animState = null;
+          actor.state = 'idle'; actor.stateT = 0;
         }
         completed.add(a);
       }
@@ -811,6 +1029,8 @@
     loadWeaponStats,
     getWeaponStats,
     createBattle,
+    resolveAmmoLimits,
+    reserveDisplayCap,
     DT,
     TILE_PX,
     ARENA_TILES,

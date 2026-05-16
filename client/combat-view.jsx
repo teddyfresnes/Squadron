@@ -24,11 +24,16 @@
   const TOKEN_REWARD_WIN = 2;
   const TOKEN_REWARD_LOSE = 1;
 
-  function frameForState(state, stateT) {
+  function frameForState(state, stateT, s) {
     const anim = window.Anims[state] || window.Anims.idle;
+    let totalFrames = anim.frames;
+    if (state === 'reload' && s && s.animState && s.animState.reloadRounds != null
+        && typeof anim.framesForRounds === 'function') {
+      totalFrames = anim.framesForRounds(s.animState.reloadRounds);
+    }
     const idx = stateT * anim.fps;
-    if (anim.loop === false) return Math.min(Math.floor(idx), anim.frames - 1);
-    return Math.floor(idx) % anim.frames;
+    if (anim.loop === false) return Math.min(Math.floor(idx), totalFrames - 1);
+    return Math.floor(idx) % totalFrames;
   }
 
   function animDuration(state) {
@@ -116,14 +121,35 @@
       });
   }
 
+  function ammoLimitsForWeaponName(name) {
+    if (window.CombatSim && typeof window.CombatSim.resolveAmmoLimits === 'function') {
+      return window.CombatSim.resolveAmmoLimits(name);
+    }
+    return { magSize: DEFAULT_MAGAZINE_SIZE, reserveCap: 0 };
+  }
+
   function magazineSizeFor(s) {
-    const stats = s.weapon || (window.CombatSim && window.CombatSim.getWeaponStats(s.weaponName));
+    if (s && s.weaponName) {
+      const limits = ammoLimitsForWeaponName(s.weaponName);
+      if (limits.magSize) return limits.magSize;
+    }
+    const stats = s.weapon;
     return Math.max(1, Math.round((stats && stats.magazineSize) || DEFAULT_MAGAZINE_SIZE));
   }
 
   function magazineSizeForWeaponName(name) {
-    const stats = window.CombatSim && window.CombatSim.getWeaponStats(name);
-    return Math.max(1, Math.round((stats && stats.magazineSize) || DEFAULT_MAGAZINE_SIZE));
+    return ammoLimitsForWeaponName(name).magSize || DEFAULT_MAGAZINE_SIZE;
+  }
+
+  function reserveAmmoForWeaponName(name) {
+    return ammoLimitsForWeaponName(name).reserveCap || 0;
+  }
+
+  function ammoStateForWeapon(s, weaponName) {
+    if (s && s.ammo && s.ammo[weaponName]) return s.ammo[weaponName];
+    // Fallback when ammo wasn't initialised (older sim or no stats found).
+    const limits = ammoLimitsForWeaponName(weaponName);
+    return { loaded: limits.magSize, reserve: limits.reserveCap };
   }
 
   const TRAIL_BODY_POINTS = {
@@ -206,7 +232,7 @@
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
   function ArenaSoldier({ s, arenaH, pxPerTile, spriteScale, xOffset, isActive, isSelected, showHpBar, onSelect }) {
     const SpriteCanvas = UI.SpriteCanvas;
-    const frame = frameForState(s.state, s.stateT);
+    const frame = frameForState(s.state, s.stateT, s);
     const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
     const life = hpPct(s);
     const hpLabel = hpText(s);
@@ -330,7 +356,8 @@
   }
 
   function AmmoRow({ total, filled, small, loaded, reserve }) {
-    const count = Math.max(1, Math.round(total || DEFAULT_MAGAZINE_SIZE));
+    const count = Math.max(0, Math.round(total || 0));
+    if (count === 0) return null;
     const full = clamp(filled == null ? count : Math.round(filled), 0, count);
     const bullets = [];
     for (let i = 0; i < count; i++) bullets.push(i);
@@ -343,12 +370,15 @@
     );
   }
 
-  function AmmoStack({ total }) {
-    const count = Math.max(1, Math.round(total || DEFAULT_MAGAZINE_SIZE));
+  // Yellow bullet = round currently held (loaded magazine row, reserve row);
+  // dark slot = the capacity that exists but has no round in it right now.
+  function AmmoStack({ magSize, reserveSize, loaded, reserveCur }) {
+    const mag = Math.max(1, Math.round(magSize || DEFAULT_MAGAZINE_SIZE));
+    const reserve = Math.max(0, Math.round(reserveSize || 0));
     return (
       <div className="cv-ammo-stack" aria-hidden="true">
-        <AmmoRow total={count} filled={count} small loaded />
-        <AmmoRow total={count} filled={count} small reserve />
+        <AmmoRow total={mag} filled={loaded} small loaded />
+        <AmmoRow total={reserve} filled={reserveCur} small reserve />
       </div>
     );
   }
@@ -404,16 +434,20 @@
           )}
           {allWeapons.map(w => {
             const mag = magazineSizeForWeaponName(w.name);
+            const reserveCap = reserveAmmoForWeaponName(w.name);
+            const state = ammoStateForWeapon(s, w.name);
+            const isActive = w.name === s.weaponName;
             return (
               <div key={w.name}
-                   className="cv-inspect-weapon-card"
+                   className={'cv-inspect-weapon-card' + (isActive ? ' is-active' : '')}
                    aria-label={w.name}
                    onMouseMove={(ev) => trackCursor(ev, w.name)}
                    onMouseLeave={clearCursor}>
                 <div className="cv-inspect-weapon-card-img">
                   {WeaponIcon ? <WeaponIcon weapon={w} scale={0.74} /> : <span className="cv-weapon-placeholder" />}
                 </div>
-                <AmmoStack total={mag} />
+                <AmmoStack magSize={mag} reserveSize={reserveCap}
+                           loaded={state.loaded} reserveCur={state.reserve} />
               </div>
             );
           })}
