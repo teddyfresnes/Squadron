@@ -697,14 +697,15 @@
       // -π/2 rotation this becomes a horizontal arm along the lying body.
       if (lying) {
         // Shoulder stays at the body's central axis (sx=0, sy=-7) — "top
-        // middle of the body just below the head", same anchor the renderer
-        // uses for the default weaponDropped pose. The arm then drops to
-        // the back/ground side of the lying silhouette: elbow and hand both
-        // at body-local X = -3, which after the -π/2 rotation maps to the
-        // silhouette's lower edge (originY+30). The forearm (elbow → hand)
-        // is therefore flat on the ground, running straight along the lower
-        // back from mid-body out to the hip area.
-        d.frontArm = { sx: 0, sy: -7, hx: -3, hy: 3, ex: -3, ey: -2 };
+        // middle of the body just below the head". Elbow and hand are kept
+        // at body-local X = -3 so the forearm sits flat on the silhouette's
+        // lower edge (originY+30 — the back/ground side of the lying body).
+        //
+        // Compared to a full IDLE arm (~32 px on screen) this dead pose is
+        // foreshortened to ~22 px: ey=-4 brings the elbow up the body-local
+        // Y axis (closer to the shoulder), and hy=-1 brings the hand back
+        // toward the elbow. Visual lengths: upper arm ~13 px, forearm 9 px.
+        d.frontArm = { sx: 0, sy: -7, hx: -3, hy: -1, ex: -3, ey: -4 };
       }
       return d;
     }
@@ -765,14 +766,15 @@
       // only once the body is flat so it does not snap during the fall.
       if (lying) {
         // Shoulder stays at the body's central axis (sx=0, sy=-7) — "top
-        // middle of the body just below the head", same anchor the renderer
-        // uses for the default weaponDropped pose. The arm then drops to
-        // the back/ground side of the lying silhouette: elbow and hand both
-        // at body-local X = -3, which after the -π/2 rotation maps to the
-        // silhouette's lower edge (originY+30). The forearm (elbow → hand)
-        // is therefore flat on the ground, running straight along the lower
-        // back from mid-body out to the hip area.
-        d.frontArm = { sx: 0, sy: -7, hx: -3, hy: 3, ex: -3, ey: -2 };
+        // middle of the body just below the head". Elbow and hand are kept
+        // at body-local X = -3 so the forearm sits flat on the silhouette's
+        // lower edge (originY+30 — the back/ground side of the lying body).
+        //
+        // Compared to a full IDLE arm (~32 px on screen) this dead pose is
+        // foreshortened to ~22 px: ey=-4 brings the elbow up the body-local
+        // Y axis (closer to the shoulder), and hy=-1 brings the hand back
+        // toward the elbow. Visual lengths: upper arm ~13 px, forearm 9 px.
+        d.frontArm = { sx: 0, sy: -7, hx: -3, hy: -1, ex: -3, ey: -4 };
       }
       return d;
     }
