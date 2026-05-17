@@ -2829,6 +2829,10 @@ html, body {
   line-height: 0;
   touch-action: manipulation;
 }
+.cv-soldier.is-exploding {
+  z-index: 5;
+  will-change: transform;
+}
 .cv-ground-shadow {
   position: absolute;
   left: 50%;
@@ -2946,11 +2950,18 @@ html, body {
   z-index: 7;
   pointer-events: none;
 }
+.cv-explosions {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
 .cv-bullet-glint,
 .cv-bullet-line,
 .cv-bullet-tip,
 .cv-bullet-pellet,
-.cv-bullet-chip {
+.cv-bullet-chip,
+.cv-explosion-spark {
   vector-effect: non-scaling-stroke;
   stroke-linecap: round;
 }
@@ -2976,9 +2987,28 @@ html, body {
   stroke: rgba(255, 248, 216, 0.82);
   stroke-width: 1.1;
 }
+.cv-explosion-smoke {
+  fill: rgba(54, 49, 44, 0.76);
+  filter: blur(2px);
+}
+.cv-explosion-ring {
+  fill: none;
+  stroke: rgba(255, 185, 72, 0.88);
+}
+.cv-explosion-flash {
+  fill: rgba(255, 238, 166, 0.96);
+  filter: blur(0.45px);
+}
+.cv-explosion-dust {
+  fill: rgba(216, 190, 148, 0.6);
+}
+.cv-explosion-spark {
+  stroke: rgba(255, 224, 126, 0.96);
+}
 .cv-arena.is-paused .cv-bg,
 .cv-arena.is-paused .cv-soldier:not(.is-selected),
-.cv-arena.is-paused .cv-trails {
+.cv-arena.is-paused .cv-trails,
+.cv-arena.is-paused .cv-explosions {
   filter: grayscale(0.76) saturate(0.42) brightness(0.82) contrast(0.92);
 }
 .cv-arena.is-paused .cv-soldier.is-selected {

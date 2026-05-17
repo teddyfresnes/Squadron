@@ -860,7 +860,7 @@
       const profileScale = (bodyProfile && bodyProfile.scale) || BODY_SCALE;
       const deathPivotY = originY + 7 * profileScale;
       ctx.translate(originX, deathPivotY);
-      ctx.rotate(facing * frame.deathAngle);
+      ctx.rotate(frame.deathAngleWorld ? frame.deathAngle : facing * frame.deathAngle);
       ctx.translate(-originX, -deathPivotY);
     }
 

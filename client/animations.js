@@ -16,6 +16,7 @@
 //   muzzleFlash   : true on shoot frames
 //   blink / eyesClosed
 //   deathAngle    : rotation when dead
+//   deathAngleWorld: true = do not mirror deathAngle by facing
 //   rollAngle     : rotation for roll
 //   showWeapon    : whether to draw weapon
 //   showBody      : whether to draw (for roll we still show)
@@ -47,7 +48,7 @@
       muzzleFlashSize: 1,
       muzzleSmoke: 0,
       eyesClosed: false,
-      deathAngle: 0, rollAngle: 0,
+      deathAngle: 0, deathAngleWorld: false, rollAngle: 0,
       showWeapon: true, showBody: true,
       alpha: 1, tint: null,
       handAtGrip: true,
@@ -794,6 +795,64 @@
     }
   };
 
+  // ---------- DEAD EXPLODE (blast launch -> inverted fall -> ground bounce) ----------
+  // Keeps the combat state as "dead" but gives explosive kills their own body
+  // variant. The big vertical travel is applied by combat-view through
+  // deadExplode.flightY(frame), so the sprite is not clipped inside its canvas.
+  Anims.deadExplode = {
+    name: 'Dead (explode)',
+    frames: 16,
+    fps: 14,
+    loop: false,
+    flightY: function (i) {
+      return [0, -24, -58, -92, -118, -126, -120, -102, -78, -52, -28, -8, -14, -6, 0, 0][i] || 0;
+    },
+    get: function (i) {
+      const d = mark(defaults(), 'dead', i);
+      const HALF_PI = Math.PI / 2;
+      const tiltSeq = [
+        0.20, 1.00, HALF_PI, HALF_PI, HALF_PI, HALF_PI, 1.18, 0.35,
+       -0.45, -1.15, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI
+      ];
+      const bodyDYSeq = [-1, -2, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, -2, -1, 0, 0];
+      const limbBendSeq = [0.4, 0.9, 1.4, 1.7, 1.8, 1.7, 1.5, 1.2, 1.3, 1.6, 1.8, 1.8, 1.5, 1.2, 1.1, 1.1];
+      const armReachSeq = [5, 8, 11, 13, 13, 12, 11, 9, 10, 12, 13, 13, 11, 9, 8, 8];
+      const reach = armReachSeq[i] || 8;
+      const bend = limbBendSeq[i] || 1.1;
+      const airborne = i < 11;
+
+      d.deathAngle = tiltSeq[i] || 0;
+      d.deathAngleWorld = true;
+      d.deathBackShift = 0;
+      d.bodyDY = bodyDYSeq[i] || 0;
+      d.bodyDX = i === 12 ? -3 : (i === 13 ? -1 : 0);
+      d.eyesClosed = true;
+      d.weaponDropped = true;
+      d.showWeapon = false;
+      d.bodyCollapsed = true;
+      d.tint = i < 3 ? '#ffd66b' : null;
+      d.alpha = i === 0 ? 0.88 : 1;
+
+      // A positive local-X limb offset points down during the +PI/2 launch
+      // and up during the -PI/2 fall, giving the requested inverted descent.
+      d.legs = {
+        front: 0,
+        back: 0,
+        frontStep: 0,
+        backStep: 0,
+        frontLift: airborne ? 0.45 : 0,
+        backLift: airborne ? 0.35 : 0,
+        frontBend: bend,
+        backBend: Math.max(0.8, bend - 0.25),
+        lying: true,
+        lyingSpread: 3
+      };
+      d.frontArm = { sx: 0, sy: -7, ex: reach * 0.65, ey: -7, hx: reach, hy: -6 };
+      d.backArm = { sx: 1, sy: -6, ex: reach * 0.55, ey: -3, hx: reach * 0.92, hy: -2 };
+      return d;
+    }
+  };
+
   // ---------- ROLL (8 frames) ----------
   Anims.roll = {
     name: 'Roll',
@@ -944,5 +1003,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'dead2', 'roll', 'punch', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'dead2', 'deadExplode', 'roll', 'punch', 'throw'];
 })();

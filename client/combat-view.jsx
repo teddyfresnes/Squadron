@@ -15,6 +15,7 @@
   const MUZZLE_FLASH_MS = 95;
   const HIT_IMPACT_MS = 280;
   const GROUND_IMPACT_MS = 360;
+  const EXPLOSION_FX_MS = 680;
   const BASE_TILE_PX = 24;              // reference tile size that maps to SPRITE_SCALE = 1.0
   const DEFAULT_MAGAZINE_SIZE = 8;
   const HP_FLASH_MS = 1700;
@@ -230,13 +231,22 @@
   }
 
   // Resolves the actual Anims key from a soldier's state, expanding variants
-  // that share a state but use different animations (e.g. the 'dead' state
-  // has two variants: 'project' → Anims.dead, 'fall' → Anims.dead2).
+  // that share a state but use different animations under the same 'dead'
+  // combat state.
   function effectiveAnimKey(s) {
+    if (s.state === 'dead' && s.animState && s.animState.deadVariant === 'explode') {
+      return 'deadExplode';
+    }
     if (s.state === 'dead' && s.animState && s.animState.deadVariant === 'fall') {
       return 'dead2';
     }
     return s.state;
+  }
+
+  function flightOffsetY(animKey, frame, spriteScale) {
+    const anim = window.Anims && window.Anims[animKey];
+    if (!anim || typeof anim.flightY !== 'function') return 0;
+    return Math.round(anim.flightY(frame) * spriteScale);
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
@@ -245,6 +255,7 @@
     const animKey = effectiveAnimKey(s);
     const frame = frameForState(animKey, s.stateT, s);
     const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
+    const flightY = flightOffsetY(animKey, frame, spriteScale);
     const life = hpPct(s);
     const hpLabel = hpText(s);
     const shadowTop = Math.round(SHADOW_FOOT_Y * spriteScale);
@@ -261,11 +272,13 @@
     // bounce), so the circle would dangle next to a corpse that's no longer
     // there. Click still selects so the inspect panel can show their stats.
     const showSelection = isSelected && s.state !== 'dead';
+    const soldierStyle = { left: layout.left, top: layout.top, width: layout.stageW, height: layout.stageH };
+    if (flightY) soldierStyle.transform = 'translateY(' + flightY + 'px)';
 
     return (
       <button type="button"
-              className={'cv-soldier' + (isActive ? ' is-active' : '') + (showSelection ? ' is-selected' : '')}
-              style={{ left: layout.left, top: layout.top, width: layout.stageW, height: layout.stageH }}
+              className={'cv-soldier' + (isActive ? ' is-active' : '') + (showSelection ? ' is-selected' : '') + (animKey === 'deadExplode' ? ' is-exploding' : '')}
+              style={soldierStyle}
               onClick={handleClick}
               aria-label={(s.name || 'Soldat') + ', niveau ' + (s.level || 1)}
               aria-pressed={isSelected}>
@@ -709,6 +722,59 @@
     );
   }
 
+  // ── Explosion overlay for explosive death variants ───────────────────────
+  function ExplosionLayer({ explosions, arenaW, arenaH, pxPerTile, spriteScale, xOffset, nowMs }) {
+    const laneScale = pxPerTile / BASE_TILE_PX;
+    return (
+      <svg className="cv-explosions" width={arenaW} height={arenaH}
+           viewBox={`0 0 ${arenaW} ${arenaH}`} preserveAspectRatio="none">
+        {explosions.map(ex => {
+          const age = nowMs - ex.bornMs;
+          const t = clamp(age / EXPLOSION_FX_MS, 0, 1);
+          if (t >= 1) return null;
+          const k = 1 - t;
+          const groundY = arenaH * GROUND_Y_RATIO + ex.y * laneScale;
+          const x = xOffset + ex.x * pxPerTile;
+          const y = groundY - 42 * spriteScale;
+          const dustY = groundY - 2 * spriteScale;
+          const ringR = (10 + 44 * t) * spriteScale;
+          const flashR = (8 + 18 * t) * spriteScale;
+          const smokeR = (16 + 34 * t) * spriteScale;
+          return (
+            <g key={ex.key} className="cv-explosion-fx">
+              <circle className="cv-explosion-smoke" cx={x} cy={y + 7 * spriteScale}
+                      r={smokeR} opacity={0.48 * k} />
+              <circle className="cv-explosion-ring" cx={x} cy={y}
+                      r={ringR} strokeWidth={Math.max(1, 3.2 * spriteScale * k)}
+                      opacity={Math.min(1, k * 1.2)} />
+              <circle className="cv-explosion-flash" cx={x} cy={y}
+                      r={flashR} opacity={Math.max(0, 1 - t * 3.2)} />
+              <ellipse className="cv-explosion-dust" cx={x} cy={dustY}
+                       rx={(22 + 28 * t) * spriteScale}
+                       ry={(5 + 8 * t) * spriteScale}
+                       opacity={0.62 * k} />
+              {(ex.sparks || []).map((s, i) => {
+                const dist = s.dist * (0.28 + t * 0.9) * spriteScale;
+                const tail = Math.max(4, s.len * spriteScale);
+                const sx = x + Math.cos(s.ang) * dist;
+                const sy = y + Math.sin(s.ang) * dist + t * 18 * spriteScale;
+                return (
+                  <line key={i} className="cv-explosion-spark"
+                        x1={sx - Math.cos(s.ang) * tail}
+                        y1={sy - Math.sin(s.ang) * tail}
+                        x2={sx}
+                        y2={sy}
+                        strokeWidth={Math.max(1, s.w * spriteScale)}
+                        strokeOpacity={k} />
+                );
+              })}
+            </g>
+          );
+        })}
+      </svg>
+    );
+  }
+
   // ── Big sliding banner shown the moment a winner is decided ───────────────
   function ResultBanner({ winner, isPaused }) {
     const cls = winner === 'A' ? 'cv-banner-win'
@@ -778,6 +844,7 @@
     const [arenaSize, setArenaSize] = useState({ w: 1200, h: 320 });
     const [, setTick] = useState(0);
     const [trails, setTrails] = useState([]);
+    const [explosions, setExplosions] = useState([]);
     const [hpFlashes, setHpFlashes] = useState({});
     const [bannerShown, setBannerShown] = useState(false);
     const [resultShown, setResultShown] = useState(false);
@@ -800,6 +867,7 @@
         setPauseMode(null);
         setHpFlashes({});
         setTrails([]);
+        setExplosions([]);
         bannerShownRef.current = false;
         resultShownRef.current = false;
         setBannerShown(false);
@@ -871,6 +939,7 @@
         // Pull new shoot events into the trails list.
         if (battle.events.length > lastEventIdx) {
           const newOnes = [];
+          const newExplosions = [];
           const newHpFlashes = {};
           for (let i = lastEventIdx; i < battle.events.length; i++) {
             const ev = battle.events[i];
@@ -909,12 +978,32 @@
                 bornMs: now
               });
             }
+            if (ev.type === 'die' && ev.deadVariant === 'explode') {
+              const target = battle.all.find(s => s.id === ev.targetId);
+              if (target) {
+                newExplosions.push({
+                  key: 'ex' + i,
+                  x: target.x,
+                  y: target.laneOffsetPx,
+                  sparks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(() => ({
+                    ang: trailRng() * Math.PI * 2,
+                    dist: 16 + trailRng() * 32,
+                    len: 4 + trailRng() * 9,
+                    w: 0.75 + trailRng() * 0.8
+                  })),
+                  bornMs: now
+                });
+              }
+            }
             if (ev.type === 'hit' || ev.type === 'die') {
               newHpFlashes[ev.targetId] = now + HP_FLASH_MS;
             }
           }
           if (newOnes.length) {
             setTrails(prev => prev.concat(newOnes));
+          }
+          if (newExplosions.length) {
+            setExplosions(prev => prev.concat(newExplosions));
           }
           if (Object.keys(newHpFlashes).length) {
             setHpFlashes(prev => Object.assign({}, prev, newHpFlashes));
@@ -925,6 +1014,10 @@
         // Garbage-collect expired trails — only re-set if anything actually expired.
         setTrails(prev => {
           const kept = prev.filter(tr => now - tr.bornMs < BULLET_TRAIL_MAX_MS);
+          return kept.length === prev.length ? prev : kept;
+        });
+        setExplosions(prev => {
+          const kept = prev.filter(ex => now - ex.bornMs < EXPLOSION_FX_MS);
           return kept.length === prev.length ? prev : kept;
         });
         setHpFlashes(prev => {
@@ -1021,6 +1114,10 @@
                        arenaW={arenaSize.w} arenaH={arenaSize.h}
                        pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
                        nowMs={nowMs} />
+          <ExplosionLayer explosions={explosions}
+                          arenaW={arenaSize.w} arenaH={arenaSize.h}
+                          pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
+                          nowMs={nowMs} />
           {isPaused && (
             <div className="cv-pause-overlay" aria-hidden="true">
               <div className="cv-pause-text">PAUSE</div>

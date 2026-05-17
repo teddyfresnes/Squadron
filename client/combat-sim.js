@@ -395,15 +395,23 @@
       return n;
     }
 
-    // Pick which death animation variant a kill should play. Heavy-impact
-    // weapons (shotguns, all heavies, top-tier snipers) "project" the body
-    // backward (Anims.dead with deathBackShift skid). Lighter weapons and
-    // melee/punch fall back cleanly (Anims.dead2 — hurt → pause → fall →
-    // ground bounce). Mirrors the user's brief: most kills => fall back,
-    // shotguns + some snipers => classic projection.
+    // Pick which death animation variant a kill should play. Explosive heavy
+    // launchers send the body upward; impact weapons still project it back;
+    // lighter weapons and melee fall back cleanly.
+    function isLauncherLike(weaponStats) {
+      if (!weaponStats) return false;
+      const text = [
+        weaponStats.id,
+        weaponStats.name,
+        weaponStats.weaponType
+      ].concat(weaponStats.aliases || []).filter(Boolean).join(' ').toLowerCase();
+      return /launcher|grenade|lobber|rpg|at4|at5|stinger|stingar|gustaf|gustov|mgl|m202|flare|toob|tube|cannon|recoilless|recoillite/.test(text);
+    }
+
     function pickDeadVariant(weaponStats) {
       if (!weaponStats) return 'fall';
       const cat = weaponStats.category;
+      if ((cat === 'heavy' && weaponStats.weaponType !== 'automatic') || isLauncherLike(weaponStats)) return 'explode';
       if (cat === 'shotgun' || cat === 'heavy') return 'project';
       if (cat === 'sniper' && (weaponStats.damageMax || 0) >= 6) return 'project';
       return 'fall';
@@ -1064,10 +1072,9 @@
                 target.hp = Math.max(0, target.hp - shot.damage);
                 if (target.hp <= 0) {
                   target.state = 'dead'; target.stateT = 0;
-                  // Weapon-driven variant: shotgun/heavy/heavy-sniper project
-                  // the body backward; everything else falls back cleanly.
-                  target.animState = { deadVariant: pickDeadVariant(actor.weapon) };
-                  events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: shot.damage });
+                  const deadVariant = pickDeadVariant(actor.weapon);
+                  target.animState = { deadVariant };
+                  events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: shot.damage, deadVariant });
                 } else {
                   target.state = 'hurt'; target.stateT = 0;
                   events.push({
@@ -1198,8 +1205,9 @@
                 // Punch always falls back — `actor.weapon` still points at the
                 // last real gun the actor had, so we pass MELEE-01 stats so the
                 // variant picker sees the melee category and returns 'fall'.
-                target.animState = { deadVariant: pickDeadVariant(getWeaponStats('Main nue')) };
-                events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: a.damage });
+                const deadVariant = pickDeadVariant(getWeaponStats('Main nue'));
+                target.animState = { deadVariant };
+                events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: a.damage, deadVariant });
               } else {
                 target.state = 'hurt'; target.stateT = 0;
                 events.push({

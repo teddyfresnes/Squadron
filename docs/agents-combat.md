@@ -168,7 +168,7 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 { t, type: 'turn',  actorId, action: 'move'|'shoot'|'idle' }
 { t, type: 'shoot', actorId, targetId, ax, ay, tx, ty, hit: bool, shotIndex?: number, shotCount?: number, weaponName?: string, weaponCategory?: string, weaponType?: string, shotProfile?: string, facing?: 1|-1, bodyPart?: 'head'|'chestLeft'|'chestRight'|'abdomen'|'leftArm'|'rightArm'|'leftLeg'|'rightLeg', damage }
 { t, type: 'hit',   targetId, hp, bodyPart, damage, bodyHits }
-{ t, type: 'die',   targetId, bodyPart, damage }
+{ t, type: 'die',   targetId, bodyPart, damage, deadVariant?: 'project'|'fall'|'explode' }
 { t, type: 'end',   winner: 'A'|'B'|'draw' }
 ```
 
@@ -187,7 +187,9 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 | `'punch'` | Coup de poing mains nues (anticipation, frappe, impact, recovery). Damage à `Anims.punch.impactFrame` (F5) |
 | `'holster'` | Fin de combat : les survivants gagnants rangent leur arme (puis `victory`, puis `walk`/`run` mains nues) |
 | `'hurt'` | Vient d'être touché (dure `Anims.hurt.frames/fps`, puis → idle) |
-| `'dead'` | HP ≤ 0, animation finale. Le simulateur tire (RNG seedé) `animState.deadVariant ∈ {'project','fall'}` au moment du kill ; `combat-view.effectiveAnimKey` mappe `'fall'` → `Anims.dead2` (chute raide en arrière, pas de skid) et `'project'` → `Anims.dead` (projection + skid arrière). Les deux animations partagent durée et pose finale, donc tous les checks `animDuration('dead')` restent valides. |
+| `'dead'` | HP ≤ 0, animation finale. Le simulateur tire (RNG seedé) `animState.deadVariant ∈ {'project','fall','explode'}` au moment du kill ; `combat-view.effectiveAnimKey` mappe `'fall'` → `Anims.dead2` (chute raide en arrière, pas de skid), `'project'` → `Anims.dead` (projection + skid arrière) et `'explode'` → `Anims.deadExplode` (projection verticale, ventre vers le sol à la montée puis membres vers le ciel à la retombée). |
+
+`deadVariant: 'explode'` est choisi pour les armes lourdes non automatiques et les armes de type launcher/grenade launcher ; les futures mines devront réutiliser cette même variante sans ajouter un nouvel état de combat.
 
 `stateT` = temps écoulé dans l'état courant (en secondes), passé à `frameForState()` dans combat-view.
 
