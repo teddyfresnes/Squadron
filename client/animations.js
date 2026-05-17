@@ -715,17 +715,18 @@
     }
   };
 
-  // ---------- DEAD 2 (stiff backward fall, no skid) ----------
-  // Same final pose as `dead` (deathAngle = -π/2, eyes closed, weapon dropped)
-  // but a much calmer trajectory: no `deathBackShift` (zero horizontal skid),
-  // no brutal hurt-style F0, no splayed kicking legs. The body just folds
-  // backward around its feet on an ease-in curve — knees soften (F0-F1),
-  // upper body tips faster (F2-F4), lands flat (F5), then settles. Eyes
-  // close on F1, weapon is released on F3 mid-fall so it leaves the hand
-  // before the body hits the ground.
+  // ---------- DEAD 2 (hurt-style recoil → hold → fall back) ----------
+  // Less linear than the previous `dead2`: F0-F2 reproduces a hurt-style
+  // backward recoil (same body kinematics as `Anims.hurt` — split stance,
+  // weapon thrust up, body lifted) that builds up to a peak tilt of about
+  // -0.50 rad. F3 holds that peak for one frame — the "ça stoppe un petit
+  // peu" beat where the body briefly suspends before losing balance. F4-F7
+  // tips past the point of no return on an ease-in curve until the body
+  // slams flat (-π/2). F8-F10 lies still. Still no `deathBackShift` — only
+  // the deathAngle drives the fall, no horizontal skid.
   Anims.dead2 = {
     name: 'Dead (fall back)',
-    frames: 10,
+    frames: 11,
     fps: 14,
     loop: false,
     get: function (i) {
@@ -733,20 +734,26 @@
       // (the angle adjustments and grip offsets keyed off motion === 'dead').
       const d = mark(defaults(), 'dead', i);
       const HALF_PI = Math.PI / 2;
-      const tiltSeq   = [-0.05, -0.20, -0.55, -0.95, -1.30, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI];
-      const fStepSeq  = [ 0,     0.1,   0.3,   0.4,   0.3,   0,        0,        0,        0,        0      ];
-      const fLiftSeq  = [ 0,     0.05,  0.20,  0.35,  0.30,  0,        0,        0,        0,        0      ];
-      const fBendSeq  = [ 0.10,  0.25,  0.50,  0.55,  0.40,  0,        0,        0,        0,        0      ];
-      const bStepSeq  = [ 0,     0,     0.05,  0.10,  0.05,  0,        0,        0,        0,        0      ];
-      const bLiftSeq  = [ 0,     0.05,  0.15,  0.20,  0.15,  0,        0,        0,        0,        0      ];
-      const bBendSeq  = [-0.05, -0.15, -0.30, -0.30, -0.15,  0,        0,        0,        0,        0      ];
-      const gripYSeq  = [ 1,     2,     3,     4,     5,     5,        5,        5,        5,        5      ];
-      const aimSeq    = [ 0.20,  0.30,  0.40,  0.40,  0.40,  0.40,     0.40,     0.40,     0.40,     0.40   ];
-      const bodyDYSeq = [ 0.5,   1,     1.5,   1,     0.5,   0,        0,        0,        0,        0      ];
+      // ── Phase map ────────────────────────────────────────────────────────
+      // F0-F2: recoil build-up (mirrors hurt's peak pose)
+      // F3:    hold at peak (the brief stop)
+      // F4-F7: fall, accelerating into the ground
+      // F8-F10: lying still
+      const tiltSeq   = [-0.20, -0.40, -0.50, -0.50, -0.65, -0.90, -1.25, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI];
+      const fStepSeq  = [ 1.0,   1.8,   2.0,   2.0,   1.8,   1.2,   0.4,   0,        0,        0,        0      ];
+      const fLiftSeq  = [ 0.15,  0.35,  0.50,  0.50,  0.40,  0.15,  0,     0,        0,        0,        0      ];
+      const fBendSeq  = [ 0.30,  0.55,  0.70,  0.70,  0.55,  0.30,  0.10,  0,        0,        0,        0      ];
+      const bStepSeq  = [-1.0,  -1.7,  -2.0,  -2.0,  -1.7,  -1.0,  -0.3,   0,        0,        0,        0      ];
+      const bLiftSeq  = [ 0.10,  0.20,  0.30,  0.30,  0.20,  0.05,  0,     0,        0,        0,        0      ];
+      const bBendSeq  = [-0.30, -0.50, -0.60, -0.60, -0.50, -0.30, -0.10,  0,        0,        0,        0      ];
+      const gripXSeq  = [ 2,     4,     5,     5,     4,     2,     1,     0,        0,        0,        0      ];
+      const gripYSeq  = [-1,    -3,    -4,    -4,    -3,    -1,     1,     3,        4,        4,        4      ];
+      const aimSeq    = [-0.50, -1.00, -1.20, -1.20, -0.95, -0.45,  0.10,  0.30,     0.40,     0.40,     0.40   ];
+      const bodyDYSeq = [-1,    -2,    -2,    -2,    -1,     0,     0,     0,        0,        0,        0      ];
 
       d.deathAngle = tiltSeq[i] || 0;
       d.deathBackShift = 0;  // KEY DIFFERENCE vs Anims.dead: no horizontal skid
-      const lying = i >= 5;
+      const lying = i >= 7;
       d.legs = {
         front: 0,
         back: 0,
@@ -762,11 +769,11 @@
         // Same subtle 2-unit stack as Anims.dead (see comment there).
         lyingSpread: lying ? 2 : 0
       };
-      d.gripOffset = { x: 0, y: gripYSeq[i] || 0 };
+      d.gripOffset = { x: gripXSeq[i] || 0, y: gripYSeq[i] || 0 };
       d.aimAngle = aimSeq[i] || 0;
       d.bodyDY = bodyDYSeq[i] || 0;
-      d.eyesClosed = i >= 1;
-      d.weaponDropped = i >= 3;
+      d.eyesClosed = i >= 2;       // close as the impact reaction lands
+      d.weaponDropped = i >= 5;    // released mid-fall, before the body lands
       d.bodyCollapsed = lying;
       // Same arm-along-body pose as Anims.dead (see comment there) — fires
       // only once the body is flat so it does not snap during the fall.
