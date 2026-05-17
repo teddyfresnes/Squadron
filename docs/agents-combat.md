@@ -64,7 +64,7 @@ battle.aliveCount('A')  // soldats vivants de l'équipe A
 
 | Type | Condition | Durée |
 |---|---|---|
-| `move` | Cible trop loin (> rangeMax) ou trop proche (< rangeMin) | dist / SPEED_TILES_PER_SEC |
+| `move` | Cible trop loin (> rangeMax) ou trop proche (< rangeMin). Le `move` supporte aussi `fromY`/`toY` pour les déplacements 2D (kite snipers, voir plus bas). | dist / SPEED_TILES_PER_SEC |
 | `shoot` | Dans la portée et magazine > 0 | aimDur + rafale visuelle + recovery + unaim |
 | `switch` | Arme courante vide et autre arme chargée disponible | animDur('holster') + animDur('drawWeapon') |
 | `reload` | Arme courante vide, pas d'autre arme chargée, mais réserve > 0 | `Anims.reload.durationForRounds(rounds)` |
@@ -89,7 +89,20 @@ La rafale (`burst`) est cappée à la volée par `Math.min(burstCount, loaded)`,
 Quand le magasin courant atteint 0 lors du planning :
 1. **Switch** vers une autre arme chargée (priorité : celle qui a le plus de balles).
 2. Sinon **Reload** depuis la réserve (arme courante si elle a de la réserve, sinon switch d'abord vers une arme qui en a).
-3. Sinon **bare-hands** : `cfg.weaponIdx` passe sur `MELEE-01`, `outOfAmmo = true`. Le soldat s'approche de la cible la plus proche puis joue `Anims.punch` (anticipation → frappe → impact → récupération). Les dégâts (`damageMin/damageMax` de MELEE-01) sont appliqués à la frame `Anims.punch.impactFrame` (F5 par défaut). Si la cible disparaît, retour à `idle` (0.8 s).
+3. Sinon **décision basée sur la distance** :
+   - Si la cible est proche (`d ≤ BARE_HANDS_CLOSE_RANGE = 4` tiles) → bare-hands (le poing arrive plus vite qu'un reload).
+   - Sinon, si un reload est possible (réserve `> 0` sur n'importe quelle arme) → `Reload` (avec switch préalable si une autre arme a de la réserve). Couvre aussi le cas "redraw" : un soldat qui s'était mis à mains nues retourne à une vraie arme dès qu'il a de la distance.
+   - Sinon **bare-hands**.
+
+   Bare-hands : `cfg.weaponIdx` passe sur `MELEE-01`, `outOfAmmo = true`. Le soldat s'approche de la cible la plus proche puis joue `Anims.punch` (anticipation → frappe → impact → récupération). Les dégâts (`damageMin=1, damageMax=2` de MELEE-01) sont appliqués à la frame `Anims.punch.impactFrame` (F5 par défaut). Si la cible disparaît, retour à `idle` (0.8 s).
+
+### Kite snipers (escape 2D)
+
+Quand `tooClose` (cible dans la `rangeMin`) **et** `rangeMin ≥ KITE_RANGE_MIN_TILES = 5` (snipers et la plupart des heavies), `planKiteAction` remplace le simple recul horizontal :
+- Budget de déplacement = `MOVE_STEP_TILES`, dépensé d'abord en horizontal (loin de la cible), puis en vertical sur l'axe `laneOffsetPx` quand le mur d'arène est proche.
+- Direction Y : côté avec le plus de place (par défaut opposé à la Y de la cible).
+- Clamp final aux bornes (`x ∈ [0.5, ARENA_TILES-0.5]`, `y ∈ [SPAWN_Y_MIN, SPAWN_Y_MAX]`) — le soldat ne sort jamais du décor.
+- Quand les deux axes sont déjà bloqués, retour au `move` 1D classique (filet de sécurité).
 
 L'animation `Anims.reload` reçoit `animState.reloadRounds` ; `combat-view.frameForState` lit `framesForRounds(rounds)` pour clipper correctement sur la dernière frame quand le nombre de balles diffère du défaut.
 

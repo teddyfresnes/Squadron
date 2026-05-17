@@ -96,6 +96,6 @@
     { "id": "PISTOL-07", "name": "Gold M1912", "aliases": ["Gold M1911"], "category": "pistol", "weaponType": "semi_auto", "magazineSize": 7, "reserveAmmo": 21, "shootSpeed": 3.2, "damage": 2.5, "accuracy": 0.76, "criticalChance": 0.11, "recovery": 0.28, "burst": 1, "rangeMin": 1, "rangeMax": 16, "damageMin": 2, "damageMax": 3 },
     { "id": "PISTOL-08", "name": "Makarovv PM Mk.II", "category": "pistol", "weaponType": "semi_auto", "magazineSize": 8, "reserveAmmo": 24, "shootSpeed": 3.4, "damage": 2, "accuracy": 0.68, "criticalChance": 0.08, "recovery": 0.22, "burst": 1, "rangeMin": 1, "rangeMax": 13, "damageMin": 1, "damageMax": 3 },
 
-    { "id": "MELEE-01", "name": "Main nue", "category": "melee", "weaponType": "unarmed", "magazineSize": 1, "reserveAmmo": 0, "shootSpeed": 1, "damage": 1, "accuracy": 0.8, "criticalChance": 0.02, "recovery": 0.5, "burst": 1, "rangeMin": 0, "rangeMax": 1, "damageMin": 1, "damageMax": 1 }
+    { "id": "MELEE-01", "name": "Main nue", "category": "melee", "weaponType": "unarmed", "magazineSize": 1, "reserveAmmo": 0, "shootSpeed": 1, "damage": 1.5, "accuracy": 0.8, "criticalChance": 0.02, "recovery": 0.5, "burst": 1, "rangeMin": 0, "rangeMax": 1, "damageMin": 1, "damageMax": 2 }
   ]
 }

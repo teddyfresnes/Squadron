@@ -501,6 +501,63 @@
       return false;
     }
 
+    // Sniper-class kite escape. Runs the soldier away from `target` along a
+    // 2D vector capped at MOVE_STEP_TILES of total travel (using TILE_PX to
+    // convert the Y axis into tile-equivalent units). Pure horizontal when
+    // we have backward room; mixes in vertical when the wall is close so we
+    // keep gaining distance even when cornered. Returns null when both axes
+    // are already at the bound (caller should fall back to the default move).
+    function planKiteAction(actor, target) {
+      const ax = actor.x;
+      const ay = actor.laneOffsetPx;
+      const tx = target.x;
+      const ty = target.laneOffsetPx;
+
+      // Horizontal: move away from the enemy, but cap at how much arena room
+      // is left on that side (with a small gutter).
+      const escapeDir = ax >= tx ? 1 : -1;
+      const horizontalRoom = escapeDir > 0 ? (ARENA_TILES - ax) : ax;
+      const horizontalAvail = Math.max(0, horizontalRoom - 0.5);
+      const horizontalBudget = Math.min(MOVE_STEP_TILES, horizontalAvail);
+
+      // Vertical: pick the side with more room (away from target's Y first,
+      // unless we're already pinned against that bound). Convert pixels to
+      // tile-equivalent units so the speed is consistent with x movement.
+      let yDir = ay >= ty ? 1 : -1;
+      let yRoomPx = yDir > 0 ? (SPAWN_Y_MAX - ay) : (ay - SPAWN_Y_MIN);
+      if (yRoomPx < 1) {
+        yDir = -yDir;
+        yRoomPx = yDir > 0 ? (SPAWN_Y_MAX - ay) : (ay - SPAWN_Y_MIN);
+      }
+      const yRoomT = yRoomPx / TILE_PX;
+      const yBudgetT = Math.max(0, Math.min(MOVE_STEP_TILES - horizontalBudget, yRoomT));
+
+      const toX = clamp(ax + escapeDir * horizontalBudget, 0.5, ARENA_TILES - 0.5);
+      const toY = clamp(ay + yDir * yBudgetT * TILE_PX, SPAWN_Y_MIN, SPAWN_Y_MAX);
+
+      const actualDxT = toX - ax;
+      const actualDyT = (toY - ay) / TILE_PX;
+      const moveDistT = Math.sqrt(actualDxT * actualDxT + actualDyT * actualDyT);
+      if (moveDistT < 0.3) return null;  // both axes pinned — caller falls back
+
+      const dur = moveDistT / SPEED_TILES_PER_SEC;
+      const facing = escapeDir > 0 ? 1 : -1;
+      const action = {
+        actorId: actor.id, type: 'move',
+        startT: worldT, duration: dur,
+        fromX: ax, toX,
+        fromY: ay, toY,
+        facing
+      };
+      action.commit = function () {
+        actor.x = toX;
+        actor.laneOffsetPx = toY;
+      };
+      actor.aimed = false;
+      actor.cooldown = worldT + dur + TURN_GAP;
+      return action;
+    }
+
     // Bare-handed: the soldier has burned through every magazine and was
     // swapped to MELEE-01 by the ammo planning step. Instead of standing
     // around idling, walk into melee range and throw a punch. Damage is the
@@ -608,14 +665,22 @@
       const tooClose = (w.rangeMin || 0) > 0 && d < w.rangeMin;
 
       // â”€â”€ AMMO check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      // Current weapon empty: try to switch to a loaded weapon, else reload the
-      // current weapon (or switch to a weapon that still has reserve), else go
-      // bare-handed and idle (no melee combat for now).
+      // Current weapon empty:
+      //   1. Free-cost switch to a loaded alternative is always preferred.
+      //   2. Otherwise the decision depends on distance — when the enemy is
+      //      close, fists land faster than a reload; when far, reload (or
+      //      switch-then-reload) so we keep ranged pressure. If no reload is
+      //      possible anywhere, fall back to fists no matter the distance.
       const ammoState = actor.ammo[actor.weaponName];
       if (!ammoState || ammoState.loaded <= 0) {
         const switchTo = pickLoadedAlternative(actor);
         if (switchTo) return planSwitchAction(actor, switchTo);
+
         const reloadTo = pickReloadCandidate(actor);
+        const BARE_HANDS_CLOSE_RANGE = 4;  // tiles — within this, punching beats reloading
+        if (d <= BARE_HANDS_CLOSE_RANGE) {
+          return planBareHandsAction(actor);
+        }
         if (reloadTo) {
           if (reloadTo !== actor.weaponName) return planSwitchAction(actor, reloadTo);
           return planReloadAction(actor);
@@ -624,6 +689,19 @@
       }
       // Reset bare-hands flag in case the soldier somehow regained ammo.
       if (actor.outOfAmmo) actor.outOfAmmo = false;
+
+      // â”€â”€ KITE turn (sniper-class, enemy inside deadzone) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Big-rangeMin weapons (snipers, most heavies) become useless when an
+      // enemy is inside their deadzone. Instead of just shuffling backward
+      // along x and hitting the arena wall, break the engagement with a 2D
+      // run: pure horizontal backup when there is room, mixed with vertical
+      // travel along the lane Y axis when we are cornered. Clamped to arena
+      // bounds so the soldier never runs off-screen.
+      const KITE_RANGE_MIN_TILES = 5;
+      if (tooClose && (w.rangeMin || 0) >= KITE_RANGE_MIN_TILES) {
+        const kite = planKiteAction(actor, target);
+        if (kite) return kite;
+      }
 
       // â”€â”€ MOVE turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (tooFar || tooClose) {
@@ -920,6 +998,9 @@
       if (a.type === 'move') {
         const t = clamp(a.elapsed / a.duration, 0, 1);
         actor.x = lerp(a.fromX, a.toX, t);
+        if (a.fromY != null && a.toY != null) {
+          actor.laneOffsetPx = lerp(a.fromY, a.toY, t);
+        }
         actor.facing = a.facing;
         if (actor.state !== 'run') { actor.state = 'run'; actor.stateT = 0; }
         else actor.stateT += dt;
