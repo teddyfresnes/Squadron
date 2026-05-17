@@ -46,7 +46,8 @@ Tous les scripts sont chargés dans `Squadron.html` dans cet ordre **exact** :
 GET  /api/health                 → {status:'ok', version:'1.0.0'}
 GET  /api/troopers               → {troopers:[8 soldats], date}
 GET  /api/squad/:name            → {exists, hasPassword}
-GET  /api/squad/opponents/list   → {squads:[armées joueurs]} (fondateur seul tant que le HQ complet n'est pas sync serveur)
+GET  /api/squad/opponents/list?exclude=<name>&power=<n>&cycle=<n>&excludeBots=<ids>
+                                → {squads:[armées joueurs + bots par paliers]}
 POST /api/squad/soldier-upgrade  auth · body:{soldierId,fromLevel,toLevel,cost} → {ok:true} (ack — hook future ledger)
 POST /api/auth/register          body:{squadName,password,founder}  → {token,squadName}
 POST /api/auth/login             body:{squadName,password}           → {token,squadName}

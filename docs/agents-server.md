@@ -27,15 +27,15 @@
 GET  /api/health                 → {status:'ok', version:'1.0.0'}
 GET  /api/troopers               → {troopers:[8 soldats], date}
 GET  /api/squad/:name            → {exists, hasPassword}
-GET  /api/squad/opponents/list?exclude=<name>
-                                → {squads:[{name,soldiers,power,level,source:'player'}]}
+GET  /api/squad/opponents/list?exclude=<name>&power=<n>&cycle=<n>&excludeBots=<ids>
+                                → {squads:[{name,soldiers,power,level,source:'player'|'bot',botId?}]}
 POST /api/auth/register          body:{squadName,password,founder{name,config,skill1Name,skill2Name}}
                                  → 201 {token, squadName}
 POST /api/auth/login             body:{squadName,password}
                                  → 200 {token, squadName}
 ```
 
-`/api/squad/opponents/list` expose les squads enregistrées pour le matchmaking. Tant que le serveur ne synchronise pas le HQ complet, chaque armée serveur contient uniquement le fondateur enregistré, donc power 5.
+`/api/squad/opponents/list` expose les squads enregistrées pour le matchmaking et ajoute des bots par paliers de power afin de garder une liste jouable quand il y a peu de joueurs. Tant que le serveur ne synchronise pas le HQ complet, chaque armée joueur serveur contient uniquement le fondateur enregistré, donc power 5. `cycle` change les seeds de bots après combat ; `excludeBots` est une liste CSV de `botId`/noms récemment combattus à éviter.
 
 ---
 

@@ -20,6 +20,7 @@ const UPGRADE_COSTS  = [4, 8, 16, 32, 48, 64, 96, 128];
 const RECRUIT_COSTS  = [15, 35, 80, 150, 220, 325, 450, 600, 790];
 const STARTING_TOKENS   = 250;
 const OPPONENT_COUNT    = 8;
+const MATCH_HISTORY_LIMIT = 48;
 const SIX_MONTHS_MS     = 6 * 30 * 24 * 60 * 60 * 1000; // approx 6 months
 const HIDDEN_WEAPON_NAMES = new Set(['Main nue']);
 const MAX_PERK_TIER       = 2;   // highest perk tier currently implemented
@@ -283,6 +284,7 @@ function normalizeOpponentSquad(raw, fallbackName, source) {
     name,
     soldiers,
     source: source || raw.source || 'player',
+    botId: raw.botId || null,
     level: raw.level || calcSquadLevel(soldiers),
     power: raw.power || calcSquadPower(soldiers),
   };
@@ -330,22 +332,42 @@ function applyTargetPower(soldiers, targetPower, rng) {
 
 function buildOpponentSelection({ mySquad, myPower, playerSquads, nonce }) {
   const tiers = getPowerTiers(myPower);
-  const picked = (playerSquads || [])
-    .map(s => normalizeOpponentSquad(s, s && s.name, 'player'))
+  const recentBots = loadOpponentMeta(mySquad.name).recentBots;
+  const recentBotSet = new Set(recentBots);
+  const available = (playerSquads || [])
+    .map(s => normalizeOpponentSquad(s, s && s.name, s && s.source))
     .filter(s => s && s.name !== mySquad.name)
-    .sort((a, b) => a.power - b.power || a.name.localeCompare(b.name))
-    .slice(0, OPPONENT_COUNT);
+    .filter(s => !isRecentBotOpponent(s, recentBotSet))
+    .map((s, idx) => ({ ...s, _matchIdx: idx }))
+    .sort((a, b) => a.power - b.power || a.name.localeCompare(b.name));
 
-  const selected = picked.slice();
-  for (const tier of tiers) {
-    if (selected.length >= OPPONENT_COUNT) break;
-    selected.push(generateEnemySquad('opp-' + todayKey() + '-' + mySquad.name + '-' + nonce + '-' + tier, tier));
-  }
+  const selected = [];
+  const used = new Set();
+  tiers.forEach((tier, idx) => {
+    if (selected.length >= OPPONENT_COUNT) return;
+    const lower = idx === 0 ? -Infinity : (tiers[idx - 1] + tier) / 2;
+    const upper = idx === tiers.length - 1 ? Infinity : (tier + tiers[idx + 1]) / 2;
+    const picked = pickSquadForPowerBucket(available, used, tier, lower, upper);
+    if (picked) {
+      used.add(picked._matchIdx);
+      selected.push(stripMatchMeta(picked));
+      return;
+    }
+    selected.push(generateFreshEnemySquad(
+      'opp-' + todayKey() + '-' + mySquad.name + '-' + nonce + '-' + idx + '-' + tier,
+      tier,
+      recentBotSet
+    ));
+  });
 
   let fill = 0;
-  while (selected.length < OPPONENT_COUNT) {
+  while (selected.length < OPPONENT_COUNT && fill < OPPONENT_COUNT * 3) {
     const tier = tiers[fill % tiers.length] || Math.max(5, myPower);
-    selected.push(generateEnemySquad('opp-fill-' + todayKey() + '-' + mySquad.name + '-' + nonce + '-' + fill, tier));
+    selected.push(generateFreshEnemySquad(
+      'opp-fill-' + todayKey() + '-' + mySquad.name + '-' + nonce + '-' + fill,
+      tier,
+      recentBotSet
+    ));
     fill += 1;
   }
 
@@ -354,27 +376,85 @@ function buildOpponentSelection({ mySquad, myPower, playerSquads, nonce }) {
     .sort((a, b) => a.power - b.power || a.name.localeCompare(b.name));
 }
 
+function stripMatchMeta(squad) {
+  const { _matchIdx, ...clean } = squad;
+  return clean;
+}
+
+function pickSquadForPowerBucket(squads, used, tier, lower, upper) {
+  const candidates = squads
+    .filter(s => !used.has(s._matchIdx) && s.power >= lower && s.power < upper)
+    .sort((a, b) => {
+      const da = Math.abs(a.power - tier);
+      const db = Math.abs(b.power - tier);
+      const sourceRank = (a.source === 'player' ? 0 : 1) - (b.source === 'player' ? 0 : 1);
+      return da - db || sourceRank || a.name.localeCompare(b.name);
+    });
+  return candidates[0] || null;
+}
+
+function botHistoryKeys(opp) {
+  if (!opp || opp.source !== 'bot') return [];
+  return [opp.botId, opp.name].filter(Boolean).map(String);
+}
+
+function isRecentBotOpponent(opp, recentBotSet) {
+  if (!opp || opp.source !== 'bot') return false;
+  return botHistoryKeys(opp).some(key => recentBotSet.has(key));
+}
+
+function generateFreshEnemySquad(baseSeed, targetPower, recentBotSet) {
+  let fallback = null;
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const bot = generateEnemySquad(baseSeed + '-' + attempt, targetPower);
+    fallback = bot;
+    if (!isRecentBotOpponent(bot, recentBotSet)) return bot;
+  }
+  return fallback;
+}
+
 function loadOpponentPack(squadName, myPower) {
   try {
     const raw = localStorage.getItem(MATCH_KEY(squadName));
     const parsed = raw ? JSON.parse(raw) : null;
-    if (!parsed || parsed.date !== todayKey() || parsed.myPower !== myPower || !Array.isArray(parsed.opponents)) {
+    if (!parsed || parsed.date !== todayKey() || parsed.myPower !== myPower || parsed.canRefresh || !Array.isArray(parsed.opponents)) {
       return null;
     }
     return parsed;
   } catch (_) { return null; }
 }
 
+function loadOpponentMeta(squadName) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(MATCH_KEY(squadName)) || 'null');
+    if (!parsed || parsed.date !== todayKey()) return { cycle: 0, recentBots: [] };
+    return {
+      cycle: Math.max(0, Number(parsed.cycle) || 0),
+      recentBots: Array.isArray(parsed.recentBots) ? parsed.recentBots.slice(0, MATCH_HISTORY_LIMIT) : [],
+    };
+  } catch (_) {
+    return { cycle: 0, recentBots: [] };
+  }
+}
+
 function saveOpponentPack(squadName, pack) {
   try { localStorage.setItem(MATCH_KEY(squadName), JSON.stringify(pack)); } catch (_) {}
 }
 
-function markOpponentPackRefreshable(squadName) {
+function markOpponentPackRefreshable(squadName, foughtOpponent) {
   try {
     const parsed = JSON.parse(localStorage.getItem(MATCH_KEY(squadName)) || 'null');
-    if (parsed && parsed.date === todayKey()) {
-      saveOpponentPack(squadName, { ...parsed, canRefresh: true });
-    }
+    const base = parsed && parsed.date === todayKey() ? parsed : { date: todayKey(), opponents: [] };
+    const foughtBotKeys = botHistoryKeys(foughtOpponent);
+    const recentBots = [...foughtBotKeys, ...(Array.isArray(base.recentBots) ? base.recentBots : [])]
+      .filter((key, idx, arr) => key && arr.indexOf(key) === idx)
+      .slice(0, MATCH_HISTORY_LIMIT);
+    saveOpponentPack(squadName, {
+      ...base,
+      canRefresh: true,
+      cycle: (Math.max(0, Number(base.cycle) || 0) + 1),
+      recentBots,
+    });
   } catch (_) {}
 }
 
@@ -582,30 +662,46 @@ function generateEnemySquad(seed, targetPower) {
   applyTargetPower(squad, wantedPower, rng);
   const name = FAKE_SQUAD_NAMES[Math.floor(rng() * FAKE_SQUAD_NAMES.length)] +
                ' #' + Math.floor(100 + rng() * 900);
-  return { name, level: calcSquadLevel(squad), soldiers: squad, power: calcSquadPower(squad), source: 'bot' };
+  return {
+    name,
+    botId: 'local-bot-' + hashStr(seed).toString(36),
+    level: calcSquadLevel(squad),
+    soldiers: squad,
+    power: calcSquadPower(squad),
+    source: 'bot',
+  };
 }
 
 // ── HQOpponentSelect (army-vs-army opponent picker) ─────────────────────────
+function buildAndSaveOpponentSelection(mySquad, myPower, players, nonceLabel) {
+  const meta = loadOpponentMeta(mySquad.name);
+  const nonce = meta.cycle + '-' + nonceLabel + '-' + (players ? players.length : 0);
+  const opponents = buildOpponentSelection({ mySquad, myPower, playerSquads: players, nonce });
+  saveOpponentPack(mySquad.name, {
+    date: todayKey(),
+    myPower,
+    canRefresh: false,
+    cycle: meta.cycle,
+    recentBots: meta.recentBots,
+    opponents,
+  });
+  return opponents;
+}
+
 function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
   const myPower = calcSquadPower(mySquad.soldiers);
   const [initialPack] = useState(() => loadOpponentPack(mySquad.name, myPower));
+  const [isLoadingOpponents, setIsLoadingOpponents] = useState(() => serverOnline && !initialPack);
   const [playerSquads, setPlayerSquads] = useState(() => loadLocalPlayerSquads(mySquad.name));
   const [opponents, setOpponents] = useState(() => {
     if (initialPack) return initialPack.opponents;
-    const initial = buildOpponentSelection({
-      mySquad,
-      myPower,
-      playerSquads: loadLocalPlayerSquads(mySquad.name),
-      nonce: 'initial',
-    });
-    saveOpponentPack(mySquad.name, { date: todayKey(), myPower, canRefresh: false, opponents: initial });
-    return initial;
+    if (serverOnline) return [];
+    return buildAndSaveOpponentSelection(mySquad, myPower, loadLocalPlayerSquads(mySquad.name), 'offline');
   });
 
   const rebuildOpponents = useCallback((players, nonce) => {
-    const next = buildOpponentSelection({ mySquad, myPower, playerSquads: players, nonce });
+    const next = buildAndSaveOpponentSelection(mySquad, myPower, players, nonce);
     setOpponents(next);
-    saveOpponentPack(mySquad.name, { date: todayKey(), myPower, canRefresh: false, opponents: next });
   }, [mySquad, myPower]);
 
   useEffect(() => {
@@ -613,12 +709,18 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
     async function loadPlayers() {
       let players = loadLocalPlayerSquads(mySquad.name);
       if (serverOnline && G.apiFetch) {
-        const { ok, data } = await G.apiFetch('/api/squad/opponents/list?exclude=' + encodeURIComponent(mySquad.name));
+        const meta = loadOpponentMeta(mySquad.name);
+        const query = '?exclude=' + encodeURIComponent(mySquad.name)
+          + '&power=' + encodeURIComponent(myPower)
+          + '&cycle=' + encodeURIComponent(meta.cycle)
+          + '&excludeBots=' + encodeURIComponent(meta.recentBots.join(','));
+        const { ok, data } = await G.apiFetch('/api/squad/opponents/list' + query);
         if (ok && data && Array.isArray(data.squads)) players = data.squads;
       }
       if (cancelled) return;
       setPlayerSquads(players);
-      if (!initialPack) rebuildOpponents(players, 'players-' + players.length);
+      if (!initialPack && serverOnline) rebuildOpponents(players, 'online');
+      setIsLoadingOpponents(false);
     }
     loadPlayers();
     return () => { cancelled = true; };
@@ -630,11 +732,15 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
 
       <h2 className="hq-section-title hq-opponents-title">Squad vs Squad</h2>
 
-      <div className="hq-opp-grid">
-        {opponents.map((opp, i) => (
-          <OpponentCard key={(opp.source || 'opp') + '-' + opp.name + '-' + i} opp={opp} myPower={myPower} onAttack={() => onAttack(opp)} />
-        ))}
-      </div>
+      {isLoadingOpponents ? (
+        <p className="hq-section-hint">Recherche d'adversaires...</p>
+      ) : (
+        <div className="hq-opp-grid">
+          {opponents.map((opp, i) => (
+            <OpponentCard key={(opp.source || 'opp') + '-' + (opp.botId || opp.name) + '-' + i} opp={opp} myPower={myPower} onAttack={() => onAttack(opp)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1318,7 +1424,7 @@ function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
       if (tokensWon > 0) {
         setHQ(prev => ({ ...prev, tokens: (prev.tokens || 0) + tokensWon }));
       }
-      markOpponentPackRefreshable(hq.name);
+      markOpponentPackRefreshable(hq.name, battleTarget);
       setSubpage(null);
       setBattleTarget(null);
     };

@@ -66,7 +66,7 @@ Tous les composants (renderer, SpriteCanvas, combat-sim, DB) échangent ce même
 
 Dans `hq.jsx`, le power d'une squad vaut `sum(4 + soldier.level)` : un soldat niveau 1 donne 5 power, puis chaque niveau de soldat ajoute 1 power.
 
-La sélection Armée vs Armée est persistée par squad dans `localStorage` (`squadron-matchmaking-<squad>`), datée au jour courant et verrouillée jusqu'à un combat ou au reset de minuit. Elle privilégie les armées joueurs : HQ locaux en offline, `/api/squad/opponents/list` en online. Les bots complètent ensuite les paliers de power.
+La sélection Armée vs Armée est persistée par squad dans `localStorage` (`squadron-matchmaking-<squad>`), datée au jour courant et verrouillée jusqu'à un combat ou au reset de minuit. Elle fonctionne par paliers de power : au plus une vraie squad par palier, puis des bots complètent les paliers vides. Offline, les HQ locaux sont utilisés puis complétés par bots locaux. Online, `/api/squad/opponents/list?exclude=<name>&power=<n>&cycle=<n>&excludeBots=<ids>` renvoie joueurs + bots serveur. Après un combat, le pack passe `canRefresh:true`, son `cycle` augmente, et les `botId`/noms récemment combattus sont gardés dans `recentBots` pour ne pas reproposer immédiatement le même bot.
 
 ---
 
