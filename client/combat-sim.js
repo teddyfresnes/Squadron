@@ -395,6 +395,20 @@
       return n;
     }
 
+    // Pick which death animation variant a kill should play. Heavy-impact
+    // weapons (shotguns, all heavies, top-tier snipers) "project" the body
+    // backward (Anims.dead with deathBackShift skid). Lighter weapons and
+    // melee/punch fall back cleanly (Anims.dead2 — hurt → pause → fall →
+    // ground bounce). Mirrors the user's brief: most kills => fall back,
+    // shotguns + some snipers => classic projection.
+    function pickDeadVariant(weaponStats) {
+      if (!weaponStats) return 'fall';
+      const cat = weaponStats.category;
+      if (cat === 'shotgun' || cat === 'heavy') return 'project';
+      if (cat === 'sniper' && (weaponStats.damageMax || 0) >= 6) return 'project';
+      return 'fall';
+    }
+
     function findTarget(self) {
       let best = null, bestD = Infinity;
       for (const e of all) {
@@ -1020,8 +1034,13 @@
             shotIndex: shot.index,
             shotCount: a.shots.length
           };
-          if (target && target.hp > 0) {
+          if (target) {
+            const targetAlive = target.hp > 0;
             const bodyPart = shot.part || 'torso';
+            // Push the shoot event even when the target is already a corpse
+            // from an earlier shot in the same burst — the trail, muzzle
+            // flash, and impact spread still render. `damage` is zeroed for
+            // corpse hits since HP is already 0.
             events.push({
               t: worldT, type: 'shoot',
               actorId: a.actorId, targetId: a.targetId,
@@ -1036,27 +1055,37 @@
               facing: actor.facing,
               hit: shot.hit,
               bodyPart: shot.hit ? bodyPart : null,
-              damage: shot.hit ? shot.damage : 0
+              damage: targetAlive && shot.hit ? shot.damage : 0,
+              corpseHit: !targetAlive && shot.hit
             });
             if (shot.hit) {
               target.bodyHits[bodyPart] = Math.min(2, (target.bodyHits[bodyPart] || 0) + 1);
-              target.hp = Math.max(0, target.hp - shot.damage);
-              if (target.hp <= 0) {
-                target.state = 'dead'; target.stateT = 0;
-                // Pick a death animation variant via the seeded RNG so the
-                // same battle replays identically. 'fall' → Anims.dead2 (stiff
-                // backward fall), 'project' → Anims.dead (projected/skid).
-                target.animState = { deadVariant: rng() < 0.5 ? 'fall' : 'project' };
-                events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: shot.damage });
+              if (targetAlive) {
+                target.hp = Math.max(0, target.hp - shot.damage);
+                if (target.hp <= 0) {
+                  target.state = 'dead'; target.stateT = 0;
+                  // Weapon-driven variant: shotgun/heavy/heavy-sniper project
+                  // the body backward; everything else falls back cleanly.
+                  target.animState = { deadVariant: pickDeadVariant(actor.weapon) };
+                  events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: shot.damage });
+                } else {
+                  target.state = 'hurt'; target.stateT = 0;
+                  events.push({
+                    t: worldT, type: 'hit',
+                    targetId: target.id, hp: target.hp,
+                    bodyPart,
+                    damage: shot.damage,
+                    bodyHits: Object.assign({}, target.bodyHits)
+                  });
+                }
               } else {
-                target.state = 'hurt'; target.stateT = 0;
-                events.push({
-                  t: worldT, type: 'hit',
-                  targetId: target.id, hp: target.hp,
-                  bodyPart,
-                  damage: shot.damage,
-                  bodyHits: Object.assign({}, target.bodyHits)
-                });
+                // Corpse re-hit (remaining burst shots landing on a body that
+                // was already killed earlier in the same burst): replay the
+                // dead animation from F0 so the body visibly twitches. Keep
+                // the original variant so projected corpses don't suddenly
+                // switch to fall-back mid-replay.
+                target.state = 'dead';
+                target.stateT = 0;
               }
             }
           }
@@ -1166,7 +1195,10 @@
               target.hp = Math.max(0, target.hp - a.damage);
               if (target.hp <= 0) {
                 target.state = 'dead'; target.stateT = 0;
-                target.animState = { deadVariant: rng() < 0.5 ? 'fall' : 'project' };
+                // Punch always falls back — `actor.weapon` still points at the
+                // last real gun the actor had, so we pass MELEE-01 stats so the
+                // variant picker sees the melee category and returns 'fall'.
+                target.animState = { deadVariant: pickDeadVariant(getWeaponStats('Main nue')) };
                 events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: a.damage });
               } else {
                 target.state = 'hurt'; target.stateT = 0;

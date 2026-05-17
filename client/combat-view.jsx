@@ -255,9 +255,16 @@
       if (onSelect) onSelect(s.id);
     }
 
+    // Visual selection (gold halo + bottom marker) is suppressed for dead
+    // soldiers — the cv-soldier <button> is positioned by s.x but the dead
+    // animation can drag the rendered body away (death rotation, deathBackShift,
+    // bounce), so the circle would dangle next to a corpse that's no longer
+    // there. Click still selects so the inspect panel can show their stats.
+    const showSelection = isSelected && s.state !== 'dead';
+
     return (
       <button type="button"
-              className={'cv-soldier' + (isActive ? ' is-active' : '') + (isSelected ? ' is-selected' : '')}
+              className={'cv-soldier' + (isActive ? ' is-active' : '') + (showSelection ? ' is-selected' : '')}
               style={{ left: layout.left, top: layout.top, width: layout.stageW, height: layout.stageH }}
               onClick={handleClick}
               aria-label={(s.name || 'Soldat') + ', niveau ' + (s.level || 1)}
@@ -265,7 +272,7 @@
         {s.state !== 'dead' && (
           <div className="cv-ground-shadow" style={{ top: shadowTop }} />
         )}
-        {isSelected && <div className="cv-selected-marker" />}
+        {showSelection && <div className="cv-selected-marker" />}
         <SpriteCanvas
           cfg={s.cfg}
           animKey={animKey}
