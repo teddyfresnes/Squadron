@@ -187,7 +187,7 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 | `'punch'` | Coup de poing mains nues (anticipation, frappe, impact, recovery). Damage à `Anims.punch.impactFrame` (F5) |
 | `'holster'` | Fin de combat : les survivants gagnants rangent leur arme (puis `victory`, puis `walk`/`run` mains nues) |
 | `'hurt'` | Vient d'être touché (dure `Anims.hurt.frames/fps`, puis → idle) |
-| `'dead'` | HP ≤ 0, animation finale |
+| `'dead'` | HP ≤ 0, animation finale. Le simulateur tire (RNG seedé) `animState.deadVariant ∈ {'project','fall'}` au moment du kill ; `combat-view.effectiveAnimKey` mappe `'fall'` → `Anims.dead2` (chute raide en arrière, pas de skid) et `'project'` → `Anims.dead` (projection + skid arrière). Les deux animations partagent durée et pose finale, donc tous les checks `animDuration('dead')` restent valides. |
 
 `stateT` = temps écoulé dans l'état courant (en secondes), passé à `frameForState()` dans combat-view.
 

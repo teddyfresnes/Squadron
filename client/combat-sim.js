@@ -1043,6 +1043,10 @@
               target.hp = Math.max(0, target.hp - shot.damage);
               if (target.hp <= 0) {
                 target.state = 'dead'; target.stateT = 0;
+                // Pick a death animation variant via the seeded RNG so the
+                // same battle replays identically. 'fall' → Anims.dead2 (stiff
+                // backward fall), 'project' → Anims.dead (projected/skid).
+                target.animState = { deadVariant: rng() < 0.5 ? 'fall' : 'project' };
                 events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: shot.damage });
               } else {
                 target.state = 'hurt'; target.stateT = 0;
@@ -1162,6 +1166,7 @@
               target.hp = Math.max(0, target.hp - a.damage);
               if (target.hp <= 0) {
                 target.state = 'dead'; target.stateT = 0;
+                target.animState = { deadVariant: rng() < 0.5 ? 'fall' : 'project' };
                 events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: a.damage });
               } else {
                 target.state = 'hurt'; target.stateT = 0;

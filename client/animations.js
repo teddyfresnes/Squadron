@@ -691,6 +691,60 @@
     }
   };
 
+  // ---------- DEAD 2 (stiff backward fall, no skid) ----------
+  // Same final pose as `dead` (deathAngle = -π/2, eyes closed, weapon dropped)
+  // but a much calmer trajectory: no `deathBackShift` (zero horizontal skid),
+  // no brutal hurt-style F0, no splayed kicking legs. The body just folds
+  // backward around its feet on an ease-in curve — knees soften (F0-F1),
+  // upper body tips faster (F2-F4), lands flat (F5), then settles. Eyes
+  // close on F1, weapon is released on F3 mid-fall so it leaves the hand
+  // before the body hits the ground.
+  Anims.dead2 = {
+    name: 'Dead (fall back)',
+    frames: 10,
+    fps: 14,
+    loop: false,
+    get: function (i) {
+      // `mark(..., 'dead', ...)` so the renderer applies its dead-pose logic
+      // (the angle adjustments and grip offsets keyed off motion === 'dead').
+      const d = mark(defaults(), 'dead', i);
+      const HALF_PI = Math.PI / 2;
+      const tiltSeq   = [-0.05, -0.20, -0.55, -0.95, -1.30, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI];
+      const fStepSeq  = [ 0,     0.1,   0.3,   0.4,   0.3,   0,        0,        0,        0,        0      ];
+      const fLiftSeq  = [ 0,     0.05,  0.20,  0.35,  0.30,  0,        0,        0,        0,        0      ];
+      const fBendSeq  = [ 0.10,  0.25,  0.50,  0.55,  0.40,  0,        0,        0,        0,        0      ];
+      const bStepSeq  = [ 0,     0,     0.05,  0.10,  0.05,  0,        0,        0,        0,        0      ];
+      const bLiftSeq  = [ 0,     0.05,  0.15,  0.20,  0.15,  0,        0,        0,        0,        0      ];
+      const bBendSeq  = [-0.05, -0.15, -0.30, -0.30, -0.15,  0,        0,        0,        0,        0      ];
+      const gripYSeq  = [ 1,     2,     3,     4,     5,     5,        5,        5,        5,        5      ];
+      const aimSeq    = [ 0.20,  0.30,  0.40,  0.40,  0.40,  0.40,     0.40,     0.40,     0.40,     0.40   ];
+      const bodyDYSeq = [ 0.5,   1,     1.5,   1,     0.5,   0,        0,        0,        0,        0      ];
+
+      d.deathAngle = tiltSeq[i] || 0;
+      d.deathBackShift = 0;  // KEY DIFFERENCE vs Anims.dead: no horizontal skid
+      const lying = i >= 5;
+      d.legs = {
+        front: 0,
+        back: 0,
+        frontStep: fStepSeq[i] || 0,
+        frontLift: fLiftSeq[i] || 0,
+        frontBend: fBendSeq[i] || 0,
+        backStep: bStepSeq[i] || 0,
+        backLift: bLiftSeq[i] || 0,
+        backBend: bBendSeq[i] || 0,
+        lying: lying,
+        lyingSpread: lying ? 1 : 0
+      };
+      d.gripOffset = { x: 0, y: gripYSeq[i] || 0 };
+      d.aimAngle = aimSeq[i] || 0;
+      d.bodyDY = bodyDYSeq[i] || 0;
+      d.eyesClosed = i >= 1;
+      d.weaponDropped = i >= 3;
+      d.bodyCollapsed = lying;
+      return d;
+    }
+  };
+
   // ---------- ROLL (8 frames) ----------
   Anims.roll = {
     name: 'Roll',
@@ -841,5 +895,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'punch', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'dead2', 'roll', 'punch', 'throw'];
 })();

@@ -229,10 +229,21 @@
     });
   }
 
+  // Resolves the actual Anims key from a soldier's state, expanding variants
+  // that share a state but use different animations (e.g. the 'dead' state
+  // has two variants: 'project' → Anims.dead, 'fall' → Anims.dead2).
+  function effectiveAnimKey(s) {
+    if (s.state === 'dead' && s.animState && s.animState.deadVariant === 'fall') {
+      return 'dead2';
+    }
+    return s.state;
+  }
+
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
   function ArenaSoldier({ s, arenaH, pxPerTile, spriteScale, xOffset, isActive, isSelected, showHpBar, onSelect }) {
     const SpriteCanvas = UI.SpriteCanvas;
-    const frame = frameForState(s.state, s.stateT, s);
+    const animKey = effectiveAnimKey(s);
+    const frame = frameForState(animKey, s.stateT, s);
     const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
     const life = hpPct(s);
     const hpLabel = hpText(s);
@@ -257,7 +268,7 @@
         {isSelected && <div className="cv-selected-marker" />}
         <SpriteCanvas
           cfg={s.cfg}
-          animKey={s.state}
+          animKey={animKey}
           frame={frame}
           scale={spriteScale}
           facing={s.facing}
