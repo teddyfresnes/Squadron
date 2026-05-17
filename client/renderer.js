@@ -728,6 +728,23 @@
 
   function customArmPose(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, arm, shoulder) {
     if (!arm) return null;
+    // Optional shoulder override (body-local sx/sy). When provided, the
+    // animation can re-anchor the arm origin away from the canonical torso
+    // shoulder — useful for poses like dead/sleep where the arm collapses
+    // toward the body-axis (matches the renderer's default weaponDropped
+    // shoulder at body-local (0, -7) but still allows custom hand/elbow).
+    const customShoulder = (arm.sx != null || arm.sy != null)
+      ? customArmPoint(
+          originX,
+          originY,
+          upperBodyDXLocal,
+          bodyDY,
+          bodyProfile,
+          arm.sx != null ? arm.sx : 0,
+          arm.sy != null ? arm.sy : 0
+        )
+      : null;
+    const effectiveShoulder = customShoulder || shoulder;
     const hand = customArmPoint(originX, originY, upperBodyDXLocal, bodyDY, bodyProfile, arm.hx, arm.hy);
     const elbow = (arm.ex != null || arm.ey != null)
       ? customArmPoint(
@@ -740,10 +757,10 @@
           arm.ey != null ? arm.ey : (arm.hy || 0) * 0.5
         )
       : {
-          x: Math.round((shoulder.x + hand.x) / 2),
-          y: Math.round((shoulder.y + hand.y) / 2) - 4
+          x: Math.round((effectiveShoulder.x + hand.x) / 2),
+          y: Math.round((effectiveShoulder.y + hand.y) / 2) - 4
         };
-    return { elbow, hand };
+    return { elbow, hand, shoulder: customShoulder };
   }
 
   function stanceLegs(frame, hold) {
@@ -958,7 +975,7 @@
     }
 
     if (backArmPose && !frame.tuck) {
-      drawBentArm(ctx, shoulderBack, backArmPose.elbow, backArmPose.hand, uniform, smooth, bodyProfile);
+      drawBentArm(ctx, backArmPose.shoulder || shoulderBack, backArmPose.elbow, backArmPose.hand, uniform, smooth, bodyProfile);
     } else if (supportHand && !frame.tuck) {
       const armElbow = elbowOffset(hold, 'support', motion, frame);
       const elbow = resolveElbow(shoulderBack, {
@@ -1032,7 +1049,7 @@
       };
       drawBentArm(ctx, shoulderFront, elbow, throwHand, uniform, smooth, bodyProfile);
     } else if (frontArmPose && !frame.tuck) {
-      drawBentArm(ctx, shoulderFront, frontArmPose.elbow, frontArmPose.hand, uniform, smooth, bodyProfile);
+      drawBentArm(ctx, frontArmPose.shoulder || shoulderFront, frontArmPose.elbow, frontArmPose.hand, uniform, smooth, bodyProfile);
     } else if (!frame.tuck) {
       // When the weapon is dropped (final death frames), override the
       // shoulder and hand to body-axis positions (body-local X = originX)
