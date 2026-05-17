@@ -696,13 +696,15 @@
       // running from shoulder (hy=-7) down to the hip (hy=+3). After the
       // -π/2 rotation this becomes a horizontal arm along the lying body.
       if (lying) {
-        // Shoulder override (sx/sy) moves the front-arm anchor from the
-        // canonical torso shoulder (body-local -3, -7) onto the body's
-        // central axis (0, -7) — same anchor the renderer uses for the
-        // default weaponDropped pose, "top middle of the body just below the
-        // head". The whole arm then lies straight along the body axis, with
-        // the hand reaching the hip / lower-back area.
-        d.frontArm = { sx: 0, sy: -7, hx: 0, hy: 3, ex: 0, ey: -2 };
+        // Shoulder stays at the body's central axis (sx=0, sy=-7) — "top
+        // middle of the body just below the head", same anchor the renderer
+        // uses for the default weaponDropped pose. The arm then drops to
+        // the back/ground side of the lying silhouette: elbow and hand both
+        // at body-local X = -3, which after the -π/2 rotation maps to the
+        // silhouette's lower edge (originY+30). The forearm (elbow → hand)
+        // is therefore flat on the ground, running straight along the lower
+        // back from mid-body out to the hip area.
+        d.frontArm = { sx: 0, sy: -7, hx: -3, hy: 3, ex: -3, ey: -2 };
       }
       return d;
     }
@@ -762,13 +764,15 @@
       // Same arm-along-body pose as Anims.dead (see comment there) — fires
       // only once the body is flat so it does not snap during the fall.
       if (lying) {
-        // Shoulder override (sx/sy) moves the front-arm anchor from the
-        // canonical torso shoulder (body-local -3, -7) onto the body's
-        // central axis (0, -7) — same anchor the renderer uses for the
-        // default weaponDropped pose, "top middle of the body just below the
-        // head". The whole arm then lies straight along the body axis, with
-        // the hand reaching the hip / lower-back area.
-        d.frontArm = { sx: 0, sy: -7, hx: 0, hy: 3, ex: 0, ey: -2 };
+        // Shoulder stays at the body's central axis (sx=0, sy=-7) — "top
+        // middle of the body just below the head", same anchor the renderer
+        // uses for the default weaponDropped pose. The arm then drops to
+        // the back/ground side of the lying silhouette: elbow and hand both
+        // at body-local X = -3, which after the -π/2 rotation maps to the
+        // silhouette's lower edge (originY+30). The forearm (elbow → hand)
+        // is therefore flat on the ground, running straight along the lower
+        // back from mid-body out to the hip area.
+        d.frontArm = { sx: 0, sy: -7, hx: -3, hy: 3, ex: -3, ey: -2 };
       }
       return d;
     }
