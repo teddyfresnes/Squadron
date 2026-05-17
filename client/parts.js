@@ -1061,17 +1061,20 @@
     const b = pack.base, s = pack.shade, h = pack.hl;
     const O = P.outline;
     if (opts.crushed) {
-      // Body lying flat — compress the pack on its side-depth axis, while
-      // keeping its length along the torso. This avoids chopping off the top.
+      // Body lying flat — gently compress the pack (3 columns vs 4 alive)
+      // along its side-depth axis. Stamp position aligns the right edge with
+      // the torso's left edge (tx) so there is no gap between the pack and
+      // the body after the death rotation.
       const tpl = [
-        'OO',
-        'BH',
-        'BB',
-        'BS',
-        'BB',
-        'OO'
+        '.OO',
+        'OBO',
+        'OHO',
+        'OBO',
+        'OSO',
+        'OBO',
+        '.OO'
       ];
-      E.stamp(ctx, tx - 3, ty + 1, tpl, { O, B: b, H: h, S: s });
+      E.stamp(ctx, tx - 2, ty + 1, tpl, { O, B: b, H: h, S: s });
       return;
     }
     // Behind torso, so sits on LEFT side (back). tx is torso TL.
@@ -1279,16 +1282,16 @@
     // backward so the stance keeps a little side-view spread.
     const frontWalk = typeof legOffsets.frontStep === 'number' || typeof legOffsets.frontLift === 'number';
     const backWalk = typeof legOffsets.backStep === 'number' || typeof legOffsets.backLift === 'number';
-    // Lying pose collapses both legs to the same body-local X so the
-    // X-offset between front/back doesn't become a Y-offset after the
-    // death rotation around the feet. A small body-local Y offset on the
-    // front leg becomes a small SCREEN-X spread after rotation — both legs
-    // stay at ground level but slightly visible side-by-side.
+    // Lying pose: the back leg sits on the body axis; the front leg drops
+    // down on SCREEN-Y (toward the body's back — which is on the ground when
+    // lying flat) via a body-local -X shift (after the death rotation, body-X
+    // becomes screen-Y). This avoids both legs overlapping while keeping them
+    // stacked rather than splayed sideways.
     const lying = legOffsets.lying === true;
     const spread = lying ? (legOffsets.lyingSpread || 0) : 0;
     const backX = tx + 3;
-    const frontX = lying ? tx + 3 : tx + 0;
-    const frontDY = lying ? -spread : 0;
+    const frontX = lying ? tx + 3 - spread : tx + 0;
+    const frontDY = 0;
     drawSideLeg(
       backX,
       backWalk ? ty : ty + legOffsets.back,
@@ -2407,11 +2410,12 @@
     if (!pack) return;
     opts = opts || {};
     if (opts.crushed) {
-      // Crushed slab under the lying body: thin on the side-depth axis, still
-      // long along the torso so the top of the pack does not collapse first.
-      fillRoundRect(ctx, tx - 3.05, ty + 1.32, 2.1, 6.65, 0.72, P.outline);
-      fillRoundRect(ctx, tx - 2.74, ty + 1.78, 1.42, 5.72, 0.48, pack.base);
-      strokeLine(ctx, tx - 2.06, ty + 2.18, tx - 2.06, ty + 7.08, pack.shade, 0.32);
+      // Lightly compressed slab under the lying body (~75% of the alive pack
+      // width, vs the previous 50%). Right edge aligned with the non-crushed
+      // pack (≈ tx + 0.92) so it stays flush against the torso.
+      fillRoundRect(ctx, tx - 2.08, ty + 1.32, 3.0, 6.65, 0.72, P.outline);
+      fillRoundRect(ctx, tx - 1.55, ty + 1.78, 2.05, 5.72, 0.48, pack.base);
+      strokeLine(ctx, tx - 0.32, ty + 2.18, tx - 0.32, ty + 7.08, pack.shade, 0.32);
       return;
     }
     fillRoundRect(ctx, tx - 3.08, ty + 1.18, 4.0, 6.95, 1.05, P.outline);
@@ -2578,14 +2582,14 @@
     // it. Walk keeps both hip anchors fixed and only shifts/lifts lower legs.
     const frontWalk = typeof legOffsets.frontStep === 'number' || typeof legOffsets.frontLift === 'number';
     const backWalk = typeof legOffsets.backStep === 'number' || typeof legOffsets.backLift === 'number';
-    // Lying pose: collapse both legs to the same X, then add a small Y offset
-    // on the front leg which becomes a small horizontal screen spread after
-    // the death rotation, keeping both legs flat on the ground line.
+    // Lying pose: back leg stays on the body axis, front leg drops down on
+    // SCREEN-Y via a body-local -X shift so it reads as the "near" leg below
+    // the back leg (see drawLegs above for the rotation/axis mapping).
     const lyingHD = legOffsets.lying === true;
     const spreadHD = lyingHD ? (legOffsets.lyingSpread || 0) : 0;
     const backHDX = tx + 4.35;
-    const frontHDX = lyingHD ? tx + 4.35 : tx + 1.75;
-    const frontHDY = lyingHD ? -spreadHD : 0;
+    const frontHDX = lyingHD ? tx + 4.35 - spreadHD : tx + 1.75;
+    const frontHDY = 0;
     drawSideLegHD(
       backHDX,
       backWalk ? ty : ty + legOffsets.back,

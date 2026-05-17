@@ -678,8 +678,10 @@
         backLift: backLiftSeq[i] || 0,
         backBend: backBendSeq[i] || 0,
         lying: lying,
-        // Slight spread so both legs are still discernible side-by-side.
-        lyingSpread: lying ? 1 : 0
+        // Small 2-unit stack so the front leg sits just under the back leg
+        // on screen (post-rotation). Bigger values pull the front leg out of
+        // the pelvis, which reads as a broken silhouette.
+        lyingSpread: lying ? 2 : 0
       };
       d.gripOffset = { x: gripXSeq[i] || 0, y: gripYSeq[i] || 0 };
       d.aimAngle = aimSeq[i] || 0;
@@ -687,6 +689,15 @@
       d.eyesClosed = true;
       d.weaponDropped = i >= 3;
       d.bodyCollapsed = lying;
+      // Once flat on the back, the front arm lies ALONG the body axis (not
+      // perpendicular to it) so the shoulder reads at its canonical anchor
+      // and the hand ends near the hip / lower-back area. Pre-rotation the
+      // arm is a vertical segment at body-local X = -3 (front shoulder X),
+      // running from shoulder (hy=-7) down to the hip (hy=+3). After the
+      // -π/2 rotation this becomes a horizontal arm along the lying body.
+      if (lying) {
+        d.frontArm = { hx: -3, hy: 3, ex: -3, ey: -2 };
+      }
       return d;
     }
   };
@@ -733,7 +744,8 @@
         backLift: bLiftSeq[i] || 0,
         backBend: bBendSeq[i] || 0,
         lying: lying,
-        lyingSpread: lying ? 1 : 0
+        // Same subtle 2-unit stack as Anims.dead (see comment there).
+        lyingSpread: lying ? 2 : 0
       };
       d.gripOffset = { x: 0, y: gripYSeq[i] || 0 };
       d.aimAngle = aimSeq[i] || 0;
@@ -741,6 +753,11 @@
       d.eyesClosed = i >= 1;
       d.weaponDropped = i >= 3;
       d.bodyCollapsed = lying;
+      // Same arm-along-body pose as Anims.dead (see comment there) — fires
+      // only once the body is flat so it does not snap during the fall.
+      if (lying) {
+        d.frontArm = { hx: -3, hy: 3, ex: -3, ey: -2 };
+      }
       return d;
     }
   };
