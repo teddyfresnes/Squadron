@@ -708,6 +708,111 @@
     }
   };
 
+  // ---------- PUNCH (bare-handed straight: anticipation → drive → impact → recover) ----------
+  // Reads the same Minitroopers vocabulary as the other front-arm anims, but
+  // sells the strike with three layers stacked on top of one another:
+  //   1. ARM ARC — front fist retracts to the chest (chamber), then explodes
+  //      forward along a straight horizontal line to peak extension at F5
+  //      (hx=10, arm fully extended ~38 px from the front shoulder). It then
+  //      retracts back along the same arc to the IDLE_BARE_FRONT guard.
+  //   2. BACK-ARM COUNTER — the rear arm reaches forward during the chamber
+  //      (jab feint), then whips back hard on the strike so the body twist
+  //      reads visually. Endpoints are IDLE_BARE_BACK so transitions snap-free.
+  //   3. WHOLE-BODY WEIGHT — bodyDY rises (crouch) and bodyDX shifts backward
+  //      during the wind-up, then both reverse on the strike (drop + lunge)
+  //      while forwardLean leans the upper body further forward than the
+  //      legs travel. Front leg steps forward (frontStep up to 1.2 — same cap
+  //      as `hurt`), back leg pivots opposite to anchor the lunge.
+  //
+  // Endpoints (F0 and F10) sit exactly at IDLE_BARE so transitions from/to
+  // idle/holster/drawWeapon have no snap. F6 holds the impact one extra frame
+  // for readability. Hit registration in combat-sim fires on F5.
+  Anims.punch = {
+    name: 'Punch',
+    frames: 11,
+    fps: 18,
+    loop: false,
+    impactFrame: 5,
+    get: function (i) {
+      const d = mark(defaults(), 'punch', i);
+      const seq = [
+        // F0  guard (IDLE_BARE)
+        { fHx:  6, fHy: -4, fEx:  0, fEy: -3,
+          bHx:  8, bHy: -6, bEx:  5, bEy: -3,
+          bDY:  0,    bDX:  0,    lean:  0,    hDY:  0,
+          fStep:  0,    fBend:  0,    bBend:  0    },
+        // F1  anticipation start — chin tucks, weight starts loading back
+        { fHx:  4, fHy: -5, fEx: -2, fEy: -4,
+          bHx:  9, bHy: -5, bEx:  6, bEy: -3,
+          bDY:  0.4,  bDX:  0.4,  lean: -0.3,  hDY:  0.3,
+          fStep: -0.2, fBend: -0.1, bBend:  0.4  },
+        // F2  full chamber — fist at chest, back arm forward as feint
+        { fHx: -1, fHy: -6, fEx: -5, fEy: -4,
+          bHx: 11, bHy: -4, bEx:  7, bEy: -2,
+          bDY:  0.9,  bDX:  0.7,  lean: -0.6,  hDY:  0.6,
+          fStep: -0.3, fBend: -0.15,bBend:  0.7  },
+        // F3  release — body launches forward, fist begins shooting out
+        { fHx:  2, fHy: -7, fEx: -3, fEy: -6,
+          bHx:  9, bHy: -5, bEx:  6, bEy: -3,
+          bDY:  0.1,  bDX: -0.2,  lean:  0.1,  hDY:  0.2,
+          fStep:  0.4, fBend:  0.2, bBend:  0.5  },
+        // F4  mid-extension — arm nearly straight, body lunged forward
+        { fHx:  7, fHy: -7, fEx:  2, fEy: -7,
+          bHx:  5, bHy: -4, bEx:  5, bEy: -3,
+          bDY: -0.4,  bDX: -0.8,  lean:  0.5,  hDY: -0.1,
+          fStep:  0.9, fBend:  0.5, bBend: -0.2  },
+        // F5  IMPACT — full extension, peak forward, damage lands here
+        { fHx: 10, fHy: -7, fEx:  5, fEy: -7,
+          bHx:  2, bHy: -3, bEx:  4, bEy: -2,
+          bDY: -0.7,  bDX: -1.5,  lean:  0.8,  hDY: -0.3,
+          fStep:  1.2, fBend:  0.6, bBend: -0.5  },
+        // F6  impact hold — one extra frame near peak for readability
+        { fHx:  9, fHy: -7, fEx:  4, fEy: -7,
+          bHx:  3, bHy: -3, bEx:  4, bEy: -2,
+          bDY: -0.5,  bDX: -1.2,  lean:  0.7,  hDY: -0.2,
+          fStep:  1.1, fBend:  0.55,bBend: -0.4  },
+        // F7  retract 1 — arm pulls back along the same arc
+        { fHx:  7, fHy: -6, fEx:  2, fEy: -5,
+          bHx:  5, bHy: -4, bEx:  5, bEy: -3,
+          bDY: -0.3,  bDX: -0.5,  lean:  0.4,  hDY: -0.1,
+          fStep:  0.7, fBend:  0.4, bBend: -0.2  },
+        // F8  recovery mid — body returns to balance
+        { fHx:  6, fHy: -5, fEx:  0, fEy: -4,
+          bHx:  7, bHy: -5, bEx:  5, bEy: -3,
+          bDY: -0.15, bDX:  0,    lean:  0.2,  hDY:  0,
+          fStep:  0.4, fBend:  0.2, bBend: -0.1  },
+        // F9  settle — almost back to guard
+        { fHx:  6, fHy: -4, fEx:  0, fEy: -3,
+          bHx:  8, bHy: -6, bEx:  5, bEy: -3,
+          bDY: -0.05, bDX:  0,    lean:  0.05, hDY:  0,
+          fStep:  0.15,fBend:  0.05,bBend: -0.05 },
+        // F10 guard (IDLE_BARE)
+        { fHx:  6, fHy: -4, fEx:  0, fEy: -3,
+          bHx:  8, bHy: -6, bEx:  5, bEy: -3,
+          bDY:  0,    bDX:  0,    lean:  0,    hDY:  0,
+          fStep:  0,   fBend:  0,   bBend:  0    }
+      ];
+      const p = seq[i] || seq[seq.length - 1];
+      d.showWeapon = false;
+      d.bodyDY = p.bDY;
+      d.bodyDX = p.bDX;
+      d.forwardLean = p.lean;
+      d.headDY = p.hDY;
+      d.frontArm = { hx: p.fHx, hy: p.fHy, ex: p.fEx, ey: p.fEy };
+      d.backArm  = { hx: p.bHx, hy: p.bHy, ex: p.bEx, ey: p.bEy };
+      d.legs = {
+        front: 0,
+        back: 0,
+        frontStep: p.fStep,
+        backStep: -p.fStep * 0.4,
+        frontBend: p.fBend,
+        backBend:  p.bBend
+      };
+      if (i === 5) d.punchImpact = true;
+      return d;
+    }
+  };
+
   // ---------- THROW GRENADE (6 frames) ----------
   Anims.throw = {
     name: 'Throw Grenade',
@@ -736,5 +841,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'roll', 'punch', 'throw'];
 })();

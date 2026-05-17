@@ -856,7 +856,7 @@
           const newHpFlashes = {};
           for (let i = lastEventIdx; i < battle.events.length; i++) {
             const ev = battle.events[i];
-            if (ev.type === 'shoot') {
+            if (ev.type === 'shoot' && !ev.melee) {
               const actor = battle.all.find(s => s.id === ev.actorId);
               const aimPart = ev.bodyPart || randomTrailPart(trailRng);
               const miss = ev.hit ? { x: 0, y: 0 } : trailMissOffset(trailRng, ev.ax, ev.tx);

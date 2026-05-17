@@ -68,7 +68,8 @@ battle.aliveCount('A')  // soldats vivants de l'équipe A
 | `shoot` | Dans la portée et magazine > 0 | aimDur + rafale visuelle + recovery + unaim |
 | `switch` | Arme courante vide et autre arme chargée disponible | animDur('holster') + animDur('drawWeapon') |
 | `reload` | Arme courante vide, pas d'autre arme chargée, mais réserve > 0 | `Anims.reload.durationForRounds(rounds)` |
-| `idle` | Pas de cible vivante, ou bare-handed (plus de balles nulle part) | 0.4 s (0.8 s pour bare-hands) |
+| `punch` | Bare-handed et cible vivante à portée (`MELEE-01.rangeMax = 1`) | `Anims.punch.frames / fps` |
+| `idle` | Pas de cible vivante (ou bare-handed sans cible) | 0.4 s (0.8 s pour bare-hands) |
 
 Après chaque action : `cooldown += duration + TURN_GAP (0.04s)`.
 
@@ -88,7 +89,7 @@ La rafale (`burst`) est cappée à la volée par `Math.min(burstCount, loaded)`,
 Quand le magasin courant atteint 0 lors du planning :
 1. **Switch** vers une autre arme chargée (priorité : celle qui a le plus de balles).
 2. Sinon **Reload** depuis la réserve (arme courante si elle a de la réserve, sinon switch d'abord vers une arme qui en a).
-3. Sinon **bare-hands** : `cfg.weaponIdx` passe sur `MELEE-01`, `outOfAmmo = true`, le soldat enchaîne des `idle` jusqu'à la fin du combat (pas de mécanique mêlée pour l'instant).
+3. Sinon **bare-hands** : `cfg.weaponIdx` passe sur `MELEE-01`, `outOfAmmo = true`. Le soldat s'approche de la cible la plus proche puis joue `Anims.punch` (anticipation → frappe → impact → récupération). Les dégâts (`damageMin/damageMax` de MELEE-01) sont appliqués à la frame `Anims.punch.impactFrame` (F5 par défaut). Si la cible disparaît, retour à `idle` (0.8 s).
 
 L'animation `Anims.reload` reçoit `animState.reloadRounds` ; `combat-view.frameForState` lit `framesForRounds(rounds)` pour clipper correctement sur la dernière frame quand le nombre de balles diffère du défaut.
 
@@ -170,6 +171,7 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 | `'shoot'` | Tir en cours |
 | `'unaim'` | Baisse l'arme après la fin d'une action de tir |
 | `'reload'` | Recharge : genou à terre, arme verticale, boucle `reloadRounds` balles, puis retour idle |
+| `'punch'` | Coup de poing mains nues (anticipation, frappe, impact, recovery). Damage à `Anims.punch.impactFrame` (F5) |
 | `'holster'` | Fin de combat : les survivants gagnants rangent leur arme (puis `victory`, puis `walk`/`run` mains nues) |
 | `'hurt'` | Vient d'être touché (dure `Anims.hurt.frames/fps`, puis → idle) |
 | `'dead'` | HP ≤ 0, animation finale |

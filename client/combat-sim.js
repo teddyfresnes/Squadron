@@ -501,6 +501,12 @@
       return false;
     }
 
+    // Bare-handed: the soldier has burned through every magazine and was
+    // swapped to MELEE-01 by the ammo planning step. Instead of standing
+    // around idling, walk into melee range and throw a punch. Damage is the
+    // weapon's damageMin/damageMax (currently 1) and lands on the impact
+    // frame of Anims.punch — so the swing reads as a real strike that hits
+    // exactly when the fist is fully extended.
     function planBareHandsAction(actor) {
       const meleeIdx = bareHandsWeaponIdx();
       if (meleeIdx != null && actor.cfg && actor.cfg.weaponIdx !== meleeIdx) {
@@ -508,11 +514,63 @@
       }
       actor.outOfAmmo = true;
       actor.aimed = false;
+
+      const target = findTarget(actor);
+      if (!target) {
+        const action = {
+          actorId: actor.id, type: 'idle',
+          startT: worldT, duration: IDLE_TURN_DURATION * 2
+        };
+        actor.cooldown = worldT + action.duration + TURN_GAP;
+        return action;
+      }
+
+      const dx = target.x - actor.x;
+      const d = Math.abs(dx);
+      actor.facing = dx >= 0 ? 1 : -1;
+
+      const meleeStats = getWeaponStats('Main nue') || getWeaponStats('MELEE-01');
+      const punchRange = Math.max(0.9, (meleeStats && meleeStats.rangeMax) || 1);
+
+      if (d > punchRange) {
+        const dir = sign(dx);
+        let stepDist = Math.min(MOVE_STEP_TILES, d - punchRange + 0.4);
+        stepDist = Math.max(0.5, stepDist);
+        let toX = clamp(actor.x + dir * stepDist, 0, ARENA_TILES);
+        const dist = Math.abs(toX - actor.x);
+        const dur = dist / SPEED_TILES_PER_SEC;
+        const moveAction = {
+          actorId: actor.id, type: 'move',
+          startT: worldT, duration: dur,
+          fromX: actor.x, toX, facing: actor.facing
+        };
+        moveAction.commit = function () { actor.x = toX; };
+        actor.cooldown = worldT + dur + TURN_GAP;
+        return moveAction;
+      }
+
+      // In range — throw a punch.
+      const punchAnim = window.Anims && window.Anims.punch;
+      const fps = (punchAnim && punchAnim.fps) || 18;
+      const frames = (punchAnim && punchAnim.frames) || 11;
+      const impactFrame = (punchAnim && punchAnim.impactFrame != null) ? punchAnim.impactFrame : 5;
+      const duration = frames / fps;
+      const impactT = impactFrame / fps;
+      const accuracy = meleeStats && meleeStats.accuracy != null ? meleeStats.accuracy : 0.8;
+      const hit = rng() < accuracy;
+      const part = hit ? rollHitPart(rng) : null;
+      const damage = hit ? rollDamage(meleeStats || { damageMin: 1, damageMax: 1 }, rng) : 0;
+
       const action = {
-        actorId: actor.id, type: 'idle',
-        startT: worldT, duration: IDLE_TURN_DURATION * 2
+        actorId: actor.id, targetId: target.id, type: 'punch',
+        startT: worldT, duration,
+        impactT, impacted: false,
+        hit, part, damage,
+        facing: actor.facing,
+        ax: actor.x, ay: actor.laneOffsetPx,
+        tx: target.x, ty: target.laneOffsetPx
       };
-      actor.cooldown = worldT + action.duration + TURN_GAP;
+      actor.cooldown = worldT + duration + TURN_GAP;
       return action;
     }
 
@@ -804,6 +862,10 @@
       } else if (action.type === 'reload') {
         actor.state = 'reload'; actor.stateT = 0;
         actor.animState = { reloadRounds: action.rounds };
+      } else if (action.type === 'punch') {
+        actor.facing = action.facing;
+        actor.state = 'punch'; actor.stateT = 0;
+        actor.animState = null;
       } else {
         actor.state = 'idle';
         actor.animState = null;
@@ -842,6 +904,14 @@
         // Hurt done — push cooldown forward so next action doesn't start immediately
         actor.cooldown = Math.max(actor.cooldown, worldT + (a.duration - a.elapsed) + TURN_GAP);
         if (a.type === 'shoot') { actor.state = 'aim'; actor.stateT = 0; }
+        else if (a.type === 'punch') {
+          // Aborting a punch mid-anim: drop back to idle and cancel the action so
+          // the soldier doesn't auto-finish a swing that already got interrupted.
+          actor.state = 'idle'; actor.stateT = 0;
+          a.duration = a.elapsed;
+          completed.add(a);
+          return;
+        }
         else { actor.state = 'idle'; actor.stateT = 0; }
       }
 
@@ -980,6 +1050,50 @@
           a.aborted = true;
           a.duration = a.elapsed;  // forces completion on this tick
         }
+      } else if (a.type === 'punch') {
+        actor.facing = a.facing;
+        if (actor.state !== 'punch') { actor.state = 'punch'; actor.stateT = 0; }
+        else actor.stateT += dt;
+        // Damage lands on the impact frame (full extension). Single hit, no burst.
+        if (!a.impacted && a.elapsed >= a.impactT) {
+          a.impacted = true;
+          const target = all.find(s => s.id === a.targetId);
+          if (target && target.hp > 0) {
+            const bodyPart = a.part || 'torso';
+            events.push({
+              t: worldT, type: 'shoot',
+              actorId: a.actorId, targetId: a.targetId,
+              ax: actor.x, ay: actor.laneOffsetPx,
+              tx: target.x, ty: target.laneOffsetPx,
+              shotIndex: 0, shotCount: 1,
+              weaponName: actor.weaponName,
+              weaponCategory: 'melee',
+              weaponType: 'unarmed',
+              shotProfile: 'melee',
+              facing: actor.facing,
+              hit: a.hit,
+              bodyPart: a.hit ? bodyPart : null,
+              damage: a.hit ? a.damage : 0,
+              melee: true
+            });
+            if (a.hit) {
+              target.bodyHits[bodyPart] = Math.min(2, (target.bodyHits[bodyPart] || 0) + 1);
+              target.hp = Math.max(0, target.hp - a.damage);
+              if (target.hp <= 0) {
+                target.state = 'dead'; target.stateT = 0;
+                events.push({ t: worldT, type: 'die', targetId: target.id, bodyPart, damage: a.damage });
+              } else {
+                target.state = 'hurt'; target.stateT = 0;
+                events.push({
+                  t: worldT, type: 'hit',
+                  targetId: target.id, hp: target.hp,
+                  bodyPart, damage: a.damage,
+                  bodyHits: Object.assign({}, target.bodyHits)
+                });
+              }
+            }
+          }
+        }
       } else if (a.type === 'idle') {
         if (actor.state !== 'idle') { actor.state = 'idle'; actor.stateT = 0; }
         else actor.stateT += dt;
@@ -996,6 +1110,9 @@
           actor.animState = null;
           actor.state = 'idle'; actor.stateT = 0;
         } else if (a.type === 'switch') {
+          actor.animState = null;
+          actor.state = 'idle'; actor.stateT = 0;
+        } else if (a.type === 'punch') {
           actor.animState = null;
           actor.state = 'idle'; actor.stateT = 0;
         }
