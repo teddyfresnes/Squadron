@@ -715,16 +715,19 @@
     }
   };
 
-  // ---------- DEAD 2 (instant hurt-impact → slow continuation → fall back) ----------
+  // ---------- DEAD 2 (instant hurt-impact → slow continuation → fall back → bounce) ----------
   // F0 lands directly on Anims.hurt's peak pose — same brutal one-frame snap
   // from standing into a full backward recoil that hurt uses (no buildup).
   // Then the body tips very slowly through the "almost pause" beat (F1-F3,
   // deltas of 0.01-0.03 rad/frame ≈ 1/10 of the fall speed) before losing
-  // balance and accelerating into the ground (F4-F8). F9-F11 lie settled.
+  // balance and accelerating into the ground (F4-F8). F9 slams flat. F10-F11
+  // are a small ground bounce — the body lifts a few px off the floor and
+  // settles back (driven by bodyDX, which becomes a screen-Y shift after
+  // the -π/2 rotation). F12 is the final rest pose.
   // No `deathBackShift` — only the deathAngle drives the motion.
   Anims.dead2 = {
     name: 'Dead (fall back)',
-    frames: 12,
+    frames: 13,
     fps: 14,
     loop: false,
     get: function (i) {
@@ -732,17 +735,21 @@
       // (the angle adjustments and grip offsets keyed off motion === 'dead').
       const d = mark(defaults(), 'dead', i);
       const HALF_PI = Math.PI / 2;
-      const tiltSeq   = [-0.50, -0.51, -0.53, -0.56, -0.62, -0.75, -0.92, -1.12, -1.35, -HALF_PI, -HALF_PI, -HALF_PI];
-      const fStepSeq  = [ 2.0,   2.0,   2.0,   2.0,   1.85,  1.5,   1.0,   0.5,   0.15,  0,        0,        0      ];
-      const fLiftSeq  = [ 0.50,  0.50,  0.48,  0.46,  0.40,  0.25,  0.10,  0,     0,     0,        0,        0      ];
-      const fBendSeq  = [ 0.70,  0.70,  0.68,  0.65,  0.55,  0.40,  0.22,  0.08,  0,     0,        0,        0      ];
-      const bStepSeq  = [-2.0,  -2.0,  -2.0,  -2.0,  -1.85, -1.5,  -1.0,  -0.5,  -0.15,  0,        0,        0      ];
-      const bLiftSeq  = [ 0.30,  0.30,  0.28,  0.26,  0.20,  0.10,  0.05,  0,     0,     0,        0,        0      ];
-      const bBendSeq  = [-0.60, -0.60, -0.58, -0.55, -0.45, -0.30, -0.15, -0.05,  0,     0,        0,        0      ];
-      const gripXSeq  = [ 5,     5,     5,     5,     4,     3,     2,     1,     0,     0,        0,        0      ];
-      const gripYSeq  = [-4,    -4,    -4,    -4,    -3,    -1,     0,     1,     3,     4,        4,        4      ];
-      const aimSeq    = [-1.20, -1.20, -1.18, -1.15, -0.95, -0.60, -0.20,  0.10,  0.30,  0.38,     0.40,     0.40   ];
-      const bodyDYSeq = [-2,    -2,    -2,    -2,    -1.5,  -1,    -0.5,   0,     0,     0,        0,        0      ];
+      const tiltSeq   = [-0.50, -0.51, -0.53, -0.56, -0.62, -0.75, -0.92, -1.12, -1.35, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI];
+      const fStepSeq  = [ 2.0,   2.0,   2.0,   2.0,   1.85,  1.5,   1.0,   0.5,   0.15,  0,        0,        0,        0      ];
+      const fLiftSeq  = [ 0.50,  0.50,  0.48,  0.46,  0.40,  0.25,  0.10,  0,     0,     0,        0,        0,        0      ];
+      const fBendSeq  = [ 0.70,  0.70,  0.68,  0.65,  0.55,  0.40,  0.22,  0.08,  0,     0,        0,        0,        0      ];
+      const bStepSeq  = [-2.0,  -2.0,  -2.0,  -2.0,  -1.85, -1.5,  -1.0,  -0.5,  -0.15,  0,        0,        0,        0      ];
+      const bLiftSeq  = [ 0.30,  0.30,  0.28,  0.26,  0.20,  0.10,  0.05,  0,     0,     0,        0,        0,        0      ];
+      const bBendSeq  = [-0.60, -0.60, -0.58, -0.55, -0.45, -0.30, -0.15, -0.05,  0,     0,        0,        0,        0      ];
+      const gripXSeq  = [ 5,     5,     5,     5,     4,     3,     2,     1,     0,     0,        0,        0,        0      ];
+      const gripYSeq  = [-4,    -4,    -4,    -4,    -3,    -1,     0,     1,     3,     4,        4,        4,        4      ];
+      const aimSeq    = [-1.20, -1.20, -1.18, -1.15, -0.95, -0.60, -0.20,  0.10,  0.30,  0.38,     0.40,     0.40,     0.40   ];
+      const bodyDYSeq = [-2,    -2,    -2,    -2,    -1.5,  -1,    -0.5,   0,     0,     0,        0,        0,        0      ];
+      // Ground bounce: F9 lands flush, F10 the body lifts 3 px off the floor,
+      // F11 it's halfway back down, F12 settled. bodyDX before the death
+      // rotation becomes a screen-Y shift after — negative = up on screen.
+      const bodyDXSeq = [ 0,     0,     0,     0,     0,     0,     0,     0,     0,     0,       -3,       -1,        0      ];
 
       d.deathAngle = tiltSeq[i] || 0;
       d.deathBackShift = 0;  // KEY DIFFERENCE vs Anims.dead: no horizontal skid
@@ -765,6 +772,7 @@
       d.gripOffset = { x: gripXSeq[i] || 0, y: gripYSeq[i] || 0 };
       d.aimAngle = aimSeq[i] || 0;
       d.bodyDY = bodyDYSeq[i] || 0;
+      d.bodyDX = bodyDXSeq[i] || 0;
       d.eyesClosed = true;         // closed from F0 — impact is instant
       d.weaponDropped = i >= 7;    // released mid-fall, before the body lands
       d.bodyCollapsed = lying;
