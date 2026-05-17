@@ -1229,11 +1229,17 @@
       return bend;
     };
 
-    const drawSideLeg = function (lx, ly, bend, front, stepX, lift) {
+    const drawSideLeg = function (lx, ly, bend, front, stepX, lift, lying) {
       const height = 6;
       const w = 5;
       const modernStep = typeof stepX === 'number';
-      const lowerShift = modernStep ? Math.round(step(stepX)) : (front ? -1 : step(bend));
+      // Lying pose drives the lower-leg shift from `bend` directly (no
+      // front-vs-back asymmetry, no stride). Bend < 0 angles the shin toward
+      // body-local -X — after the death rotation that maps to screen-DOWN,
+      // so the back leg's shin appears to fall toward the front leg.
+      const lowerShift = lying
+        ? Math.round(step(bend))
+        : (modernStep ? Math.round(step(stepX)) : (front ? -1 : step(bend)));
       const liftPx = Math.round(Math.max(0, Math.min(1.35, lift || 0)));
 
       for (let i = 0; i < height; i++) {
@@ -1298,7 +1304,8 @@
       legOffsets.backBend,
       false,
       backWalk ? legOffsets.backStep : null,
-      backWalk ? legOffsets.backLift : 0
+      backWalk ? legOffsets.backLift : 0,
+      lying
     );
     drawSideLeg(
       frontX,
@@ -1306,7 +1313,8 @@
       legOffsets.frontBend,
       true,
       frontWalk ? legOffsets.frontStep : null,
-      frontWalk ? legOffsets.frontLift : 0
+      frontWalk ? legOffsets.frontLift : 0,
+      lying
     );
 
     // Colored hip plate keeps the side-view silhouette solid without a
@@ -2535,7 +2543,7 @@
       if (bend < -1.85) return -1.85;
       return bend;
     };
-    const drawSideLegHD = function (lx, ly, bend, front, stepX, lift) {
+    const drawSideLegHD = function (lx, ly, bend, front, stepX, lift, lying) {
       const modernStep = typeof stepX === 'number';
       bend = step(bend);
       const stride = modernStep ? step(stepX) : 0;
@@ -2545,15 +2553,23 @@
       const fill = front ? pants.base : pants.shade;
       const hipX = lx;
       const hipY = ly + 0.2;
-      const kneeBaseX = front ? lx + 0.05 : lx + 0.18;
-      const footBaseX = front ? lx - 0.25 : lx + 0.45;
-      const kneeX = modernStep
-        ? kneeBaseX + stride * 0.45 + bend * 0.12
-        : (front ? lx + 0.05 - bend * 0.25 : lx + 0.18 + bend * 0.35);
+      // Lying pose: drop the front-vs-back baseline offsets so both legs
+      // render perfectly straight when bend=0. `bend` then directly shifts
+      // the foot in body-local X (which maps to screen-Y after the death
+      // rotation) — matches `drawSideLeg`'s pixel behaviour.
+      const kneeBaseX = lying ? lx : (front ? lx + 0.05 : lx + 0.18);
+      const footBaseX = lying ? lx : (front ? lx - 0.25 : lx + 0.45);
+      const kneeX = lying
+        ? lx
+        : (modernStep
+            ? kneeBaseX + stride * 0.45 + bend * 0.12
+            : (front ? lx + 0.05 - bend * 0.25 : lx + 0.18 + bend * 0.35));
       const kneeY = ly + 3.2 - (modernStep ? liftY * 0.35 : 0);
-      const footX = modernStep
-        ? footBaseX + stride
-        : (front ? lx - 0.25 - bend * 0.45 : lx + 0.45 + bend * 0.75);
+      const footX = lying
+        ? lx + bend
+        : (modernStep
+            ? footBaseX + stride
+            : (front ? lx - 0.25 - bend * 0.45 : lx + 0.45 + bend * 0.75));
       const footY = ly + 6.25 - (modernStep ? liftY : 0);
       const ankleY = footY - 0.55;
 
@@ -2596,7 +2612,8 @@
       legOffsets.backBend,
       false,
       backWalk ? legOffsets.backStep : null,
-      backWalk ? legOffsets.backLift : 0
+      backWalk ? legOffsets.backLift : 0,
+      lyingHD
     );
     drawSideLegHD(
       frontHDX,
@@ -2604,7 +2621,8 @@
       legOffsets.frontBend,
       true,
       frontWalk ? legOffsets.frontStep : null,
-      frontWalk ? legOffsets.frontLift : 0
+      frontWalk ? legOffsets.frontLift : 0,
+      lyingHD
     );
     // Small colored hip plate removes the old black center bridge.
     drawHipPlateHD();

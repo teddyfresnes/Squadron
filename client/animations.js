@@ -673,10 +673,14 @@
         back: 0,
         frontStep: frontStepSeq[i] || 0,
         frontLift: frontLiftSeq[i] || 0,
-        frontBend: frontBendSeq[i] || 0,
+        // Lying: front leg is forced straight (bend=0 + drawSideLeg's lying
+        // mode skips the front-leg's hardcoded incline). Back leg gets a
+        // small negative bend so its shin drops on screen-Y (body-local -X)
+        // and falls just behind the front leg.
+        frontBend: lying ? 0 : (frontBendSeq[i] || 0),
         backStep: backStepSeq[i] || 0,
         backLift: backLiftSeq[i] || 0,
-        backBend: backBendSeq[i] || 0,
+        backBend: lying ? -1 : (backBendSeq[i] || 0),
         lying: lying,
         // Small 2-unit stack so the front leg sits just under the back leg
         // on screen (post-rotation). Bigger values pull the front leg out of
@@ -748,10 +752,12 @@
         back: 0,
         frontStep: fStepSeq[i] || 0,
         frontLift: fLiftSeq[i] || 0,
-        frontBend: fBendSeq[i] || 0,
+        frontBend: lying ? 0 : (fBendSeq[i] || 0),
         backStep: bStepSeq[i] || 0,
         backLift: bLiftSeq[i] || 0,
-        backBend: bBendSeq[i] || 0,
+        // Same lying-bend override as Anims.dead — front leg straight, back
+        // leg's shin drops on screen toward the front leg.
+        backBend: lying ? -1 : (bBendSeq[i] || 0),
         lying: lying,
         // Same subtle 2-unit stack as Anims.dead (see comment there).
         lyingSpread: lying ? 2 : 0
