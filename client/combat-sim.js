@@ -34,6 +34,17 @@
   const AIM_DELAY_MIN = 0.38;           // minimum aim-up duration (covers short aim anims)
   const AIM_HOLD = 0.18;                // pause after aim anim ends, before first shot
 
+  // â”€â”€ Rocket launcher tunables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Bazooka-class heavy weapons fire a single visible rocket with a smoke
+  // trail. Hits explode at the target's feet and toss every nearby enemy up
+  // via the deadExplode animation; misses fly past and exit the arena.
+  const ROCKET_TRAVEL_T = 0.7;          // sim-time the rocket spends in the air
+  const ROCKET_AOE_TILES = 3;           // X-distance from impact for the AoE
+  const ROCKET_RECOVERY_T = 0.18;       // pause between impact and unaim
+  const ROCKET_TOSS_DMG_MIN = 1;        // fall damage rolled when a tossed body lands
+  const ROCKET_TOSS_DMG_MAX = 6;
+  const TOSS_LAND_FRAME = 11;           // deadExplode frame where the body hits the ground
+
   const LANE_OFFSETS = { front: 0, mid: -80, back: -180 };
   // Per-soldier Y spread within a lane so soldiers don't stack on one line.
   const LANE_Y_SPREAD = [0, 12, -12, 22, -22, 6, -6];
@@ -417,10 +428,86 @@
       return 'fall';
     }
 
+    // Bazooka-class weapons: launcher silhouette (RPG, AT4, Carl Gustaf,
+    // grenade launchers, MGL, Stinger, etc) but NOT beam weapons like the
+    // Lazor Cannon — they don't fire a physical rocket with a smoke trail.
+    function isRocketLauncher(weaponStats) {
+      if (!weaponStats) return false;
+      if (weaponStats.category !== 'heavy') return false;
+      if (weaponStats.weaponType === 'automatic') return false;
+      const text = [weaponStats.id, weaponStats.name]
+        .concat(weaponStats.aliases || []).filter(Boolean).join(' ').toLowerCase();
+      if (/lazor|laser|beam/.test(text)) return false;
+      return isLauncherLike(weaponStats);
+    }
+
+    // Switch a soldier into the airborne `tossed` state: they play the
+    // deadExplode anim (launch -> peak -> fall -> ground bounce) and then
+    // either die or wake up depending on the rolled fall damage. Any active
+    // shooter/reload/move action on them is aborted in place so they don't
+    // keep firing while flying.
+    function tossSoldier(s, impactX, rngFn) {
+      if (!s || s.hp <= 0) return;
+      const r = rngFn || rng;
+      const damage = ROCKET_TOSS_DMG_MIN + Math.floor(r() * (ROCKET_TOSS_DMG_MAX - ROCKET_TOSS_DMG_MIN + 1));
+      // Random toss height multiplier so a blast group doesn't lift in lockstep.
+      const height = 0.65 + r() * 0.85;
+      // Knock the body horizontally away from the blast a bit so survivors
+      // wake up in a slightly different spot than they were standing.
+      const knockTiles = (0.4 + r() * 0.6) * (s.x >= impactX ? 1 : -1);
+      s.state = 'tossed';
+      s.stateT = 0;
+      s.aimed = false;
+      s.reloadProgress = null;
+      s.animState = {
+        toss: {
+          damage,
+          height,
+          knockFromX: s.x,
+          knockToX: clamp(s.x + knockTiles, 0.5, ARENA_TILES - 0.5),
+          landed: false
+        }
+      };
+      // Cancel whatever this soldier was doing — they're airborne now.
+      for (const a of activeActions) {
+        if (a.actorId === s.id) {
+          a.aborted = true;
+          a.duration = a.elapsed;
+        }
+      }
+      const tossDur = animDur('deadExplode') || 1.15;
+      s.cooldown = Math.max(s.cooldown, worldT + tossDur + TURN_GAP);
+      events.push({
+        t: worldT, type: 'toss',
+        targetId: s.id,
+        damage,
+        height
+      });
+    }
+
+    function applyRocketAoE(shooter, impactX, impactY) {
+      if (!shooter) return;
+      const radius = ROCKET_AOE_TILES;
+      // Hit list resolved before any state mutation so the AoE order is
+      // deterministic regardless of which body the loop touches first.
+      const targets = [];
+      for (const s of all) {
+        if (s.team === shooter.team) continue;  // no friendly fire
+        if (s.hp <= 0) continue;
+        if (s.state === 'tossed') continue;     // already airborne, ignore
+        if (Math.abs(s.x - impactX) > radius) continue;
+        targets.push(s);
+      }
+      for (const s of targets) {
+        tossSoldier(s, impactX, rng);
+      }
+    }
+
     function findTarget(self) {
       let best = null, bestD = Infinity;
       for (const e of all) {
         if (e.team === self.team || e.hp <= 0) continue;
+        if (e.state === 'tossed') continue;  // wait for them to land before lining up a new shot
         const d = Math.abs(e.x - self.x);
         if (d < bestD) { best = e; bestD = d; }
       }
@@ -433,6 +520,7 @@
         if (s.hp <= 0) continue;
         if (s.cooldown > worldT) continue;
         if (s.state === 'hurt') continue;
+        if (s.state === 'tossed') continue;
         if (activeActions.some(a => a.actorId === s.id)) continue;
         if (!best) { best = s; continue; }
         if (s.cooldown < best.cooldown) { best = s; continue; }
@@ -755,21 +843,29 @@
       // Cap the burst by what's actually in the magazine so the soldier never
       // fires phantom rounds; the next planning turn will trigger a reload or
       // weapon switch via the ammo check above.
-      const burst = Math.max(1, Math.min(burstCount(w), ammoState.loaded));
+      const isRocket = isRocketLauncher(w);
+      const burst = isRocket ? 1 : Math.max(1, Math.min(burstCount(w), ammoState.loaded));
       const hitChance = w.accuracy != null ? w.accuracy : 0.5;
       const aimDur = Math.max(AIM_DELAY_MIN, actor.aimed ? 0 : animDur('aim'));
       const shotAnim = animDur('shoot');
       const unAimDur = animDur('unaim');
       const interval = shotInterval(w, burst);
-      const recovery = Math.max(shotAnim, 0.08);  // unaim starts right after shoot anim
+      const recovery = isRocket ? ROCKET_RECOVERY_T : Math.max(shotAnim, 0.08);
       const shotProfile = shotProfileKey(w);
 
       // Pre-roll shots so the action is a self-contained, deterministic plan.
+      // Rockets fly for ROCKET_TRAVEL_T between launch and impact; the single
+      // shot.atT marks the impact moment so AoE damage applies in sim time
+      // exactly when the view's rocket reaches the target.
+      const launchT = aimDur + AIM_HOLD;
       const shots = [];
       for (let i = 0; i < burst; i++) {
         const hit = rng() < hitChance;
+        const atT = isRocket
+          ? launchT + ROCKET_TRAVEL_T
+          : launchT + i * interval;
         shots.push({
-          atT: aimDur + AIM_HOLD + i * interval,  // small pause after aim before firing
+          atT,
           index: i,
           hit,
           part: hit ? rollHitPart(rng) : null,
@@ -793,6 +889,22 @@
         ax: actor.x, ay: actor.laneOffsetPx,
         tx: target.x, ty: target.laneOffsetPx
       };
+      if (isRocket) {
+        action.isRocket = true;
+        action.launchT = launchT;
+        action.launchEmitted = false;
+        // Pre-roll the miss exit so determinism is preserved. Miss rockets
+        // shoot past the target and keep flying horizontally off-screen; we
+        // pick a clear coordinate well outside the arena bounds.
+        const missDir = actor.facing >= 0 ? 1 : -1;
+        const missEndX = missDir > 0
+          ? ARENA_TILES + 6 + rng() * 3
+          : -6 - rng() * 3;
+        // Vertical scatter for a miss: ground level ± a small jitter.
+        const missEndY = target.laneOffsetPx + (rng() - 0.5) * 16;
+        action.missEndX = missEndX;
+        action.missEndY = missEndY;
+      }
       actor.aimed = true;
       actor.cooldown = worldT + duration + TURN_GAP;
       return action;
@@ -996,6 +1108,10 @@
     function driveAction(a, dt, completed) {
       const actor = all.find(s => s.id === a.actorId);
       if (!actor || actor.hp <= 0) { completed.add(a); return; }
+      // Tossed by a rocket blast mid-action: the body is airborne, the
+      // animation is driven by driveTossedSoldier. Drop the action entirely
+      // so a rifle in mid-burst doesn't keep emitting shoot events.
+      if (actor.state === 'tossed') { completed.add(a); return; }
 
       // Hurt freezes the action: no elapsed advance, no shots, then re-aim on recovery
       if (actor.state === 'hurt') {
@@ -1028,13 +1144,50 @@
         else actor.stateT += dt;
       } else if (a.type === 'shoot') {
         actor.facing = a.facing;
+        // Rocket launchers: emit a one-shot rocketLaunch event the moment the
+        // round leaves the muzzle. The view animates the rocket flight; the
+        // sim still resolves damage on the shot.atT (impact) tick below so
+        // gameplay timing stays bit-for-bit deterministic.
+        if (a.isRocket && !a.launchEmitted && a.elapsed >= a.launchT) {
+          a.launchEmitted = true;
+          const magState = actor.ammo && actor.ammo[actor.weaponName];
+          if (magState && magState.loaded > 0) magState.loaded -= 1;
+          actor.animState = {
+            shotProfile: a.shotProfile,
+            weaponCategory: a.weaponCategory,
+            weaponType: a.weaponType,
+            shotIndex: 0,
+            shotCount: 1
+          };
+          actor.state = 'shoot'; actor.stateT = 0;
+          const shot = a.shots[0];
+          const endX = shot.hit ? a.tx : a.missEndX;
+          const endY = shot.hit ? a.ty : a.missEndY;
+          events.push({
+            t: worldT, type: 'rocketLaunch',
+            actorId: a.actorId, targetId: a.targetId,
+            ax: actor.x, ay: actor.laneOffsetPx,
+            tx: a.tx, ty: a.ty,
+            endX, endY,
+            hit: shot.hit,
+            travelT: ROCKET_TRAVEL_T,
+            aoeRadius: ROCKET_AOE_TILES,
+            weaponName: actor.weaponName,
+            weaponCategory: a.weaponCategory,
+            weaponType: a.weaponType,
+            facing: actor.facing
+          });
+        }
         while (a.shotsFired < a.shots.length && a.elapsed >= a.shots[a.shotsFired].atT) {
           const shot = a.shots[a.shotsFired++];
           const target = all.find(s => s.id === a.targetId);
-          // Spend the round from the active magazine (decrement per shot fired
-          // for a smooth visual depletion in the inspect menu).
-          const magState = actor.ammo && actor.ammo[actor.weaponName];
-          if (magState && magState.loaded > 0) magState.loaded -= 1;
+          // Non-rocket: spend the round here at the per-shot tick. Rocket
+          // already decremented at launchT above so the magazine empties when
+          // the rocket leaves the tube, not when it lands.
+          if (!a.isRocket) {
+            const magState = actor.ammo && actor.ammo[actor.weaponName];
+            if (magState && magState.loaded > 0) magState.loaded -= 1;
+          }
           actor.animState = {
             shotProfile: a.shotProfile,
             weaponCategory: a.weaponCategory,
@@ -1042,7 +1195,26 @@
             shotIndex: shot.index,
             shotCount: a.shots.length
           };
-          if (target) {
+
+          if (a.isRocket) {
+            // Rocket impact: explosion at the locked-in target position. On a
+            // hit, the impact event spawns the explosion fx and the AoE tosses
+            // every enemy within ROCKET_AOE_TILES of the blast. On a miss, the
+            // rocket just keeps flying past — no explosion, no damage.
+            events.push({
+              t: worldT, type: 'rocketImpact',
+              actorId: a.actorId, targetId: a.targetId,
+              ax: actor.x, ay: actor.laneOffsetPx,
+              tx: a.tx, ty: a.ty,
+              hit: shot.hit,
+              weaponName: actor.weaponName,
+              weaponCategory: a.weaponCategory,
+              weaponType: a.weaponType
+            });
+            if (shot.hit) {
+              applyRocketAoE(actor, a.tx, a.ty);
+            }
+          } else if (target) {
             const targetAlive = target.hp > 0;
             const bodyPart = shot.part || 'torso';
             // Push the shoot event even when the target is already a corpse
@@ -1096,9 +1268,16 @@
               }
             }
           }
-          actor.state = 'shoot'; actor.stateT = 0;
+          if (!a.isRocket) {
+            actor.state = 'shoot'; actor.stateT = 0;
+          }
         }
 
+        // Rockets fire at a.launchT (when the rocket leaves the muzzle) but
+        // their shot.atT marks impact much later; aim->shoot must follow the
+        // launch, not the impact, otherwise the actor stays aimed while the
+        // rocket is mid-flight.
+        const firstShotT = a.isRocket ? a.launchT : a.shots[0].atT;
         if (a.elapsed >= a.unaimStartT) {
           actor.animState = {
             shotProfile: a.shotProfile,
@@ -1107,7 +1286,7 @@
           };
           actor.state = 'unaim';
           actor.stateT = a.elapsed - a.unaimStartT;
-        } else if (a.elapsed < a.shots[0].atT) {
+        } else if (a.elapsed < firstShotT) {
           // aim phase + hold: stay in aim pose until first shot fires
           if (actor.state !== 'aim') { actor.state = 'aim'; actor.stateT = 0; }
           else actor.stateT += dt;
@@ -1246,10 +1425,62 @@
       }
     }
 
+    function driveTossedSoldier(s, dt) {
+      const tossAnim = window.Anims && window.Anims.deadExplode;
+      const fps = (tossAnim && tossAnim.fps) || 14;
+      const frames = (tossAnim && tossAnim.frames) || 16;
+      const totalDur = frames / fps;
+      const landT = TOSS_LAND_FRAME / fps;
+      s.stateT += dt;
+      const toss = (s.animState && s.animState.toss) || null;
+      // Slide horizontally across the toss so the body lands a step away from
+      // where it was standing — picks up the blast direction set in tossSoldier.
+      if (toss && toss.knockFromX != null && toss.knockToX != null) {
+        const k = clamp(s.stateT / Math.max(0.001, landT), 0, 1);
+        s.x = lerp(toss.knockFromX, toss.knockToX, k);
+      }
+      // Apply fall damage at the landing frame: if it kills, fall through to
+      // the explode death variant (same animation, so the body just keeps
+      // playing through bounce -> rest). If survived, keep playing through to
+      // the end and then wake up in idle.
+      if (toss && !toss.landed && s.stateT >= landT) {
+        toss.landed = true;
+        const bodyPart = 'torso';
+        s.bodyHits[bodyPart] = Math.min(2, (s.bodyHits[bodyPart] || 0) + 1);
+        s.hp = Math.max(0, s.hp - toss.damage);
+        if (s.hp <= 0) {
+          // Continue the animation seamlessly as a death — keep the same
+          // anim key (deadExplode) so the visual is uninterrupted.
+          s.state = 'dead';
+          s.animState = Object.assign({}, s.animState, { deadVariant: 'explode' });
+          // fromToss tells combat-view to skip the secondary explosion fx —
+          // the rocket impact already detonated at impact time; this death is
+          // just the body landing.
+          events.push({ t: worldT, type: 'die', targetId: s.id, bodyPart, damage: toss.damage, deadVariant: 'explode', fromToss: true });
+        } else {
+          events.push({
+            t: worldT, type: 'hit',
+            targetId: s.id, hp: s.hp,
+            bodyPart, damage: toss.damage,
+            bodyHits: Object.assign({}, s.bodyHits),
+            fromToss: true
+          });
+        }
+      }
+      if (s.state === 'tossed' && s.stateT >= totalDur) {
+        // Survived the blast — back on their feet, take a moment to recover.
+        s.state = 'idle';
+        s.stateT = 0;
+        s.animState = null;
+        s.cooldown = Math.max(s.cooldown, worldT + 0.4);
+      }
+    }
+
     function driveInactiveAnimations(dt) {
       const activeIds = new Set(activeActions.map(a => a.actorId));
       for (const s of all) {
         if (activeIds.has(s.id)) continue;
+        if (s.state === 'tossed') { driveTossedSoldier(s, dt); continue; }
         if (s.state === 'dead') { s.stateT += dt; continue; }
         if (s.state === 'hurt') {
           s.stateT += dt;

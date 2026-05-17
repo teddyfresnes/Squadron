@@ -3005,9 +3005,42 @@ html, body {
 .cv-explosion-spark {
   stroke: rgba(255, 224, 126, 0.96);
 }
+/* ── Bazooka-class rockets ─────────────────────────────────────────────── */
+.cv-rockets {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+.cv-rocket-smoke {
+  fill: rgba(180, 168, 152, 0.85);
+  filter: blur(1.4px);
+}
+.cv-rocket-body {
+  fill: #2c2622;
+  stroke: rgba(255, 220, 150, 0.55);
+  stroke-width: 0.6;
+}
+.cv-rocket-tip {
+  fill: #d35a2a;
+  stroke: rgba(255, 240, 200, 0.75);
+  stroke-width: 0.5;
+}
+.cv-rocket-fins {
+  fill: #1b1814;
+}
+.cv-rocket-flame {
+  fill: rgba(255, 198, 96, 0.95);
+  filter: blur(0.6px);
+}
+.cv-soldier.is-tossed {
+  z-index: 6;
+  will-change: transform;
+}
 .cv-arena.is-paused .cv-bg,
 .cv-arena.is-paused .cv-soldier:not(.is-selected),
 .cv-arena.is-paused .cv-trails,
+.cv-arena.is-paused .cv-rockets,
 .cv-arena.is-paused .cv-explosions {
   filter: grayscale(0.76) saturate(0.42) brightness(0.82) contrast(0.92);
 }

@@ -53,6 +53,10 @@
     return v < lo ? lo : (v > hi ? hi : v);
   }
 
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
   function getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset) {
     const stageW = STAGE_W * spriteScale;
     const stageH = STAGE_H * spriteScale;
@@ -234,6 +238,10 @@
   // that share a state but use different animations under the same 'dead'
   // combat state.
   function effectiveAnimKey(s) {
+    // Tossed bodies (still alive, mid-flight from a rocket blast) reuse the
+    // deadExplode anim — same launch -> peak -> fall -> bounce arc. The sim
+    // converts the state to 'dead' on the landing frame if fall damage kills.
+    if (s.state === 'tossed') return 'deadExplode';
     if (s.state === 'dead' && s.animState && s.animState.deadVariant === 'explode') {
       return 'deadExplode';
     }
@@ -243,10 +251,14 @@
     return s.state;
   }
 
-  function flightOffsetY(animKey, frame, spriteScale) {
+  function flightOffsetY(animKey, frame, spriteScale, s) {
     const anim = window.Anims && window.Anims[animKey];
     if (!anim || typeof anim.flightY !== 'function') return 0;
-    return Math.round(anim.flightY(frame) * spriteScale);
+    // Tossed soldiers carry a random height multiplier so a blast group
+    // doesn't lift in lockstep (the user explicitly asked for varied heights,
+    // sometimes "tres haut"). The multiplier was rolled by tossSoldier().
+    const heightMult = (s && s.animState && s.animState.toss && s.animState.toss.height) || 1;
+    return Math.round(anim.flightY(frame) * spriteScale * heightMult);
   }
 
   // ── Soldier sprite, absolutely positioned on the arena ────────────────────
@@ -255,7 +267,7 @@
     const animKey = effectiveAnimKey(s);
     const frame = frameForState(animKey, s.stateT, s);
     const layout = getSoldierLayout(s, arenaH, pxPerTile, spriteScale, xOffset);
-    const flightY = flightOffsetY(animKey, frame, spriteScale);
+    const flightY = flightOffsetY(animKey, frame, spriteScale, s);
     const life = hpPct(s);
     const hpLabel = hpText(s);
     const shadowTop = Math.round(SHADOW_FOOT_Y * spriteScale);
@@ -277,12 +289,12 @@
 
     return (
       <button type="button"
-              className={'cv-soldier' + (isActive ? ' is-active' : '') + (showSelection ? ' is-selected' : '') + (animKey === 'deadExplode' ? ' is-exploding' : '')}
+              className={'cv-soldier' + (isActive ? ' is-active' : '') + (showSelection ? ' is-selected' : '') + (animKey === 'deadExplode' ? ' is-exploding' : '') + (s.state === 'tossed' ? ' is-tossed' : '')}
               style={soldierStyle}
               onClick={handleClick}
               aria-label={(s.name || 'Soldat') + ', niveau ' + (s.level || 1)}
               aria-pressed={isSelected}>
-        {s.state !== 'dead' && (
+        {s.state !== 'dead' && s.state !== 'tossed' && (
           <div className="cv-ground-shadow" style={{ top: shadowTop }} />
         )}
         {showSelection && <div className="cv-selected-marker" />}
@@ -722,6 +734,91 @@
     );
   }
 
+  // ── Rocket projectiles + smoke trail (bazooka-class weapons) ────────────
+  // Each rocket flies from the shooter's muzzle to its end point over
+  // `travelMs`. Hits end at the target's feet; misses keep going off-screen.
+  // A train of smoke puffs is emitted along the path, each fading as it ages,
+  // leaving the classic comet-tail look. World coords are stored on the
+  // rocket entry and resolved to pixels at render so a resize stays correct.
+  function RocketsLayer({ rockets, arenaW, arenaH, pxPerTile, spriteScale, xOffset, nowMs }) {
+    const laneScale = pxPerTile / BASE_TILE_PX;
+    const groundY = arenaH * GROUND_Y_RATIO;
+    function worldToPx(tx, ty) {
+      return {
+        x: xOffset + tx * pxPerTile,
+        // ty is laneOffsetPx in world (negative = "back/up the slope"). Match
+        // soldier vertical placement so rockets line up with sprites visually.
+        y: groundY + ty * laneScale - STAGE_H * spriteScale * 0.42
+      };
+    }
+    return (
+      <svg className="cv-rockets" width={arenaW} height={arenaH}
+           viewBox={`0 0 ${arenaW} ${arenaH}`} preserveAspectRatio="none">
+        {rockets.map(r => {
+          const age = nowMs - r.bornMs;
+          const t = clamp(age / r.travelMs, 0, 1);
+          const start = worldToPx(r.ax, r.ay);
+          const end = worldToPx(r.endX, r.endY);
+          // For misses, give the rocket extra arc so the comet sweeps past
+          // visibly even when the target is at similar y.
+          const arcPx = (r.hit ? 36 : 24) * spriteScale;
+          const x = lerp(start.x, end.x, t);
+          const arc = Math.sin(t * Math.PI) * arcPx;
+          const y = lerp(start.y, end.y, t) - arc;
+          // Path heading for sprite rotation.
+          const dxTotal = end.x - start.x;
+          const dyTotal = (end.y - start.y) - arcPx * Math.PI * Math.cos(t * Math.PI);
+          const angle = Math.atan2(dyTotal, dxTotal) * 180 / Math.PI;
+          // Smoke puffs along the trail. Fixed wallclock cadence so the spacing
+          // looks consistent regardless of the rocket's flight distance.
+          const puffEveryMs = 24;
+          const puffMaxAgeMs = 640;
+          const puffs = [];
+          for (let pAge = 0; pAge <= Math.min(age, puffMaxAgeMs); pAge += puffEveryMs) {
+            const emitAge = age - pAge;
+            if (emitAge < 0) break;
+            const emitT = clamp(emitAge / r.travelMs, 0, 1);
+            const ppx = lerp(start.x, end.x, emitT);
+            const ppyArc = Math.sin(emitT * Math.PI) * arcPx;
+            const ppy = lerp(start.y, end.y, emitT) - ppyArc;
+            const k = clamp(1 - pAge / puffMaxAgeMs, 0, 1);
+            puffs.push({
+              x: ppx,
+              y: ppy + pAge * 0.05 * spriteScale,   // gentle downward drift
+              r: (2.4 + (1 - k) * 7) * spriteScale,
+              alpha: 0.68 * k
+            });
+          }
+          const finished = t >= 1;
+          return (
+            <g key={r.key} className="cv-rocket-fx">
+              {puffs.map((p, i) => (
+                <circle key={i} className="cv-rocket-smoke"
+                        cx={p.x} cy={p.y}
+                        r={p.r} opacity={p.alpha} />
+              ))}
+              {!finished && (
+                <g transform={`translate(${x},${y}) rotate(${angle})`}>
+                  <polygon className="cv-rocket-fins"
+                           points={`${-7 * spriteScale},${-1.8 * spriteScale} ${-10 * spriteScale},${-3.4 * spriteScale} ${-10 * spriteScale},${3.4 * spriteScale} ${-7 * spriteScale},${1.8 * spriteScale}`} />
+                  <rect className="cv-rocket-body"
+                        x={-7 * spriteScale} y={-1.6 * spriteScale}
+                        width={11 * spriteScale} height={3.2 * spriteScale}
+                        rx={1.2 * spriteScale} />
+                  <polygon className="cv-rocket-tip"
+                           points={`${4 * spriteScale},${-1.6 * spriteScale} ${8.5 * spriteScale},0 ${4 * spriteScale},${1.6 * spriteScale}`} />
+                  <ellipse className="cv-rocket-flame"
+                           cx={-11.5 * spriteScale} cy={0}
+                           rx={3.6 * spriteScale} ry={1.4 * spriteScale} />
+                </g>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    );
+  }
+
   // ── Explosion overlay for explosive death variants ───────────────────────
   function ExplosionLayer({ explosions, arenaW, arenaH, pxPerTile, spriteScale, xOffset, nowMs }) {
     const laneScale = pxPerTile / BASE_TILE_PX;
@@ -735,11 +832,15 @@
           const k = 1 - t;
           const groundY = arenaH * GROUND_Y_RATIO + ex.y * laneScale;
           const x = xOffset + ex.x * pxPerTile;
-          const y = groundY - 42 * spriteScale;
+          // Rocket impacts explode at the target's feet ("sous ses pieds");
+          // body-explosion deaths still center on the chest like before.
+          const centerOffset = ex.atFeet ? 8 : 42;
+          const y = groundY - centerOffset * spriteScale;
           const dustY = groundY - 2 * spriteScale;
-          const ringR = (10 + 44 * t) * spriteScale;
-          const flashR = (8 + 18 * t) * spriteScale;
-          const smokeR = (16 + 34 * t) * spriteScale;
+          const scale = ex.scale || 1;
+          const ringR = (10 + 44 * t) * spriteScale * scale;
+          const flashR = (8 + 18 * t) * spriteScale * scale;
+          const smokeR = (16 + 34 * t) * spriteScale * scale;
           return (
             <g key={ex.key} className="cv-explosion-fx">
               <circle className="cv-explosion-smoke" cx={x} cy={y + 7 * spriteScale}
@@ -844,6 +945,7 @@
     const [arenaSize, setArenaSize] = useState({ w: 1200, h: 320 });
     const [, setTick] = useState(0);
     const [trails, setTrails] = useState([]);
+    const [rockets, setRockets] = useState([]);
     const [explosions, setExplosions] = useState([]);
     const [hpFlashes, setHpFlashes] = useState({});
     const [bannerShown, setBannerShown] = useState(false);
@@ -867,6 +969,7 @@
         setPauseMode(null);
         setHpFlashes({});
         setTrails([]);
+        setRockets([]);
         setExplosions([]);
         bannerShownRef.current = false;
         resultShownRef.current = false;
@@ -939,6 +1042,7 @@
         // Pull new shoot events into the trails list.
         if (battle.events.length > lastEventIdx) {
           const newOnes = [];
+          const newRockets = [];
           const newExplosions = [];
           const newHpFlashes = {};
           for (let i = lastEventIdx; i < battle.events.length; i++) {
@@ -978,7 +1082,7 @@
                 bornMs: now
               });
             }
-            if (ev.type === 'die' && ev.deadVariant === 'explode') {
+            if (ev.type === 'die' && ev.deadVariant === 'explode' && !ev.fromToss) {
               const target = battle.all.find(s => s.id === ev.targetId);
               if (target) {
                 newExplosions.push({
@@ -995,12 +1099,41 @@
                 });
               }
             }
+            if (ev.type === 'rocketLaunch') {
+              newRockets.push({
+                key: 'rk' + i,
+                ax: ev.ax, ay: ev.ay,
+                endX: ev.endX, endY: ev.endY,
+                hit: !!ev.hit,
+                travelMs: Math.max(60, Math.round((ev.travelT || 0.7) * 1000)),
+                bornMs: now
+              });
+            }
+            if (ev.type === 'rocketImpact' && ev.hit) {
+              newExplosions.push({
+                key: 'rkex' + i,
+                x: ev.tx,
+                y: ev.ty,
+                atFeet: true,
+                scale: 1.25,
+                sparks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(() => ({
+                  ang: trailRng() * Math.PI * 2,
+                  dist: 18 + trailRng() * 40,
+                  len: 5 + trailRng() * 12,
+                  w: 0.9 + trailRng() * 1.1
+                })),
+                bornMs: now
+              });
+            }
             if (ev.type === 'hit' || ev.type === 'die') {
               newHpFlashes[ev.targetId] = now + HP_FLASH_MS;
             }
           }
           if (newOnes.length) {
             setTrails(prev => prev.concat(newOnes));
+          }
+          if (newRockets.length) {
+            setRockets(prev => prev.concat(newRockets));
           }
           if (newExplosions.length) {
             setExplosions(prev => prev.concat(newExplosions));
@@ -1018,6 +1151,12 @@
         });
         setExplosions(prev => {
           const kept = prev.filter(ex => now - ex.bornMs < EXPLOSION_FX_MS);
+          return kept.length === prev.length ? prev : kept;
+        });
+        // Rockets live for their flight time plus a generous smoke-fade tail
+        // so the last puffs aren't snipped before fully fading out.
+        setRockets(prev => {
+          const kept = prev.filter(rk => now - rk.bornMs < rk.travelMs + 700);
           return kept.length === prev.length ? prev : kept;
         });
         setHpFlashes(prev => {
@@ -1114,6 +1253,10 @@
                        arenaW={arenaSize.w} arenaH={arenaSize.h}
                        pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
                        nowMs={nowMs} />
+          <RocketsLayer rockets={rockets}
+                        arenaW={arenaSize.w} arenaH={arenaSize.h}
+                        pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
+                        nowMs={nowMs} />
           <ExplosionLayer explosions={explosions}
                           arenaW={arenaSize.w} arenaH={arenaSize.h}
                           pxPerTile={pxPerTile} spriteScale={spriteScale} xOffset={xOffset}
