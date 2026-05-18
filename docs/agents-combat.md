@@ -137,16 +137,28 @@ aim (aimDur)
 
 **Hit** : `applyRocketAoE(shooter, tx, ty)` projette en l'air tous les ennemis (pas d'allié) vivants à `|x - tx| ≤ ROCKET_AOE_TILES (= 3 tuiles)` via `tossSoldier()` :
 - `state = 'tossed'` ; toute action en cours sur la cible est avortée (`a.duration = a.elapsed`)
-- `animState.toss = { damage ∈ [1,6], height ∈ [0.65, 1.5], knockFromX, knockToX, landed }`
+- `animState.toss = { damage, height ∈ [0.55, ~3.7], heightRatio ∈ [0,1], knockFromX, knockToX, landed }`
 - `cooldown = Math.max(cooldown, worldT + animDur('deadExplode'))`
 
-`driveTossedSoldier()` (appelée depuis `driveInactiveAnimations`) lerp la position X de `knockFromX` → `knockToX` sur `[0, landT = TOSS_LAND_FRAME/fps]`, puis applique les dégâts à `landT`. Si HP ≤ 0, bascule en `'dead'` en gardant `deadVariant: 'explode'` (même anim, transition invisible). Sinon, à la fin de l'anim (`frames/fps`), retour `'idle'` avec un cooldown de récupération de 0.4 s.
+**Hauteur de toss** : `height = 0.55 + min(rng, rng) * 1.35` (biais bas, mean ~1.0) + `20% chance` d'ajouter `0.4 + rng*1.4` (kicker, pour des envols spectaculaires). `combat-view.flightOffsetY` lit `s.animState.toss.height` et multiplie `deadExplode.flightY(frame)` — donc un soldat avec `height = 3.0` monte 3× plus haut que la trajectoire de base.
+
+**Dégâts de chute biaisés par la hauteur** : `rollFallDamage(rng, heightRatio)` mélange deux tirages :
+- `heightRatio = 0` (mini-pop) → `Math.min(a, b)` → quasi tout le temps 1-2
+- `heightRatio = 1` (envol max) → `Math.max(a, b)` → quasi tout le temps 5-6
+- entre les deux : interpolation via `mid = (a+b)/2`
+
+`driveTossedSoldier()` (appelée depuis `driveInactiveAnimations`) lerp la position X de `knockFromX` → `knockToX` sur `[0, landT = TOSS_LAND_FRAME/fps]`, puis applique les dégâts à `landT`. Si HP ≤ 0, bascule en `'dead'` en gardant `deadVariant: 'explode'` + `fromToss: true` (l'event `die` indique à la vue de ne PAS spawner une seconde explosion). Sinon, à la fin de l'anim (`frames/fps`), bascule en `'lain'` pour `1.0 + min(2.0, height*0.5) + rng*0.5` s, puis `'getUp'` (~1 s), puis `'idle'`.
 
 `combat-view.flightOffsetY(animKey, frame, spriteScale, s)` lit `s.animState.toss.height` pour multiplier `deadExplode.flightY(frame)` — un groupe touché par la même explosion ne décolle pas en bloc.
 
 **Tunables** : `ROCKET_TRAVEL_T`, `ROCKET_AOE_TILES`, `ROCKET_RECOVERY_T`, `ROCKET_TOSS_DMG_MIN/MAX`, `TOSS_LAND_FRAME` (combat-sim.js).
 
-**Rendu (combat-view.jsx)** : `RocketsLayer` (SVG, z-index 8) anime le sprite roquette + train de fumée (puff toutes les 24 ms, fade en 640 ms) sur le path parabolique entre `(ax, ay)` et `(endX, endY)`. Sur impact, `ExplosionLayer` reçoit une entrée avec `atFeet: true` (centre baissé à ~8 px au-dessus du sol au lieu de ~42) et `scale: 1.25` (rayons d'onde de choc agrandis).
+**Rendu (combat-view.jsx)** :
+- `RocketsLayer` (SVG, z-index 8) anime le sprite roquette (2.2× le scale de base, 3 couches de flamme) + train de fumée blanche dense (puffs toutes les 14 ms : halo flouté + corps + cœur). Le point de départ est résolu via `trailMuzzlePoint(r)` (même helper que les balles) pour partir du **muzzle de l'arme**, pas du centre du soldat. Arc parabolique entre `muzzlePx` et `worldToPx(endX, endY)`.
+- `ExplosionLayer` (DIV, z-index 9) — **sprite-based**. Deux variantes 50/50 (`trailRng() < 0.5`) :
+  - `'explosion'` : `assets/animations/explosion/{1..11,13..17}.png` (16 frames, 512×512, frame 12 absente du disque, mappée par `frameForIdx`).
+  - `'explosion2'` : `assets/animations/explosion2/{1..36}.png` (36 frames, 64×64, leading zeros déjà strippés).
+  Pour les impacts de roquette (`atFeet: true`), le bottom du sprite est ancré à `groundY + 4 * spriteScale` — donc l'explosion sort vraiment du sol pile où la roquette atterrit. Pour `deadVariant: 'explode'` (corps qui pète en l'air), `atFeet: false` garde l'ancien comportement (centre à ~42 px au-dessus du sol).
 
 ---
 
@@ -222,7 +234,9 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 | `'punch'` | Coup de poing mains nues (anticipation, frappe, impact, recovery). Damage à `Anims.punch.impactFrame` (F5) |
 | `'holster'` | Fin de combat : les survivants gagnants rangent leur arme (puis `victory`, puis `walk`/`run` mains nues) |
 | `'hurt'` | Vient d'être touché (dure `Anims.hurt.frames/fps`, puis → idle) |
-| `'tossed'` | Projeté en l'air par l'explosion d'une roquette AoE. Joue `Anims.deadExplode` (montée → pic → chute → rebond) via `combat-view.effectiveAnimKey`. À la frame d'atterrissage (`TOSS_LAND_FRAME = 11`) le simulateur tire `damage ∈ [1,6]` ; si HP ≤ 0 → bascule en `'dead'` (même clé d'anim) sans saut visuel, sinon retour `'idle'`. La hauteur est multipliée par `animState.toss.height ∈ [0.65, 1.5]` pour varier les trajectoires. |
+| `'tossed'` | Projeté en l'air par l'explosion d'une roquette AoE. Joue `Anims.deadExplode` via `combat-view.effectiveAnimKey`. À la frame d'atterrissage (`TOSS_LAND_FRAME = 11`) le simulateur tire `damage ∈ [1,6]` biaisé par `animState.toss.heightRatio` (haut → plus de 6 ; bas → plus de 1, voir `rollFallDamage()`). Si HP ≤ 0 → bascule en `'dead'` (même clé d'anim) sans saut visuel, sinon → `'lain'`. La hauteur `animState.toss.height` ∈ `[0.55, ~3.7]` (queue longue : 20 % de chance d'un gros bonus) multiplie `deadExplode.flightY(frame)` dans `combat-view.flightOffsetY`. |
+| `'lain'` | Survivant d'une roquette, allongé sur le dos, **yeux ouverts**, légère respiration (`bodyDY` oscille de 1 px). Boucle `Anims.lain` (12 frames @ 6 fps). Durée tirée à la transition `tossed → lain` : `1.0 + min(2.0, height*0.5) + rng*0.5` secondes (plus on a volé haut, plus on reste sonné). Verrouille `cooldown` jusqu'à la fin de `lain + getUp`. |
+| `'getUp'` | Transition `lain → idle` : `Anims.getUp` (10 frames @ 10 fps, ~1 s). Le `deathAngle` revient de `-π/2` à `0`, le soldat s'appuie sur son coude puis se met à genoux puis debout. Endpoint pose = IDLE bare-hands → aucun snap au retour `'idle'`. |
 | `'dead'` | HP ≤ 0, animation finale. Le simulateur tire (RNG seedé) `animState.deadVariant ∈ {'project','fall','explode'}` au moment du kill ; `combat-view.effectiveAnimKey` mappe `'fall'` → `Anims.dead2` (chute raide en arrière, pas de skid), `'project'` → `Anims.dead` (projection + skid arrière) et `'explode'` → `Anims.deadExplode` (projection verticale, ventre vers le sol à la montée puis membres vers le ciel à la retombée). |
 
 `deadVariant: 'explode'` est choisi pour les armes lourdes non automatiques et les armes de type launcher/grenade launcher ; les futures mines devront réutiliser cette même variante sans ajouter un nouvel état de combat.

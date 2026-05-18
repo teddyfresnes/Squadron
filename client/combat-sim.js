@@ -428,6 +428,35 @@
       return 'fall';
     }
 
+    // Fall damage rolled when a tossed body lands. Damage is in [1, 6] but
+    // the distribution is biased by `heightRatio` ∈ [0, 1]:
+    //   - heightRatio = 0 (tiny pop)  → heavily biased toward 1-2, 6 nearly impossible
+    //   - heightRatio = 1 (big launch) → heavily biased toward 5-6, 1 nearly impossible
+    // Implemented via a clipped beta-ish skew: draw two rolls and blend
+    // them based on the ratio so the curve shifts smoothly.
+    function rollFallDamage(r, heightRatio) {
+      const min = ROCKET_TOSS_DMG_MIN;
+      const max = ROCKET_TOSS_DMG_MAX;
+      const span = max - min;
+      // Bias: low ratio → take min-of-rolls (skew low). High ratio → take
+      // max-of-rolls (skew high). Mid → average them (uniform-ish).
+      const a = r();
+      const b = r();
+      const low = Math.min(a, b);
+      const high = Math.max(a, b);
+      const mid = (a + b) * 0.5;
+      let blended;
+      if (heightRatio <= 0.5) {
+        // ramp from pure-low at 0 to mid-blend at 0.5
+        const k = heightRatio / 0.5;
+        blended = lerp(low, mid, k);
+      } else {
+        const k = (heightRatio - 0.5) / 0.5;
+        blended = lerp(mid, high, k);
+      }
+      return min + Math.floor(blended * (span + 1 - 1e-9));
+    }
+
     // Bazooka-class weapons: launcher silhouette (RPG, AT4, Carl Gustaf,
     // grenade launchers, MGL, Stinger, etc) but NOT beam weapons like the
     // Lazor Cannon — they don't fire a physical rocket with a smoke trail.
@@ -449,9 +478,21 @@
     function tossSoldier(s, impactX, rngFn) {
       if (!s || s.hp <= 0) return;
       const r = rngFn || rng;
-      const damage = ROCKET_TOSS_DMG_MIN + Math.floor(r() * (ROCKET_TOSS_DMG_MAX - ROCKET_TOSS_DMG_MIN + 1));
-      // Random toss height multiplier so a blast group doesn't lift in lockstep.
-      const height = 0.65 + r() * 0.85;
+      // Toss height: most blasts lift bodies a normal amount, but a chunky
+      // tail of rolls send them WAY up. Triangular distribution biased to
+      // 0.8 with a long tail to ~3.0 of the deadExplode arc height.
+      // Using max-of-2 rng to bias low, then a 20% kicker that adds a big
+      // bonus so the body sometimes goes spectacularly high.
+      const baseRoll = Math.min(r(), r());            // bias toward smaller values
+      let height = 0.55 + baseRoll * 1.35;             // [0.55, 1.9]
+      if (r() < 0.20) height += 0.4 + r() * 1.4;       // 20% chance to add a "kicker" -> up to ~3.7
+      // Fall damage scales with height: a tiny pop should mostly tickle for
+      // 1-2, a big launch should mostly hurt for 5-6. We bias the [1,6]
+      // roll by interpolating between two triangular distributions weighted
+      // by a height ratio in [0, 1].
+      // heightRatio: 0 at height=0.55 (min toss) -> 1 at height=3.5 (very high).
+      const heightRatio = clamp((height - 0.55) / (3.5 - 0.55), 0, 1);
+      const damage = rollFallDamage(r, heightRatio);
       // Knock the body horizontally away from the blast a bit so survivors
       // wake up in a slightly different spot than they were standing.
       const knockTiles = (0.4 + r() * 0.6) * (s.x >= impactX ? 1 : -1);
@@ -463,6 +504,7 @@
         toss: {
           damage,
           height,
+          heightRatio,
           knockFromX: s.x,
           knockToX: clamp(s.x + knockTiles, 0.5, ARENA_TILES - 0.5),
           landed: false
@@ -507,7 +549,10 @@
       let best = null, bestD = Infinity;
       for (const e of all) {
         if (e.team === self.team || e.hp <= 0) continue;
-        if (e.state === 'tossed') continue;  // wait for them to land before lining up a new shot
+        // Skip targets that aren't standing yet — airborne, stunned, or
+        // getting up. Lining up a shot on a flat body is wasted time and
+        // looks weird in the run-up.
+        if (e.state === 'tossed' || e.state === 'lain' || e.state === 'getUp') continue;
         const d = Math.abs(e.x - self.x);
         if (d < bestD) { best = e; bestD = d; }
       }
@@ -521,6 +566,8 @@
         if (s.cooldown > worldT) continue;
         if (s.state === 'hurt') continue;
         if (s.state === 'tossed') continue;
+        if (s.state === 'lain') continue;
+        if (s.state === 'getUp') continue;
         if (activeActions.some(a => a.actorId === s.id)) continue;
         if (!best) { best = s; continue; }
         if (s.cooldown < best.cooldown) { best = s; continue; }
@@ -1110,8 +1157,12 @@
       if (!actor || actor.hp <= 0) { completed.add(a); return; }
       // Tossed by a rocket blast mid-action: the body is airborne, the
       // animation is driven by driveTossedSoldier. Drop the action entirely
-      // so a rifle in mid-burst doesn't keep emitting shoot events.
-      if (actor.state === 'tossed') { completed.add(a); return; }
+      // so a rifle in mid-burst doesn't keep emitting shoot events. Same
+      // treatment for lain (stunned on the ground) and getUp (rising).
+      if (actor.state === 'tossed' || actor.state === 'lain' || actor.state === 'getUp') {
+        completed.add(a);
+        return;
+      }
 
       // Hurt freezes the action: no elapsed advance, no shots, then re-aim on recovery
       if (actor.state === 'hurt') {
@@ -1468,11 +1519,43 @@
         }
       }
       if (s.state === 'tossed' && s.stateT >= totalDur) {
-        // Survived the blast — back on their feet, take a moment to recover.
+        // Survived the blast — lie stunned for a random stretch, then push
+        // back up via the getUp anim before returning to combat. The lain
+        // duration scales loosely with how high they were tossed (bigger
+        // impact → longer recovery).
+        const baseLain = 1.0;
+        const tossH = (toss && toss.height) || 1;
+        const lainDur = baseLain + Math.min(2.0, tossH * 0.5) + rng() * 0.5;
+        s.state = 'lain';
+        s.stateT = 0;
+        s.animState = Object.assign({}, s.animState || {}, {
+          lainDuration: lainDur,
+          lainStartT: worldT
+        });
+        // Lock the soldier out of acting until lain+getUp finishes.
+        const getUpDur = animDur('getUp') || 1.0;
+        s.cooldown = Math.max(s.cooldown, worldT + lainDur + getUpDur + 0.2);
+      }
+    }
+
+    function driveLainSoldier(s, dt) {
+      s.stateT += dt;
+      const ls = (s.animState && s.animState.lainDuration) || 1.5;
+      if (s.stateT >= ls) {
+        s.state = 'getUp';
+        s.stateT = 0;
+      }
+    }
+
+    function driveGetUpSoldier(s, dt) {
+      s.stateT += dt;
+      const dur = animDur('getUp') || 1.0;
+      if (s.stateT >= dur) {
         s.state = 'idle';
         s.stateT = 0;
         s.animState = null;
-        s.cooldown = Math.max(s.cooldown, worldT + 0.4);
+        // Tiny grace cooldown so the soldier doesn't snap straight into a shot.
+        s.cooldown = Math.max(s.cooldown, worldT + 0.15);
       }
     }
 
@@ -1481,6 +1564,8 @@
       for (const s of all) {
         if (activeIds.has(s.id)) continue;
         if (s.state === 'tossed') { driveTossedSoldier(s, dt); continue; }
+        if (s.state === 'lain')   { driveLainSoldier(s, dt);   continue; }
+        if (s.state === 'getUp')  { driveGetUpSoldier(s, dt);  continue; }
         if (s.state === 'dead') { s.stateT += dt; continue; }
         if (s.state === 'hurt') {
           s.stateT += dt;

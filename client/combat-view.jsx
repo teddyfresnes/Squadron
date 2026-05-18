@@ -294,7 +294,7 @@
               onClick={handleClick}
               aria-label={(s.name || 'Soldat') + ', niveau ' + (s.level || 1)}
               aria-pressed={isSelected}>
-        {s.state !== 'dead' && s.state !== 'tossed' && (
+        {s.state !== 'dead' && s.state !== 'tossed' && s.state !== 'lain' && (
           <div className="cv-ground-shadow" style={{ top: shadowTop }} />
         )}
         {showSelection && <div className="cv-selected-marker" />}
@@ -751,17 +751,32 @@
         y: groundY + ty * laneScale - STAGE_H * spriteScale * 0.42
       };
     }
+    // Resolve the launch position to the actual weapon muzzle tip instead of
+    // a body-center fallback, otherwise the rocket reads as appearing out of
+    // the soldier's chest. Uses the same helper bullet trails use.
+    function muzzleFor(r) {
+      const muzzle = trailMuzzlePoint(r);
+      const stageLeft = xOffset + r.ax * pxPerTile - (STAGE_W * spriteScale) / 2;
+      const stageTop = groundY + r.ay * laneScale - STAGE_H * spriteScale;
+      if (muzzle) {
+        return {
+          x: stageLeft + muzzle.x * spriteScale,
+          y: stageTop + muzzle.y * spriteScale
+        };
+      }
+      return worldToPx(r.ax, r.ay);
+    }
     return (
       <svg className="cv-rockets" width={arenaW} height={arenaH}
            viewBox={`0 0 ${arenaW} ${arenaH}`} preserveAspectRatio="none">
         {rockets.map(r => {
           const age = nowMs - r.bornMs;
           const t = clamp(age / r.travelMs, 0, 1);
-          const start = worldToPx(r.ax, r.ay);
+          const start = muzzleFor(r);
           const end = worldToPx(r.endX, r.endY);
           // For misses, give the rocket extra arc so the comet sweeps past
           // visibly even when the target is at similar y.
-          const arcPx = (r.hit ? 36 : 24) * spriteScale;
+          const arcPx = (r.hit ? 42 : 28) * spriteScale;
           const x = lerp(start.x, end.x, t);
           const arc = Math.sin(t * Math.PI) * arcPx;
           const y = lerp(start.y, end.y, t) - arc;
@@ -769,47 +784,69 @@
           const dxTotal = end.x - start.x;
           const dyTotal = (end.y - start.y) - arcPx * Math.PI * Math.cos(t * Math.PI);
           const angle = Math.atan2(dyTotal, dxTotal) * 180 / Math.PI;
-          // Smoke puffs along the trail. Fixed wallclock cadence so the spacing
-          // looks consistent regardless of the rocket's flight distance.
-          const puffEveryMs = 24;
-          const puffMaxAgeMs = 640;
+          // Smoke puffs along the trail. Dense + white, drifting up and
+          // expanding as they age so the trail reads from the back row.
+          const puffEveryMs = 14;
+          const puffMaxAgeMs = 900;
           const puffs = [];
           for (let pAge = 0; pAge <= Math.min(age, puffMaxAgeMs); pAge += puffEveryMs) {
             const emitAge = age - pAge;
             if (emitAge < 0) break;
             const emitT = clamp(emitAge / r.travelMs, 0, 1);
+            // Puff origin = position the rocket was at when this puff was emitted.
             const ppx = lerp(start.x, end.x, emitT);
             const ppyArc = Math.sin(emitT * Math.PI) * arcPx;
             const ppy = lerp(start.y, end.y, emitT) - ppyArc;
             const k = clamp(1 - pAge / puffMaxAgeMs, 0, 1);
+            // Each puff grows + drifts upward as it ages so the trail
+            // billows like real exhaust smoke.
+            const ageK = 1 - k;
             puffs.push({
-              x: ppx,
-              y: ppy + pAge * 0.05 * spriteScale,   // gentle downward drift
-              r: (2.4 + (1 - k) * 7) * spriteScale,
-              alpha: 0.68 * k
+              x: ppx + (pAge * 0.012 * spriteScale),
+              y: ppy - pAge * 0.04 * spriteScale,
+              r: (6 + ageK * 16) * spriteScale,
+              alpha: 0.85 * k
             });
           }
           const finished = t >= 1;
+          // Rocket sprite scale — bumped 2.2x compared to the first pass so
+          // the projectile reads clearly during the 0.7s flight.
+          const RS = 2.2;
           return (
             <g key={r.key} className="cv-rocket-fx">
               {puffs.map((p, i) => (
-                <circle key={i} className="cv-rocket-smoke"
-                        cx={p.x} cy={p.y}
-                        r={p.r} opacity={p.alpha} />
+                <g key={i}>
+                  <circle className="cv-rocket-smoke-halo"
+                          cx={p.x} cy={p.y}
+                          r={p.r * 1.4} opacity={p.alpha * 0.35} />
+                  <circle className="cv-rocket-smoke"
+                          cx={p.x} cy={p.y}
+                          r={p.r} opacity={p.alpha} />
+                  <circle className="cv-rocket-smoke-core"
+                          cx={p.x - 1 * spriteScale} cy={p.y - 1 * spriteScale}
+                          r={p.r * 0.55} opacity={p.alpha * 0.85} />
+                </g>
               ))}
               {!finished && (
                 <g transform={`translate(${x},${y}) rotate(${angle})`}>
                   <polygon className="cv-rocket-fins"
-                           points={`${-7 * spriteScale},${-1.8 * spriteScale} ${-10 * spriteScale},${-3.4 * spriteScale} ${-10 * spriteScale},${3.4 * spriteScale} ${-7 * spriteScale},${1.8 * spriteScale}`} />
+                           points={`${-7 * RS * spriteScale},${-1.8 * RS * spriteScale} ${-10 * RS * spriteScale},${-3.6 * RS * spriteScale} ${-10 * RS * spriteScale},${3.6 * RS * spriteScale} ${-7 * RS * spriteScale},${1.8 * RS * spriteScale}`} />
                   <rect className="cv-rocket-body"
-                        x={-7 * spriteScale} y={-1.6 * spriteScale}
-                        width={11 * spriteScale} height={3.2 * spriteScale}
-                        rx={1.2 * spriteScale} />
+                        x={-7 * RS * spriteScale} y={-1.7 * RS * spriteScale}
+                        width={11 * RS * spriteScale} height={3.4 * RS * spriteScale}
+                        rx={1.3 * RS * spriteScale} />
                   <polygon className="cv-rocket-tip"
-                           points={`${4 * spriteScale},${-1.6 * spriteScale} ${8.5 * spriteScale},0 ${4 * spriteScale},${1.6 * spriteScale}`} />
+                           points={`${4 * RS * spriteScale},${-1.7 * RS * spriteScale} ${9 * RS * spriteScale},0 ${4 * RS * spriteScale},${1.7 * RS * spriteScale}`} />
+                  {/* Bright twin-cone exhaust flame at the tail */}
+                  <ellipse className="cv-rocket-flame-outer"
+                           cx={-13 * RS * spriteScale} cy={0}
+                           rx={5.5 * RS * spriteScale} ry={2.2 * RS * spriteScale} />
                   <ellipse className="cv-rocket-flame"
-                           cx={-11.5 * spriteScale} cy={0}
-                           rx={3.6 * spriteScale} ry={1.4 * spriteScale} />
+                           cx={-12 * RS * spriteScale} cy={0}
+                           rx={3.6 * RS * spriteScale} ry={1.4 * RS * spriteScale} />
+                  <ellipse className="cv-rocket-flame-core"
+                           cx={-11 * RS * spriteScale} cy={0}
+                           rx={2 * RS * spriteScale} ry={0.7 * RS * spriteScale} />
                 </g>
               )}
             </g>
@@ -819,60 +856,65 @@
     );
   }
 
+  // Two interchangeable explosion sequences live under
+  // assets/animations/. One is picked 50/50 per blast in the event handler.
+  // The 'explosion' set is 16 large pixel-art frames (frame 12 missing on
+  // disk — files numbered 1..11, 13..17). The 'explosion2' set is 36 small
+  // burst frames (1..36 contiguous, leading zeros stripped).
+  const EXPLOSION_VARIANTS = {
+    explosion:  { count: 16, dir: 'assets/animations/explosion/',  baseSize: 160, frameForIdx: function (i) { return i < 11 ? (i + 1) : (i + 2); } },
+    explosion2: { count: 36, dir: 'assets/animations/explosion2/', baseSize: 220, frameForIdx: function (i) { return i + 1; } }
+  };
+  function explosionFrameSrc(variant, i) {
+    const v = EXPLOSION_VARIANTS[variant] || EXPLOSION_VARIANTS.explosion;
+    return v.dir + v.frameForIdx(i) + '.png';
+  }
+
   // ── Explosion overlay for explosive death variants ───────────────────────
   function ExplosionLayer({ explosions, arenaW, arenaH, pxPerTile, spriteScale, xOffset, nowMs }) {
     const laneScale = pxPerTile / BASE_TILE_PX;
     return (
-      <svg className="cv-explosions" width={arenaW} height={arenaH}
-           viewBox={`0 0 ${arenaW} ${arenaH}`} preserveAspectRatio="none">
+      <div className="cv-explosions" style={{ width: arenaW, height: arenaH }}>
         {explosions.map(ex => {
           const age = nowMs - ex.bornMs;
           const t = clamp(age / EXPLOSION_FX_MS, 0, 1);
           if (t >= 1) return null;
-          const k = 1 - t;
+          const variantKey = ex.variant || 'explosion';
+          const variant = EXPLOSION_VARIANTS[variantKey] || EXPLOSION_VARIANTS.explosion;
           const groundY = arenaH * GROUND_Y_RATIO + ex.y * laneScale;
           const x = xOffset + ex.x * pxPerTile;
-          // Rocket impacts explode at the target's feet ("sous ses pieds");
-          // body-explosion deaths still center on the chest like before.
-          const centerOffset = ex.atFeet ? 8 : 42;
-          const y = groundY - centerOffset * spriteScale;
-          const dustY = groundY - 2 * spriteScale;
+          // Rocket impacts blast at the target's feet ("sous ses pieds") —
+          // the explosion center sits just above the ground line so the
+          // sprite straddles the impact point. Body-explosion deaths can
+          // still float higher via ex.atFeet === false.
+          const baseSize = variant.baseSize;
           const scale = ex.scale || 1;
-          const ringR = (10 + 44 * t) * spriteScale * scale;
-          const flashR = (8 + 18 * t) * spriteScale * scale;
-          const smokeR = (16 + 34 * t) * spriteScale * scale;
+          const size = baseSize * spriteScale * scale;
+          // Anchor the bottom of the sprite slightly above the ground line
+          // so the fire pools at the impact point instead of floating up
+          // at chest height. The user explicitly asked: "exploser pile la
+          // ou la roquette atterrit".
+          const bottomY = ex.atFeet
+            ? groundY + 4 * spriteScale
+            : groundY - 42 * spriteScale + size / 2;
+          const y = bottomY - size / 2;
+          // Pick the current animation frame by elapsed wallclock time.
+          const frame = clamp(Math.floor(t * variant.count), 0, variant.count - 1);
           return (
-            <g key={ex.key} className="cv-explosion-fx">
-              <circle className="cv-explosion-smoke" cx={x} cy={y + 7 * spriteScale}
-                      r={smokeR} opacity={0.48 * k} />
-              <circle className="cv-explosion-ring" cx={x} cy={y}
-                      r={ringR} strokeWidth={Math.max(1, 3.2 * spriteScale * k)}
-                      opacity={Math.min(1, k * 1.2)} />
-              <circle className="cv-explosion-flash" cx={x} cy={y}
-                      r={flashR} opacity={Math.max(0, 1 - t * 3.2)} />
-              <ellipse className="cv-explosion-dust" cx={x} cy={dustY}
-                       rx={(22 + 28 * t) * spriteScale}
-                       ry={(5 + 8 * t) * spriteScale}
-                       opacity={0.62 * k} />
-              {(ex.sparks || []).map((s, i) => {
-                const dist = s.dist * (0.28 + t * 0.9) * spriteScale;
-                const tail = Math.max(4, s.len * spriteScale);
-                const sx = x + Math.cos(s.ang) * dist;
-                const sy = y + Math.sin(s.ang) * dist + t * 18 * spriteScale;
-                return (
-                  <line key={i} className="cv-explosion-spark"
-                        x1={sx - Math.cos(s.ang) * tail}
-                        y1={sy - Math.sin(s.ang) * tail}
-                        x2={sx}
-                        y2={sy}
-                        strokeWidth={Math.max(1, s.w * spriteScale)}
-                        strokeOpacity={k} />
-                );
-              })}
-            </g>
+            <img key={ex.key}
+                 className={'cv-explosion-sprite cv-explosion-' + variantKey}
+                 src={explosionFrameSrc(variantKey, frame)}
+                 alt=""
+                 draggable={false}
+                 style={{
+                   left: Math.round(x - size / 2),
+                   top: Math.round(y - size / 2),
+                   width: Math.round(size),
+                   height: Math.round(size)
+                 }} />
           );
         })}
-      </svg>
+      </div>
     );
   }
 
@@ -1089,23 +1131,31 @@
                   key: 'ex' + i,
                   x: target.x,
                   y: target.laneOffsetPx,
-                  sparks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(() => ({
-                    ang: trailRng() * Math.PI * 2,
-                    dist: 16 + trailRng() * 32,
-                    len: 4 + trailRng() * 9,
-                    w: 0.75 + trailRng() * 0.8
-                  })),
+                  variant: trailRng() < 0.5 ? 'explosion' : 'explosion2',
                   bornMs: now
                 });
               }
             }
             if (ev.type === 'rocketLaunch') {
+              const actor = battle.all.find(s => s.id === ev.actorId);
               newRockets.push({
                 key: 'rk' + i,
                 ax: ev.ax, ay: ev.ay,
                 endX: ev.endX, endY: ev.endY,
                 hit: !!ev.hit,
                 travelMs: Math.max(60, Math.round((ev.travelT || 0.7) * 1000)),
+                // Muzzle resolution params — same shape trailMuzzlePoint uses
+                // for bullet trails. Lets RocketsLayer anchor the projectile
+                // to the actual launcher muzzle tip instead of the body
+                // center, which matches the smoke origin the user expects.
+                actorCfg: actor && actor.cfg,
+                weaponName: ev.weaponName,
+                weaponCategory: ev.weaponCategory,
+                weaponType: ev.weaponType,
+                shotProfile: ev.shotProfile || ev.weaponCategory,
+                shotIndex: 0,
+                shotCount: 1,
+                facing: ev.facing || (ev.endX >= ev.ax ? 1 : -1),
                 bornMs: now
               });
             }
@@ -1116,12 +1166,7 @@
                 y: ev.ty,
                 atFeet: true,
                 scale: 1.25,
-                sparks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(() => ({
-                  ang: trailRng() * Math.PI * 2,
-                  dist: 18 + trailRng() * 40,
-                  len: 5 + trailRng() * 12,
-                  w: 0.9 + trailRng() * 1.1
-                })),
+                variant: trailRng() < 0.5 ? 'explosion' : 'explosion2',
                 bornMs: now
               });
             }

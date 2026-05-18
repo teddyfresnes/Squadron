@@ -853,6 +853,104 @@
     }
   };
 
+  // ---------- LAIN (lying down idle, eyes open, breathing) ----------
+  // Plays after a tossed body lands and survives. Reuses the flat-on-back
+  // pose of Anims.dead's tail end (deathAngle = -π/2, legs.lying = true,
+  // weapon dropped) but with eyesClosed = false and a slow chest rise/fall
+  // so the soldier looks alive but stunned. Loops forever — combat-sim
+  // controls how long the soldier stays in this state before getUp.
+  Anims.lain = {
+    name: 'Lain (stunned on ground)',
+    frames: 12,
+    fps: 6,    // slow cadence → ~2s breathing cycle
+    loop: true,
+    flightY: function () { return 0; },
+    get: function (i) {
+      const d = mark(defaults(), 'lain', i);
+      const HALF_PI = Math.PI / 2;
+      // Breathing motion: chest rises (negative bodyDY) at the half-cycle.
+      // 1 px peak rise is enough to read at game scale without making the
+      // soldier appear to shake.
+      const breath = -Math.round(Math.sin((i / 12) * TAU) * 1);
+      d.deathAngle = -HALF_PI;
+      d.deathAngleWorld = false;
+      d.deathBackShift = 24;       // matches Anims.dead's settled back-shift
+      d.bodyDY = breath;
+      d.bodyCollapsed = true;
+      d.eyesClosed = false;        // KEY: still alive, eyes open
+      d.weaponDropped = true;
+      d.showWeapon = false;
+      d.legs = {
+        front: 0, back: 0,
+        frontStep: 0, backStep: 0,
+        frontBend: 0, backBend: -1,
+        lying: true,
+        lyingSpread: 2
+      };
+      // Same forearm-along-body pose as Anims.dead so the silhouette reads
+      // identical at rest — only the eyes give it away.
+      d.frontArm = { sx: 0, sy: -7, hx: -3, hy: -1, ex: -3, ey: -4 };
+      return d;
+    }
+  };
+
+  // ---------- GET UP (lying → standing, one-shot) ----------
+  // Transition out of `lain`: prop up on elbow → kneel → stand. Drives the
+  // body angle from -π/2 (flat) back to 0 (upright) over 10 frames at 10 fps
+  // (~1s). End pose matches IDLE so the next state has no visible snap.
+  Anims.getUp = {
+    name: 'Get up',
+    frames: 10,
+    fps: 10,
+    loop: false,
+    flightY: function () { return 0; },
+    get: function (i) {
+      const d = mark(defaults(), 'getUp', i);
+      const HALF_PI = Math.PI / 2;
+      // Tilt sequence: stays flat for 1 frame, props on elbow (~-1.3), then
+      // sits up (~-0.7), then kneels (~-0.35), then stands (0).
+      const tiltSeq      = [-HALF_PI, -1.35, -1.05, -0.75, -0.50, -0.25, -0.10, 0, 0, 0];
+      // Back-shift returns to 0 as the body re-centers over the feet.
+      const backShiftSeq = [24,        18,    12,     6,     2,     0,     0,    0, 0, 0];
+      // bodyDY: positive = pushed down (crouching/kneeling). The soldier
+      // crouches mid-rise then settles.
+      const bodyDYSeq    = [ 0,         1,     2,     3,     2,     1,     0,    0, 0, 0];
+      // Legs: lying until they tuck under to kneel (frame 3+), then push up.
+      const lying = i < 3;
+      const kneeling = i >= 3 && i < 6;
+      d.deathAngle = tiltSeq[i] || 0;
+      d.deathAngleWorld = false;
+      d.deathBackShift = backShiftSeq[i] || 0;
+      d.bodyDY = bodyDYSeq[i] || 0;
+      d.eyesClosed = false;
+      d.weaponDropped = true;
+      d.showWeapon = false;
+      d.bodyCollapsed = lying;
+      d.legs = {
+        front: 0, back: 0,
+        frontStep: kneeling ? 0.4 : (lying ? 0 : 0),
+        backStep:  kneeling ? -0.4 : 0,
+        frontBend: lying ? 0 : (kneeling ? 0.7 : 0.2),
+        backBend:  lying ? -1 : (kneeling ? -0.4 : 0),
+        lying: lying,
+        lyingSpread: lying ? 2 : 0
+      };
+      // Arm transitions: lying along the body → pushes off ground (hand
+      // moves to side and down) → swings forward as the body rises → IDLE.
+      if (lying) {
+        d.frontArm = { sx: 0, sy: -7, hx: -3, hy: -1, ex: -3, ey: -4 };
+      } else if (kneeling) {
+        // Front hand pushes off the ground, elbow bent down and forward.
+        d.frontArm = { sx: 0, sy: -5, hx: 4, hy: 4, ex: 2, ey: 1 };
+      } else {
+        // Final 4 frames settle into the bare-hand idle guard.
+        d.frontArm = { sx: 0, sy: -6, hx: 6, hy: -4, ex: 0, ey: -3 };
+      }
+      d.backArm = { sx: 1, sy: -6, hx: 8, hy: -6, ex: 5, ey: -3 };
+      return d;
+    }
+  };
+
   // ---------- ROLL (8 frames) ----------
   Anims.roll = {
     name: 'Roll',
@@ -1003,5 +1101,5 @@
   };
 
   window.Anims = Anims;
-  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'dead2', 'deadExplode', 'roll', 'punch', 'throw'];
+  window.AnimList = ['idle', 'walk', 'run', 'aim', 'shoot', 'unaim', 'holster', 'victory', 'drawWeapon', 'reload', 'hurt', 'hurt2', 'dead', 'dead2', 'deadExplode', 'lain', 'getUp', 'roll', 'punch', 'throw'];
 })();
