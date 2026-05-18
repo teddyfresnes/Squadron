@@ -805,14 +805,29 @@
     fps: 14,
     loop: false,
     flightY: function (i) {
-      return [0, -24, -58, -92, -118, -126, -120, -102, -78, -52, -28, -8, -14, -6, 0, 0][i] || 0;
+      // Half-sine arc with peak ~-240 (≈1.9× the old -126). Sine gives a true
+      // ease-in-out: velocity is max at lift-off (rapide), 0 at the apex
+      // (ralentit), then max again at impact (la chute accélère jusqu'au sol).
+      // F0..F11 = airtime, F12..F15 = small ground bounce + settle. Landing
+      // frame stays at TOSS_LAND_FRAME (F11) so combat-sim's damage timing is
+      // unchanged.
+      return [0, -68, -130, -181, -218, -238, -238, -218, -181, -130, -68, 0, -14, -6, 0, 0][i] || 0;
     },
     get: function (i) {
       const d = mark(defaults(), 'dead', i);
       const HALF_PI = Math.PI / 2;
+      // Rise belly-down (head tipping forward) until the apex at F5, then flip
+      // to belly-up in one frame so the body falls dos-au-sol (back on the
+      // ground, limbs toward the sky) for the entire descent and landing.
+      // Using deathAngleWorld=false (below) — matches Anims.lain so the body
+      // orientation is identical to the lying pose at the moment of landing,
+      // regardless of facing (with deathAngleWorld=true, facing=-1 soldiers
+      // ended up belly-DOWN at -π/2 because the canvas mirror flips the
+      // rotation result; deathAngleWorld=false re-multiplies by facing so
+      // both directions land belly-up).
       const tiltSeq = [
-        0.20, 1.00, HALF_PI, HALF_PI, HALF_PI, HALF_PI, 1.18, 0.35,
-       -0.45, -1.15, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI
+        0.20, 1.00, HALF_PI, HALF_PI, HALF_PI, HALF_PI, -HALF_PI, -HALF_PI,
+        -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI, -HALF_PI
       ];
       const bodyDYSeq = [-1, -2, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, -2, -1, 0, 0];
       const limbBendSeq = [0.4, 0.9, 1.4, 1.7, 1.8, 1.7, 1.5, 1.2, 1.3, 1.6, 1.8, 1.8, 1.5, 1.2, 1.1, 1.1];
@@ -822,7 +837,7 @@
       const airborne = i < 11;
 
       d.deathAngle = tiltSeq[i] || 0;
-      d.deathAngleWorld = true;
+      d.deathAngleWorld = false;
       d.deathBackShift = 0;
       d.bodyDY = bodyDYSeq[i] || 0;
       d.bodyDX = i === 12 ? -3 : (i === 13 ? -1 : 0);
@@ -874,7 +889,10 @@
       const breath = -Math.round(Math.sin((i / 12) * TAU) * 1);
       d.deathAngle = -HALF_PI;
       d.deathAngleWorld = false;
-      d.deathBackShift = 24;       // matches Anims.dead's settled back-shift
+      // No back-shift — matches Anims.deadExplode's final frame so the body
+      // stays exactly where it landed when tossed → lain swaps animations
+      // (otherwise the body would visibly slide ~24 px backward on transition).
+      d.deathBackShift = 0;
       d.bodyDY = breath;
       d.bodyCollapsed = true;
       d.eyesClosed = false;        // KEY: still alive, eyes open
@@ -910,8 +928,11 @@
       // Tilt sequence: stays flat for 1 frame, props on elbow (~-1.3), then
       // sits up (~-0.7), then kneels (~-0.35), then stands (0).
       const tiltSeq      = [-HALF_PI, -1.35, -1.05, -0.75, -0.50, -0.25, -0.10, 0, 0, 0];
-      // Back-shift returns to 0 as the body re-centers over the feet.
-      const backShiftSeq = [24,        18,    12,     6,     2,     0,     0,    0, 0, 0];
+      // No back-shift — lain now anchors the body at the landing position
+      // (deathBackShift = 0), so getUp starts there and stays there as the
+      // soldier rotates upright. The body re-centers over its feet by virtue
+      // of the rotation alone.
+      const backShiftSeq = [ 0,         0,     0,     0,     0,     0,     0,    0, 0, 0];
       // bodyDY: positive = pushed down (crouching/kneeling). The soldier
       // crouches mid-rise then settles.
       const bodyDYSeq    = [ 0,         1,     2,     3,     2,     1,     0,    0, 0, 0];
