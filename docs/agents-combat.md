@@ -126,16 +126,21 @@ L'action `shoot` d'un lance-roquette est marquée `action.isRocket = true` et d�
 
 ```
 aim (aimDur)
-  → launchT = aimDur + AIM_HOLD            [event 'rocketLaunch' émis, magasin -1]
-  → ROCKET_TRAVEL_T = 0.35 s de vol        [vue : sprite roquette rapide + traînée de fumée]
-  → impactT = shot.atT                     [event 'rocketImpact', AoE si hit]
+  → launchT = aimDur + AIM_HOLD            [event 'rocketLaunch' émis (endpoint résolu ICI à partir de target.x courant — pas du snapshot stale de la création de l'action), magasin -1]
+  → ROCKET_TRAVEL_T = 0.35 s de vol (hit)  [vue : sprite roquette rapide + traînée de fumée]
+                     ou ROCKET_TRAVEL_T × k (miss, k = distance hors arène / distance cible)
+  → impactT = shot.atT                     [event 'rocketImpact' avec impactX/Y = target.x courant ; AoE si hit ; pas d'explosion sur miss]
   → ROCKET_RECOVERY_T = 0.18 s
   → unaim
 ```
 
-**Miss** : `endX = target.x + missDir * (1.0 + rng * 1.8)` (frôle la cible à 1–3 tuiles près au lieu de partir hors arène) et `endY = target.laneOffsetPx ± (22 + rng * 26)` px (passe à côté latéralement). But : trajectoire visuellement identique à un hit jusqu'au dernier instant — c'est l'absence d'explosion qui révèle le miss.
+**Résolution de la trajectoire AU LANCEMENT** (pas à la création de l'action — sinon l'explosion atterrit derrière une cible qui a bougé pendant les ~1 s d'aim) : on relit la position courante de la cible dans le handler `rocketLaunch`, et on en déduit `endX/endY` + `travelT`.
 
-**Hit** : `applyRocketAoE(shooter, tx, ty)` projette en l'air tous les ennemis (pas d'allié) vivants à `|x - tx| ≤ ROCKET_AOE_TILES (= 3 tuiles)` **ET** `|laneOffsetPx - ty| ≤ ROCKET_AOE_Y_PX (= 55 px)` via `tossSoldier()` — la clamp verticale empêche le blast d'aspirer des soldats des lanes voisines :
+**Hit** : `endX = target.x` courant, `endY = target.laneOffsetPx` courant. La roquette vole droit sur la cible en `travelT = ROCKET_TRAVEL_T`.
+
+**Miss** : on vise le long de la même ligne (`aimDy = dy + missLateralPx` où `missLateralPx ∈ ±[22, 50] px` pré-rollé à la création) puis on **extrapole jusqu'au bord de l'arène** (`endX = ±(ARENA_TILES + 4)`). La roquette continue à la même vitesse qu'un hit : `travelT = ROCKET_TRAVEL_T × k` où `k = (offScreenX - actor.x) / aimDx`. La trajectoire visible est indissociable d'un hit jusqu'à la zone de la cible — c'est l'absence d'explosion qui révèle le miss, puis la roquette finit sa course dans le décor comme une balle ratée. Fallback (cible morte/disparue avant launch) : `endX/endY` pré-rollés off-screen.
+
+**Hit AoE** : `applyRocketAoE(shooter, impactX, impactY)` (avec `impactX/Y` = position courante de la cible au moment de l'impact, pas le snapshot du launch — l'explosion sort toujours sous le perso) projette en l'air tous les ennemis (pas d'allié) vivants à `|x - impactX| ≤ ROCKET_AOE_TILES (= 3 tuiles)` **ET** `|laneOffsetPx - impactY| ≤ ROCKET_AOE_Y_PX (= 55 px)` via `tossSoldier()` — la clamp verticale empêche le blast d'aspirer des soldats des lanes voisines :
 - `state = 'tossed'` ; toute action en cours sur la cible est avortée (`a.duration = a.elapsed`)
 - `animState.toss = { damage, height ∈ [0.55, ~3.7], heightRatio ∈ [0,1], knockFromX, knockToX, landed }`
 - `cooldown = Math.max(cooldown, worldT + animDur('deadExplode'))`

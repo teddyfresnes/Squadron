@@ -952,18 +952,22 @@
         action.isRocket = true;
         action.launchT = launchT;
         action.launchEmitted = false;
-        // Pre-roll the miss exit so determinism is preserved. Misses now
-        // graze past the target instead of rocketing off-screen — the
-        // trajectory should be visually indistinguishable from a hit until
-        // the explosion (or absence of one) at the very end.
-        const missDir = actor.facing >= 0 ? 1 : -1;
-        const missEndX = target.x + missDir * (1.0 + rng() * 1.8);
-        // Vertical scatter for a miss: passes just to the side of the
-        // target's lane so the rocket clearly clears them visually.
+        // Pre-roll the miss scatter so determinism is preserved. The actual
+        // endpoint is resolved AT LAUNCH from the target's current position
+        // (see rocketLaunch handler) — this stays a small lateral offset so
+        // the rocket aims along the same line as a hit but drifts ~20–50 px
+        // off the target's lane before continuing off-screen.
         const missLatSign = rng() < 0.5 ? -1 : 1;
-        const missEndY = target.laneOffsetPx + missLatSign * (22 + rng() * 26);
-        action.missEndX = missEndX;
-        action.missEndY = missEndY;
+        action.missLateralPx = missLatSign * (22 + rng() * 28);
+        // Pre-roll the off-screen miss exit X in case the target disappears
+        // before launch (death or full despawn). Same shape as the original
+        // pre-launch rocket: a few tiles past the arena edge in the firing
+        // direction. Not used when the target is still alive at launch.
+        const missDir = actor.facing >= 0 ? 1 : -1;
+        action.missEndX = missDir > 0
+          ? ARENA_TILES + 4 + rng() * 3
+          : -4 - rng() * 3;
+        action.missEndY = target.laneOffsetPx;
       }
       actor.aimed = true;
       actor.cooldown = worldT + duration + TURN_GAP;
@@ -1225,16 +1229,52 @@
           };
           actor.state = 'shoot'; actor.stateT = 0;
           const shot = a.shots[0];
-          const endX = shot.hit ? a.tx : a.missEndX;
-          const endY = shot.hit ? a.ty : a.missEndY;
+          // Resolve the rocket's endpoint AT LAUNCH from the target's current
+          // position. Avoids the "explose derrière le perso" bug where the
+          // explosion landed on the target's stale action-creation snapshot
+          // (potentially ~1 s of movement old). Hits aim straight at the
+          // target's feet; misses aim along the same line with a small
+          // lateral drift, then extend past the target to off-screen so the
+          // rocket flies into the décor like a bullet that missed.
+          const targetNow = all.find(s => s.id === a.targetId);
+          let endX, endY, travelT;
+          if (targetNow && targetNow.hp > 0) {
+            const dx = targetNow.x - actor.x;
+            const dy = targetNow.laneOffsetPx - actor.laneOffsetPx;
+            if (shot.hit) {
+              endX = targetNow.x;
+              endY = targetNow.laneOffsetPx;
+              travelT = ROCKET_TRAVEL_T;
+            } else {
+              const aimDx = dx;
+              const aimDy = dy + (a.missLateralPx || 0);
+              const missDir = aimDx >= 0 ? 1 : -1;
+              const offScreenX = missDir > 0 ? ARENA_TILES + 4 : -4;
+              // k = how many target-distances to reach off-screen. Always > 1
+              // for normal shooter/target geometry. Speed is identical to a
+              // hit, so the rocket just flies for k× the hit duration before
+              // exiting the décor.
+              const denom = Math.abs(aimDx) < 0.001 ? (missDir * 0.001) : aimDx;
+              const k = (offScreenX - actor.x) / denom;
+              endX = offScreenX;
+              endY = actor.laneOffsetPx + aimDy * k;
+              travelT = ROCKET_TRAVEL_T * Math.max(1, Math.abs(k));
+            }
+          } else {
+            // Target died/disappeared during the aim hold: fall back to the
+            // pre-rolled off-screen exit so the rocket still flies somewhere.
+            endX = a.missEndX;
+            endY = a.missEndY;
+            travelT = ROCKET_TRAVEL_T * 2;
+          }
           events.push({
             t: worldT, type: 'rocketLaunch',
             actorId: a.actorId, targetId: a.targetId,
             ax: actor.x, ay: actor.laneOffsetPx,
-            tx: a.tx, ty: a.ty,
+            tx: endX, ty: endY,
             endX, endY,
             hit: shot.hit,
-            travelT: ROCKET_TRAVEL_T,
+            travelT,
             aoeRadius: ROCKET_AOE_TILES,
             weaponName: actor.weaponName,
             weaponCategory: a.weaponCategory,
@@ -1261,22 +1301,27 @@
           };
 
           if (a.isRocket) {
-            // Rocket impact: explosion at the locked-in target position. On a
-            // hit, the impact event spawns the explosion fx and the AoE tosses
-            // every enemy within ROCKET_AOE_TILES of the blast. On a miss, the
-            // rocket just keeps flying past — no explosion, no damage.
+            // Rocket impact: explosion anchored under the target's CURRENT
+            // position so the blast lands "sous le perso" even if the target
+            // moved during the aim/flight (fixes "explose derrière le perso"
+            // when shooting at a runner). Misses fire the event with hit=
+            // false — no explosion, no damage; the rocket sprite continues
+            // flying off-screen in the view via the longer travelT set at
+            // launch.
+            const impactX = (shot.hit && target && target.hp > 0) ? target.x : a.tx;
+            const impactY = (shot.hit && target && target.hp > 0) ? target.laneOffsetPx : a.ty;
             events.push({
               t: worldT, type: 'rocketImpact',
               actorId: a.actorId, targetId: a.targetId,
               ax: actor.x, ay: actor.laneOffsetPx,
-              tx: a.tx, ty: a.ty,
+              tx: impactX, ty: impactY,
               hit: shot.hit,
               weaponName: actor.weaponName,
               weaponCategory: a.weaponCategory,
               weaponType: a.weaponType
             });
             if (shot.hit) {
-              applyRocketAoE(actor, a.tx, a.ty);
+              applyRocketAoE(actor, impactX, impactY);
             }
           } else if (target) {
             const targetAlive = target.hp > 0;
