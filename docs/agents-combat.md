@@ -127,20 +127,22 @@ L'action `shoot` d'un lance-roquette est marquée `action.isRocket = true` et d�
 ```
 aim (aimDur)
   → launchT = aimDur + AIM_HOLD            [event 'rocketLaunch' émis, magasin -1]
-  → ROCKET_TRAVEL_T = 0.7 s de vol         [vue : sprite roquette + traînée de fumée]
+  → ROCKET_TRAVEL_T = 0.35 s de vol        [vue : sprite roquette rapide + traînée de fumée]
   → impactT = shot.atT                     [event 'rocketImpact', AoE si hit]
   → ROCKET_RECOVERY_T = 0.18 s
   → unaim
 ```
 
-**Miss** : `endX` est pré-rollé hors arène (X ∈ `[-9, -6]` ou `[+56, +59]` tuiles selon le facing) ; la roquette continue tout droit et sort du décor — pas d'explosion, pas de dégâts. Mêmes règles que les balles qui ratent.
+**Miss** : `endX = target.x + missDir * (1.0 + rng * 1.8)` (frôle la cible à 1–3 tuiles près au lieu de partir hors arène) et `endY = target.laneOffsetPx ± (22 + rng * 26)` px (passe à côté latéralement). But : trajectoire visuellement identique à un hit jusqu'au dernier instant — c'est l'absence d'explosion qui révèle le miss.
 
-**Hit** : `applyRocketAoE(shooter, tx, ty)` projette en l'air tous les ennemis (pas d'allié) vivants à `|x - tx| ≤ ROCKET_AOE_TILES (= 3 tuiles)` via `tossSoldier()` :
+**Hit** : `applyRocketAoE(shooter, tx, ty)` projette en l'air tous les ennemis (pas d'allié) vivants à `|x - tx| ≤ ROCKET_AOE_TILES (= 3 tuiles)` **ET** `|laneOffsetPx - ty| ≤ ROCKET_AOE_Y_PX (= 55 px)` via `tossSoldier()` — la clamp verticale empêche le blast d'aspirer des soldats des lanes voisines :
 - `state = 'tossed'` ; toute action en cours sur la cible est avortée (`a.duration = a.elapsed`)
 - `animState.toss = { damage, height ∈ [0.55, ~3.7], heightRatio ∈ [0,1], knockFromX, knockToX, landed }`
 - `cooldown = Math.max(cooldown, worldT + animDur('deadExplode'))`
 
 **Hauteur de toss** : `height = 0.55 + min(rng, rng) * 1.35` (biais bas, mean ~1.0) + `20% chance` d'ajouter `0.4 + rng*1.4` (kicker, pour des envols spectaculaires). `combat-view.flightOffsetY` lit `s.animState.toss.height` et multiplie `deadExplode.flightY(frame)` — donc un soldat avec `height = 3.0` monte 3× plus haut que la trajectoire de base. La trajectoire de base est une demi-sinusoïde (peak ~-238 px inner à F5-F6) → **ease-in-out** : lift-off rapide, hover au sommet, chute qui ré-accélère jusqu'à l'impact.
+
+**Direction de toss** : `knockTiles = (0.25 + rng² * 2.4)` (sqrt-biaisé → la plupart restent près du point d'impact, mais la queue laisse parfois partir un corps loin). Direction normalement **away from impact**, mais **35 % de chance** d'inverser le sens ET de flipper `s.facing` — le corps part dans l'autre direction en mode miroir, comme s'il avait pivoté de 180° avant d'être éjecté.
 
 **Dégâts de chute biaisés par la hauteur** : `rollFallDamage(rng, heightRatio)` mélange deux tirages :
 - `heightRatio = 0` (mini-pop) → `Math.min(a, b)` → quasi tout le temps 1-2
@@ -151,14 +153,11 @@ aim (aimDur)
 
 `combat-view.flightOffsetY(animKey, frame, spriteScale, s)` lit `s.animState.toss.height` pour multiplier `deadExplode.flightY(frame)` — un groupe touché par la même explosion ne décolle pas en bloc.
 
-**Tunables** : `ROCKET_TRAVEL_T`, `ROCKET_AOE_TILES`, `ROCKET_RECOVERY_T`, `ROCKET_TOSS_DMG_MIN/MAX`, `TOSS_LAND_FRAME` (combat-sim.js).
+**Tunables** : `ROCKET_TRAVEL_T`, `ROCKET_AOE_TILES`, `ROCKET_AOE_Y_PX`, `ROCKET_RECOVERY_T`, `ROCKET_TOSS_DMG_MIN/MAX`, `TOSS_LAND_FRAME` (combat-sim.js).
 
 **Rendu (combat-view.jsx)** :
-- `RocketsLayer` (SVG, z-index 8) anime le sprite roquette (2.2× le scale de base, 3 couches de flamme) + train de fumée blanche dense (puffs toutes les 14 ms : halo flouté + corps + cœur). Le point de départ est résolu via `trailMuzzlePoint(r)` (même helper que les balles) pour partir du **muzzle de l'arme**, pas du centre du soldat. Arc parabolique entre `muzzlePx` et `worldToPx(endX, endY)`.
-- `ExplosionLayer` (DIV, z-index 9) — **sprite-based**. Deux variantes 50/50 (`trailRng() < 0.5`) :
-  - `'explosion'` : `assets/animations/explosion/{1..11,13..17}.png` (16 frames, 512×512, frame 12 absente du disque, mappée par `frameForIdx`).
-  - `'explosion2'` : `assets/animations/explosion2/{1..36}.png` (36 frames, 64×64, leading zeros déjà strippés).
-  Pour les impacts de roquette (`atFeet: true`), le bottom du sprite est ancré à `groundY + 4 * spriteScale` — donc l'explosion sort vraiment du sol pile où la roquette atterrit. Pour `deadVariant: 'explode'` (corps qui pète en l'air), `atFeet: false` garde l'ancien comportement (centre à ~42 px au-dessus du sol).
+- `RocketsLayer` (SVG, z-index 8) anime le sprite roquette (compact — `RS = 1.0` × scale de base, 3 couches de flamme) + train de fumée blanche dense (puffs toutes les 14 ms : halo flouté + corps + cœur). Le point de départ est résolu via `trailMuzzlePoint(r)` (même helper que les balles) pour partir du **muzzle de l'arme**, pas du centre du soldat. **Arc minuscule** (`arcPx = 5 * spriteScale`) identique pour hit et miss — la roquette file droit et vite, on ne peut pas lire l'issue depuis la trajectoire.
+- `ExplosionLayer` (DIV, z-index 9) — **sprite-based**, une seule variante `'explosion'` : `assets/animations/explosion/{1..11,13..17}.png` (16 frames, 512×512, frame 12 absente du disque, mappée par `frameForIdx`). Pour les impacts de roquette (`atFeet: true`), le bottom du sprite est ancré à `groundY + 4 * spriteScale` — donc l'explosion sort vraiment du sol pile où la roquette atterrit. Pour `deadVariant: 'explode'` (corps qui pète en l'air), `atFeet: false` garde l'ancien comportement (centre à ~42 px au-dessus du sol).
 
 ---
 

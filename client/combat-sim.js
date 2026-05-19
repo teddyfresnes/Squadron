@@ -38,8 +38,9 @@
   // Bazooka-class heavy weapons fire a single visible rocket with a smoke
   // trail. Hits explode at the target's feet and toss every nearby enemy up
   // via the deadExplode animation; misses fly past and exit the arena.
-  const ROCKET_TRAVEL_T = 0.7;          // sim-time the rocket spends in the air
+  const ROCKET_TRAVEL_T = 0.35;         // sim-time the rocket spends in the air (fast & straight, hard to read hit-vs-miss in flight)
   const ROCKET_AOE_TILES = 3;           // X-distance from impact for the AoE
+  const ROCKET_AOE_Y_PX = 55;           // Y-distance (laneOffsetPx) from impact — keeps the blast in the impact lane (lane spacing is 80–100 px)
   const ROCKET_RECOVERY_T = 0.18;       // pause between impact and unaim
   const ROCKET_TOSS_DMG_MIN = 1;        // fall damage rolled when a tossed body lands
   const ROCKET_TOSS_DMG_MAX = 6;
@@ -493,9 +494,17 @@
       // heightRatio: 0 at height=0.55 (min toss) -> 1 at height=3.5 (very high).
       const heightRatio = clamp((height - 0.55) / (3.5 - 0.55), 0, 1);
       const damage = rollFallDamage(r, heightRatio);
-      // Knock the body horizontally away from the blast a bit so survivors
-      // wake up in a slightly different spot than they were standing.
-      const knockTiles = (0.4 + r() * 0.6) * (s.x >= impactX ? 1 : -1);
+      // Knock the body horizontally — usually AWAY from the blast, but 35 %
+      // of the time it kicks the body the OTHER way (concussion pinwheel)
+      // and mirrors the facing so the animation reads as the body spinning
+      // 180° before launching. Distance is widely scattered so survivors
+      // don't all wake up in a clean ring around the impact.
+      let knockDir = s.x >= impactX ? 1 : -1;
+      if (r() < 0.35) {
+        knockDir *= -1;
+        s.facing *= -1;
+      }
+      const knockTiles = (0.25 + r() * r() * 2.4) * knockDir;
       s.state = 'tossed';
       s.stateT = 0;
       s.aimed = false;
@@ -538,6 +547,9 @@
         if (s.hp <= 0) continue;
         if (s.state === 'tossed') continue;     // already airborne, ignore
         if (Math.abs(s.x - impactX) > radius) continue;
+        // Vertical clamp: enemies in distant lanes don't get caught by a
+        // ground-level blast even if they line up horizontally.
+        if (Math.abs(s.laneOffsetPx - impactY) > ROCKET_AOE_Y_PX) continue;
         targets.push(s);
       }
       for (const s of targets) {
@@ -940,15 +952,16 @@
         action.isRocket = true;
         action.launchT = launchT;
         action.launchEmitted = false;
-        // Pre-roll the miss exit so determinism is preserved. Miss rockets
-        // shoot past the target and keep flying horizontally off-screen; we
-        // pick a clear coordinate well outside the arena bounds.
+        // Pre-roll the miss exit so determinism is preserved. Misses now
+        // graze past the target instead of rocketing off-screen — the
+        // trajectory should be visually indistinguishable from a hit until
+        // the explosion (or absence of one) at the very end.
         const missDir = actor.facing >= 0 ? 1 : -1;
-        const missEndX = missDir > 0
-          ? ARENA_TILES + 6 + rng() * 3
-          : -6 - rng() * 3;
-        // Vertical scatter for a miss: ground level ± a small jitter.
-        const missEndY = target.laneOffsetPx + (rng() - 0.5) * 16;
+        const missEndX = target.x + missDir * (1.0 + rng() * 1.8);
+        // Vertical scatter for a miss: passes just to the side of the
+        // target's lane so the rocket clearly clears them visually.
+        const missLatSign = rng() < 0.5 ? -1 : 1;
+        const missEndY = target.laneOffsetPx + missLatSign * (22 + rng() * 26);
         action.missEndX = missEndX;
         action.missEndY = missEndY;
       }

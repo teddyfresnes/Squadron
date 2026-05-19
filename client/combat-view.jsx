@@ -774,9 +774,11 @@
           const t = clamp(age / r.travelMs, 0, 1);
           const start = muzzleFor(r);
           const end = worldToPx(r.endX, r.endY);
-          // For misses, give the rocket extra arc so the comet sweeps past
-          // visibly even when the target is at similar y.
-          const arcPx = (r.hit ? 42 : 28) * spriteScale;
+          // Very small arc for BOTH hits and misses — the rocket should fly
+          // fast and nearly straight so the player can't read hit-vs-miss
+          // from the trajectory shape. Just enough sag to feel like a
+          // ballistic projectile.
+          const arcPx = 5 * spriteScale;
           const x = lerp(start.x, end.x, t);
           const arc = Math.sin(t * Math.PI) * arcPx;
           const y = lerp(start.y, end.y, t) - arc;
@@ -809,9 +811,11 @@
             });
           }
           const finished = t >= 1;
-          // Rocket sprite scale — bumped 2.2x compared to the first pass so
-          // the projectile reads clearly during the 0.7s flight.
-          const RS = 2.2;
+          // Rocket sprite scale — kept compact so the projectile reads as
+          // "fast little missile" rather than a slow blimp. The fast travel
+          // time (ROCKET_TRAVEL_T) plus the bright exhaust still make it
+          // clearly visible on screen.
+          const RS = 1.0;
           return (
             <g key={r.key} className="cv-rocket-fx">
               {puffs.map((p, i) => (
@@ -856,14 +860,10 @@
     );
   }
 
-  // Two interchangeable explosion sequences live under
-  // assets/animations/. One is picked 50/50 per blast in the event handler.
-  // The 'explosion' set is 16 large pixel-art frames (frame 12 missing on
-  // disk — files numbered 1..11, 13..17). The 'explosion2' set is 36 small
-  // burst frames (1..36 contiguous, leading zeros stripped).
+  // Single explosion sequence under assets/animations/explosion/. 16 large
+  // pixel-art frames, frame 12 missing on disk — files numbered 1..11, 13..17.
   const EXPLOSION_VARIANTS = {
-    explosion:  { count: 16, dir: 'assets/animations/explosion/',  baseSize: 160, frameForIdx: function (i) { return i < 11 ? (i + 1) : (i + 2); } },
-    explosion2: { count: 36, dir: 'assets/animations/explosion2/', baseSize: 220, frameForIdx: function (i) { return i + 1; } }
+    explosion:  { count: 16, dir: 'assets/animations/explosion/',  baseSize: 160, frameForIdx: function (i) { return i < 11 ? (i + 1) : (i + 2); } }
   };
   function explosionFrameSrc(variant, i) {
     const v = EXPLOSION_VARIANTS[variant] || EXPLOSION_VARIANTS.explosion;
@@ -1131,7 +1131,7 @@
                   key: 'ex' + i,
                   x: target.x,
                   y: target.laneOffsetPx,
-                  variant: trailRng() < 0.5 ? 'explosion' : 'explosion2',
+                  variant: 'explosion',
                   bornMs: now
                 });
               }
@@ -1166,7 +1166,7 @@
                 y: ev.ty,
                 atFeet: true,
                 scale: 1.25,
-                variant: trailRng() < 0.5 ? 'explosion' : 'explosion2',
+                variant: 'explosion',
                 bornMs: now
               });
             }
