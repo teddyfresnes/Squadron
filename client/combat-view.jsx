@@ -6,6 +6,8 @@
 
   const { useState, useEffect, useRef } = React;
   const UI = window.SquadronUI;
+  const I18n = window.I18n;
+  const t = I18n.t;
 
   const STAGE_W = (UI && UI.STAGE_W) || 256;
   const STAGE_H = (UI && UI.STAGE_H) || 112;
@@ -78,7 +80,9 @@
   }
 
   function hpText(s) {
-    return Math.ceil(Math.max(0, s.hp || 0)) + '/' + Math.max(1, s.hpMax || 1) + ' PV';
+    const cur = Math.ceil(Math.max(0, s.hp || 0));
+    const max = Math.max(1, s.hpMax || 1);
+    return t('cv.hpAria', { cur, max });
   }
 
   function getWeaponByName(name) {
@@ -292,7 +296,7 @@
               className={'cv-soldier' + (isActive ? ' is-active' : '') + (showSelection ? ' is-selected' : '') + (animKey === 'deadExplode' ? ' is-exploding' : '') + (s.state === 'tossed' ? ' is-tossed' : '')}
               style={soldierStyle}
               onClick={handleClick}
-              aria-label={(s.name || 'Soldat') + ', niveau ' + (s.level || 1)}
+              aria-label={t('cv.soldierAria', { name: s.name || t('cv.soldier'), lvl: s.level || 1 })}
               aria-pressed={isSelected}>
         {s.state !== 'dead' && s.state !== 'tossed' && s.state !== 'lain' && (
           <div className="cv-ground-shadow" style={{ top: shadowTop }} />
@@ -359,14 +363,14 @@
   };
 
   const BODY_SVG_PARTS = [
-    { key: 'leftArm',    label: 'Bras gauche' },
-    { key: 'rightArm',   label: 'Bras droit' },
-    { key: 'leftLeg',    label: 'Jambe gauche' },
-    { key: 'rightLeg',   label: 'Jambe droite' },
-    { key: 'abdomen',    label: 'Ventre',       fallbackKey: 'torso' },
-    { key: 'chestLeft',  label: 'Torse gauche', fallbackKey: 'torso' },
-    { key: 'chestRight', label: 'Torse droit',  fallbackKey: 'torso' },
-    { key: 'head',       label: 'Tete' }
+    { key: 'leftArm',    labelKey: 'cv.bodyPart.leftArm' },
+    { key: 'rightArm',   labelKey: 'cv.bodyPart.rightArm' },
+    { key: 'leftLeg',    labelKey: 'cv.bodyPart.leftLeg' },
+    { key: 'rightLeg',   labelKey: 'cv.bodyPart.rightLeg' },
+    { key: 'abdomen',    labelKey: 'cv.bodyPart.abdomen',    fallbackKey: 'torso' },
+    { key: 'chestLeft',  labelKey: 'cv.bodyPart.chestLeft',  fallbackKey: 'torso' },
+    { key: 'chestRight', labelKey: 'cv.bodyPart.chestRight', fallbackKey: 'torso' },
+    { key: 'head',       labelKey: 'cv.bodyPart.head' }
   ];
 
   function BodyGraph({ s, onCursor, onLeave }) {
@@ -375,7 +379,7 @@
     return (
       <div className="cv-body-graph"
            role="img"
-           aria-label={'Etat du corps, ' + hpLabel}
+           aria-label={t('cv.bodyState', { hp: hpLabel })}
            onMouseMove={onCursor}
            onMouseLeave={onLeave}>
         <svg className="cv-body-svg" viewBox="0 0 88 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
@@ -412,7 +416,7 @@
                       d={BODY_SVG_PATHS[part.key]}
                       className={'cv-body-zone hit-' + lvl}
                       fill={'url(#cv-body-fill-' + lvl + ')'}>
-                  <title>{part.label + ' : ' + lvl}</title>
+                  <title>{t(part.labelKey) + ' : ' + lvl}</title>
                 </path>
               );
             })}
@@ -489,15 +493,15 @@
            className={'cv-inspect-panel cv-inspect-team-' + s.team}
            style={{ left, top, width: panelW }}
            onClick={stop}>
-        <button type="button" className="cv-inspect-close" onClick={onClose} aria-label="Fermer">×</button>
+        <button type="button" className="cv-inspect-close" onClick={onClose} aria-label={t('common.close')}>×</button>
         <div className="cv-inspect-head">
-          <div className="cv-inspect-name">{s.name || 'Soldat'}</div>
-          <div className="cv-inspect-level">NIV {s.level || 1}</div>
+          <div className="cv-inspect-name">{s.name || t('cv.soldier')}</div>
+          <div className="cv-inspect-level">{t('cv.lvl')} {s.level || 1}</div>
         </div>
 
         <div className="cv-inspect-weapons">
           {allWeapons.length === 0 && (
-            <div className="cv-inspect-weapons-empty">Aucune arme</div>
+            <div className="cv-inspect-weapons-empty">{t('cv.noWeapon')}</div>
           )}
           {allWeapons.map(w => {
             const mag = magazineSizeForWeaponName(w.name);
@@ -505,11 +509,12 @@
             const state = ammoStateForWeapon(s, w.name);
             const isActive = w.name === s.weaponName;
             const isReloading = isActive && s.state === 'reload' && s.reloadProgress;
+            const displayName = I18n.localizedWeaponName(w);
             return (
               <div key={w.name}
                    className={'cv-inspect-weapon-card' + (isActive ? ' is-active' : '') + (isReloading ? ' is-reloading' : '')}
-                   aria-label={w.name}
-                   onMouseMove={(ev) => trackCursor(ev, w.name)}
+                   aria-label={displayName}
+                   onMouseMove={(ev) => trackCursor(ev, displayName)}
                    onMouseLeave={clearCursor}>
                 <div className="cv-inspect-weapon-card-img">
                   {WeaponIcon ? <WeaponIcon weapon={w} scale={0.74} /> : <span className="cv-weapon-placeholder" />}
@@ -518,8 +523,8 @@
                            loaded={state.loaded} reserveCur={state.reserve} />
                 {isReloading && (
                   <div className="cv-inspect-reload-badge"
-                       aria-label={'Recharge ' + s.reloadProgress.seated + ' sur ' + s.reloadProgress.total}>
-                    RECHARGE {s.reloadProgress.seated}/{s.reloadProgress.total}
+                       aria-label={t('cv.reloadAria', { cur: s.reloadProgress.seated, total: s.reloadProgress.total })}>
+                    {t('cv.reloadLabel')} {s.reloadProgress.seated}/{s.reloadProgress.total}
                   </div>
                 )}
               </div>
@@ -537,7 +542,7 @@
             </div>
             <BodyGraph s={s} onCursor={trackHpCursor} onLeave={clearCursor} />
           </div>
-          <div className="cv-inspect-skills" aria-label="Armes débloquées">
+          <div className="cv-inspect-skills" aria-label={t('cv.unlocked')}>
             {skillWeapons.map(w => {
               const icon = (
                 <span className="cv-inspect-skill">
@@ -923,9 +928,9 @@
     const cls = winner === 'A' ? 'cv-banner-win'
               : winner === 'B' ? 'cv-banner-lose'
               : 'cv-banner-draw';
-    const text = winner === 'A' ? 'VICTOIRE !'
-               : winner === 'B' ? 'DÉFAITE !'
-               : 'ÉGALITÉ';
+    const text = winner === 'A' ? t('cv.win')
+               : winner === 'B' ? t('cv.lose')
+               : t('cv.draw');
     return (
       <div className={'cv-banner ' + cls + (isPaused ? ' is-paused' : '')} aria-live="polite">
         <span className="cv-banner-text">{text}</span>
@@ -951,14 +956,14 @@
       return () => window.removeEventListener('keydown', onKey);
     }, [onContinue]);
 
-    const title = isWin ? 'VICTOIRE' : (isDraw ? 'ÉGALITÉ' : 'DÉFAITE');
+    const title = isWin ? t('cv.winTitle') : (isDraw ? t('cv.drawTitle') : t('cv.loseTitle'));
     let message;
     if (isWin) {
-      message = `Vous avez gagné ${tokensWon} token${tokensWon > 1 ? 's' : ''} en battant la squad ${oppSquad.name}.`;
+      message = t('cv.winMsg', { tokens: tokensWon, plural: tokensWon > 1 ? 's' : '', name: oppSquad.name });
     } else if (isDraw) {
-      message = `Match nul face à la squad ${oppSquad.name}.`;
+      message = t('cv.drawMsg', { name: oppSquad.name });
     } else {
-      message = `La squad ${oppSquad.name} l'emporte. Vous gagnez quand même ${tokensWon} token.`;
+      message = t('cv.loseMsg', { name: oppSquad.name, tokens: tokensWon });
     }
 
     return (
@@ -967,12 +972,12 @@
              onClick={(ev) => ev.stopPropagation()}>
           <div className="cv-result-title">{title}</div>
           <div className="cv-result-sub">{message}</div>
-          <div className="cv-result-tokens" aria-label={tokensWon + ' tokens gagnés'}>
+          <div className="cv-result-tokens" aria-label={t('cv.tokensWon', { n: tokensWon })}>
             <img src="assets/images/icons/coin.png" alt="" aria-hidden="true" />
             <span>+{tokensWon}</span>
           </div>
           <button type="button" className="sq-btn cv-result-btn"
-                  onClick={onContinue}>CONTINUER</button>
+                  onClick={onContinue}>{t('cv.continue')}</button>
         </div>
       </div>
     );
@@ -980,6 +985,7 @@
 
   // ── Main battle screen component ──────────────────────────────────────────
   function HQBattleScreen({ mySquad, oppSquad, onDone }) {
+    I18n.useI18n();
     const containerRef = useRef(null);
     const pausedRef = useRef(false);
     const bannerShownRef = useRef(false);
@@ -1241,7 +1247,7 @@
     if (!battle) {
       return (
         <div className="cv-screen" ref={containerRef}>
-          <div className="cv-loading">Préparation du combat…</div>
+          <div className="cv-loading">{t('cv.preparing')}</div>
         </div>
       );
     }
@@ -1308,7 +1314,7 @@
                           nowMs={nowMs} />
           {isPaused && (
             <div className="cv-pause-overlay" aria-hidden="true">
-              <div className="cv-pause-text">PAUSE</div>
+              <div className="cv-pause-text">{t('cv.pause')}</div>
             </div>
           )}
           {selectedSoldier && (
@@ -1329,7 +1335,7 @@
             <div className="cv-team-name">{mySquad.name}</div>
             <div className="cv-team-count">{battle.aliveCount('A')}/{mySquad.soldiers.length}</div>
           </div>
-          <div className="cv-vs">VS</div>
+          <div className="cv-vs">{t('cv.vs')}</div>
           <div className="cv-team cv-team-b">
             <div className="cv-team-name">{oppSquad.name}</div>
             <div className="cv-team-count">{battle.aliveCount('B')}/{oppSquad.soldiers.length}</div>

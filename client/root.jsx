@@ -23,7 +23,8 @@ function Root() {
   if (mode === 'prod') {
     const GameApp = window.SquadronGame && window.SquadronGame.GameApp;
     if (!GameApp) {
-      return <div style={{ padding: 20, fontFamily: 'monospace' }}>Loading game…</div>;
+      const msg = (window.I18n && window.I18n.t('dev.loadingGame')) || 'Loading game…';
+      return <div style={{ padding: 20, fontFamily: 'monospace' }}>{msg}</div>;
     }
     return <GameApp onSwitchMode={switchMode} />;
   }

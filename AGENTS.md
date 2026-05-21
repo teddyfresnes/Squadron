@@ -31,12 +31,13 @@ Tous les scripts sont chargés dans `Squadron.html` dans cet ordre **exact** :
 | 4 | `weapons.js` | `Weapons` (list, baseList, mkList, getVariant, getBaseWeapon, expandWeaponStats) |
 | 5 | `animations.js` | `Anims` |
 | 6 | `renderer.js` | `Renderer` |
-| 7 | `app.jsx` | `SquadronUI` (App, SpriteCanvas, AnimPreview, WeaponGameIcon, WeaponIcon, DEFAULT_CFG, STAGE_W, STAGE_H, normalizeCharacterConfig, hairStyleOptionsForBody) |
-| 8 | `combat-sim.js` | `CombatSim` (loadWeaponStats, getWeaponStats, createBattle, DT, TILE_PX, ARENA_TILES, SPEED_TILES_PER_SEC, LANE_OFFSETS) |
-| 9 | `game.jsx` | composants React jeu (pas de global direct) |
-| 10 | `combat-view.jsx` | `HQBattleScreen` |
-| 11 | `hq.jsx` | composants React HQ (pas de global direct) |
-| 12 | `root.jsx` | monte le rendu React racine |
+| 7 | `combat-sim.js` | `CombatSim` (loadWeaponStats, getWeaponStats, createBattle, DT, TILE_PX, ARENA_TILES, SPEED_TILES_PER_SEC, LANE_OFFSETS) |
+| 8 | `i18n.js` | `I18n` (LANGS, t, setLang, getLang, getMaleNames, getFemaleNames, localizedWeaponName, useI18n) |
+| 9 | `app.jsx` | `SquadronUI` (App, SpriteCanvas, AnimPreview, WeaponGameIcon, WeaponIcon, DEFAULT_CFG, STAGE_W, STAGE_H, normalizeCharacterConfig, hairStyleOptionsForBody) |
+| 10 | `game.jsx` | composants React jeu (pas de global direct) |
+| 11 | `combat-view.jsx` | `HQBattleScreen` |
+| 12 | `hq.jsx` | composants React HQ (pas de global direct) |
+| 13 | `root.jsx` | monte le rendu React racine |
 
 ---
 
@@ -77,6 +78,19 @@ Online : API calls. Offline : localStorage (`squadron-squads`). JWT en `sessionS
 
 ---
 
+## Internationalisation (i18n)
+
+Le module `client/i18n.js` expose `window.I18n` (fr / en / zh). Toutes les chaînes affichées passent par `I18n.t('key')`.
+
+- Langue persistée dans `localStorage` sous `squadron-lang` (défaut : `fr`).
+- Sélecteur dans HQ → onglet **Paramètres** : appelle `I18n.setLang(code)` qui émet l'event `'i18n:change'`.
+- Hook React `I18n.useI18n()` à mettre sur les composants racines pour que la sous-arborescence se re-render (déjà posé sur : `GameApp`, `HomePage`, `ServerCheckPage`, `OfflineWarningModal`, `LoginPage`, `BootIntroEffect`, `ModeToggleFab`, `HQPage`, `HQHeader`, `HQSidebar`, `HQPlay`, `HQOpponentSelect`, `HQRecruit`, `HQSquadPage`, `HQMarketPage`, `HQSettingsPage`, `HQBattleSplash`, `HQBattleScreen`, `SoldierPerksPanel`, `SoldierPortraitPanel`, `HQUpgradeChoice`, `App` (dev), `WeaponPicker`, `WeaponLevelPicker`, `WeaponSkinPicker`, `FrameStrip`, `AllAnimsRow`).
+- Listes de prénoms par langue : `I18n.getMaleNames()` / `I18n.getFemaleNames()`. Pour `zh`, `game.jsx#relocalizeSoldierNames` re-tire les prénoms côté client quand le serveur renvoie les troopers (qui sont en FR).
+- Noms d'armes en chinois : `I18n.localizedWeaponName(weapon)` consulte `ZH_WEAPON_NAMES` (voir `i18n.js`) sans modifier le `weapon.name` interne, qui reste la clé canonique (préserve les saves existantes et les comparaisons par nom).
+- Pour ajouter une clé : ajouter une entrée dans `DICT` (i18n.js) avec `{fr, en, zh}` et l'utiliser via `t('key')` ou avec params : `t('cv.winMsg', { tokens: 2, name: 'X' })`.
+
+---
+
 ## Invariants de synchronisation
 
 Ces correspondances **doivent rester cohérentes** entre plusieurs fichiers :
@@ -108,6 +122,7 @@ Lire ce fichier, puis **uniquement** les fichiers touchés par la tâche :
 | Logique serveur | `server/routes/` + `server/utils/` + `docs/agents-server.md` |
 | Connexion client↔serveur | début de `game.jsx` (apiFetch, handleServerOnline/Offline) |
 | Génération troopers | `server/utils/generateTroopers.js` + `server/utils/seed.js` |
+| Traductions / textes UI | `client/i18n.js` (DICT, ZH_WEAPON_NAMES, ZH_MALE/FEMALE) |
 
 Utiliser Grep/`rg` pour localiser les symboles avant d'ouvrir de gros fichiers.
 

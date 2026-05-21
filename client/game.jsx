@@ -4,6 +4,8 @@
 (function () {
 
 const { useState, useEffect, useRef, useCallback } = React;
+const I18n = window.I18n;
+const t = I18n.t;
 
 const SQUADS_KEY    = 'squadron-squads';
 const LAST_SQUAD_KEY = 'squadron-last-squad';
@@ -91,11 +93,10 @@ const FEMALE_NAMES = [
   'Zélie','Zoé'
 ];
 
-const WEAPON_TYPE_LABELS = {
-  melee:'Corps a corps',
-  pistol:'Pistolet', smg:"Mitraillette", shotgun:"Fusil à pompe",
-  rifle:"Fusil d'assaut", sniper:"Fusil de précision", heavy:"Arme lourde"
-};
+function weaponTypeLabel(type) { return t('wt.' + type) || type; }
+// Kept as a getter-style object so existing reads (`WEAPON_TYPE_LABELS[type]`)
+// stay valid while the value follows the current language.
+const WEAPON_TYPE_LABELS = new Proxy({}, { get(_, key) { return weaponTypeLabel(key); } });
 
 // ── Squad storage (offline mode — localStorage) ──────────────────────────────
 function loadSquads() {
@@ -118,7 +119,7 @@ function squadHasPassword(name) {
 }
 function createSquad(name, password, founder) {
   const map = loadSquads();
-  if (map[name]) return { ok: false, error: 'Une squad avec ce nom existe déjà.' };
+  if (map[name]) return { ok: false, error: t('home.errSquadExists') };
   map[name] = { password, founder, createdAt: Date.now() };
   saveSquads(map);
   return { ok: true };
@@ -145,7 +146,7 @@ async function apiFetch(path, opts = {}) {
     const data = await res.json();
     return { ok: res.ok, status: res.status, data };
   } catch (e) {
-    const msg = e.name === 'AbortError' ? 'Délai dépassé.' : 'Serveur inaccessible.';
+    const msg = e.name === 'AbortError' ? t('server.timeout') : t('server.unreachable');
     return { ok: false, status: 0, data: { error: msg } };
   } finally {
     clearTimeout(tid);
@@ -198,17 +199,32 @@ function randomHomeConfig(skill1Name) {
   });
 }
 function buildSoldiers(count = SOLDIER_COUNT) {
+  const maleNames = I18n.getMaleNames();
+  const femaleNames = I18n.getFemaleNames();
   return Array.from({ length: count }, (_, i) => {
     const skills = pickSkills();
     const config = randomHomeConfig(skills.skill1Name);
     return {
       id: 'soldier-' + i + '-' + Math.random().toString(36).slice(2, 8),
       config,
-      name: pick(config.bodyType === 'female' ? FEMALE_NAMES : MALE_NAMES),
+      name: pick(config.bodyType === 'female' ? femaleNames : maleNames),
       skill1Name: skills.skill1Name,
       skill2Name: skills.skill2Name
     };
   });
+}
+
+// Re-roll names of an incoming soldier list to match the current language.
+// Server troopers and locally-stored squads are minted with French names by
+// default; this keeps the home/recruit screens consistent when ZH/EN is active.
+function relocalizeSoldierNames(list) {
+  if (!Array.isArray(list) || I18n.getLang() === 'fr') return list;
+  const maleNames = I18n.getMaleNames();
+  const femaleNames = I18n.getFemaleNames();
+  return list.map(s => ({
+    ...s,
+    name: pick((s.config && s.config.bodyType === 'female') ? femaleNames : maleNames),
+  }));
 }
 
 // ── SoldierCardSkeleton ───────────────────────────────────────────────────────
@@ -227,19 +243,27 @@ function SoldierCardSkeleton() {
 
 // ── OfflineWarningModal ───────────────────────────────────────────────────────
 function OfflineWarningModal({ onConfirm, onCancel }) {
+  I18n.useI18n();
+  // Split body texts on the marker phrase so we can inline-bold/em the highlighted segment.
+  const body1 = t('offline.body1');
+  const body1Strong = t('offline.body1Strong');
+  const [b1a, b1b] = body1.includes(body1Strong) ? body1.split(body1Strong) : [body1, ''];
+  const body3 = t('offline.body3');
+  const body3Em = t('offline.body3Em');
+  const [b3a, b3b] = body3.includes(body3Em) ? body3.split(body3Em) : [body3, ''];
   return ReactDOM.createPortal(
     <div className="offline-modal-overlay" onClick={onCancel}>
       <div className="offline-modal" onClick={e => e.stopPropagation()}>
         <div className="offline-modal-icon">⚠</div>
-        <div className="offline-modal-title">MODE HORS LIGNE</div>
+        <div className="offline-modal-title">{t('offline.title')}</div>
         <div className="offline-modal-body">
-          <p>En mode hors ligne, <strong>aucune donnée n'est sauvegardée</strong> sur le serveur.</p>
-          <p>Votre progression ne sera pas récupérée si vous changez d'appareil ou videz le cache.</p>
-          <p>Pour retrouver une progression existante, <em>contactez l'administrateur</em>.</p>
+          <p>{b1a}<strong>{body1Strong}</strong>{b1b}</p>
+          <p>{t('offline.body2')}</p>
+          <p>{b3a}<em>{body3Em}</em>{b3b}</p>
         </div>
         <div className="offline-modal-actions">
-          <button className="sq-btn" onClick={onCancel}>Annuler</button>
-          <button className="sq-btn sq-btn-primary" onClick={onConfirm}>Continuer</button>
+          <button className="sq-btn" onClick={onCancel}>{t('common.cancel')}</button>
+          <button className="sq-btn sq-btn-primary" onClick={onConfirm}>{t('common.continue')}</button>
         </div>
       </div>
     </div>,
@@ -291,14 +315,15 @@ function ServerCheckPage({ onOnline, onOffline }) {
     };
   }, [onOnline]);
 
+  I18n.useI18n();
   return (
     <div className="gp-page gp-home">
       <div className="gp-bg" /><div className="gp-overlay" />
       <div className="sq-card">
         <div className="sq-card-header">
-          <div className="sq-card-title">SQUADRON</div>
+          <div className="sq-card-title">{t('brand.title')}</div>
           <div className={'sq-card-sub' + (showOfflineBtn ? ' srv-status-error' : ' srv-status-searching')}>
-            {showOfflineBtn ? 'Serveur introuvable — toujours en recherche' : 'Connexion au serveur…'}
+            {showOfflineBtn ? t('server.notFound') : t('server.connecting')}
           </div>
         </div>
 
@@ -315,7 +340,7 @@ function ServerCheckPage({ onOnline, onOffline }) {
         {showOfflineBtn && (
           <div className="srv-offline-action">
             <button className="sq-btn sq-btn-offline" onClick={() => setShowModal(true)}>
-              JOUER HORS LIGNE
+              {t('server.playOffline')}
             </button>
           </div>
         )}
@@ -333,13 +358,14 @@ function ServerCheckPage({ onOnline, onOffline }) {
 
 // ── ModeToggleFab ────────────────────────────────────────────────────────────
 function ModeToggleFab({ onSwitchMode, variant }) {
+  I18n.useI18n();
   return (
     <button
       type="button"
       className={'mode-toggle-fab' + (variant ? ' ' + variant : '')}
       onClick={() => onSwitchMode && onSwitchMode('dev')}
-      title="Retour à l'éditeur de personnage"
-    >← DEV MODE</button>
+      title={t('brand.devModeTip')}
+    >{t('brand.devModeBtn')}</button>
   );
 }
 
@@ -376,8 +402,8 @@ function SkillTooltip({ weapon, text, tipDir = 'above', children }) {
   const tipBody = weapon ? (
     <>
       <div className="sq-skill-tip-head">
-        <div className="sq-skill-tip-name">{weapon.name}</div>
-        <div className="sq-skill-tip-type">{WEAPON_TYPE_LABELS[weapon.type] || weapon.type}</div>
+        <div className="sq-skill-tip-name">{I18n.localizedWeaponName(weapon)}</div>
+        <div className="sq-skill-tip-type">{weaponTypeLabel(weapon.type)}</div>
       </div>
       <div className="sq-skill-tip-image">
         {WeaponIcon ? <WeaponIcon weapon={weapon} scale={2} /> : null}
@@ -385,26 +411,26 @@ function SkillTooltip({ weapon, text, tipDir = 'above', children }) {
       {stats ? (
         <div className="sq-skill-tip-specs">
           <div className="sq-skill-tip-spec">
-            <span className="sq-skill-tip-spec-key">Dégâts</span>
-            <span className="sq-skill-tip-spec-val">{damageText} <span className="sq-skill-tip-unit">HP</span></span>
+            <span className="sq-skill-tip-spec-key">{t('wp.damage')}</span>
+            <span className="sq-skill-tip-spec-val">{damageText} <span className="sq-skill-tip-unit">{t('wp.hp')}</span></span>
           </div>
           <div className="sq-skill-tip-spec">
-            <span className="sq-skill-tip-spec-key">Précision</span>
+            <span className="sq-skill-tip-spec-key">{t('wp.accuracy')}</span>
             <span className="sq-skill-tip-spec-val">{Math.round(stats.accuracy * 100)}<span className="sq-skill-tip-unit">%</span></span>
           </div>
           <div className="sq-skill-tip-spec">
-            <span className="sq-skill-tip-spec-key">Rafale</span>
-            <span className="sq-skill-tip-spec-val">{Math.max(1, Math.round(stats.burst || 1))} <span className="sq-skill-tip-unit">tirs</span></span>
+            <span className="sq-skill-tip-spec-key">{t('wp.burst')}</span>
+            <span className="sq-skill-tip-spec-val">{Math.max(1, Math.round(stats.burst || 1))} <span className="sq-skill-tip-unit">{t('wp.shots')}</span></span>
           </div>
           <div className="sq-skill-tip-spec">
-            <span className="sq-skill-tip-spec-key">Portée</span>
+            <span className="sq-skill-tip-spec-key">{t('wp.range')}</span>
             <span className="sq-skill-tip-spec-val">{stats.rangeMin}–{stats.rangeMax}</span>
           </div>
         </div>
       ) : null}
     </>
   ) : (
-    <div className="sq-skill-tip-text">{text || 'Skill inconnue.'}</div>
+    <div className="sq-skill-tip-text">{text || t('wp.unknown')}</div>
   );
 
   const below = tipDir === 'below';
@@ -445,7 +471,7 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
       return <SkillTooltip weapon={weapon} tipDir="below"><WeaponGameIcon weapon={weapon} /></SkillTooltip>;
     }
     return (
-      <SkillTooltip text={name || 'Arme inconnue'} tipDir="below">
+      <SkillTooltip text={name || t('wp.unknownWeapon')} tipDir="below">
         <span className="sq-skill-fallback sq-skill-fallback-unknown">?</span>
       </SkillTooltip>
     );
@@ -472,8 +498,65 @@ function RandomSoldierCard({ soldier, selected, onSelect }) {
   );
 }
 
+// ── LangDropdown ─────────────────────────────────────────────────────────────
+function LangDropdown() {
+  I18n.useI18n();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const currentLang = I18n.getLang();
+  const current = I18n.LANGS.find(l => l.code === currentLang) || I18n.LANGS[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocDown = e => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = e => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDocDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className={'lang-dd' + (open ? ' is-open' : '')} ref={rootRef}>
+      <button
+        type="button"
+        className="lang-dd-toggle"
+        title={t('hq.set.language')}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+      >
+        <img className="lang-dd-flag" src={current.flag} alt="" aria-hidden="true" />
+        <span className="lang-dd-label">{current.label}</span>
+        <span className="lang-dd-caret" aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <ul className="lang-dd-menu" role="listbox">
+          {I18n.LANGS.map(lang => (
+            <li key={lang.code} role="option" aria-selected={lang.code === currentLang}>
+              <button
+                type="button"
+                className={'lang-dd-item' + (lang.code === currentLang ? ' is-active' : '')}
+                onClick={() => { I18n.setLang(lang.code); setOpen(false); }}
+              >
+                <img className="lang-dd-flag" src={lang.flag} alt="" aria-hidden="true" />
+                <span className="lang-dd-label">{lang.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // ── HomePage ─────────────────────────────────────────────────────────────────
 function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
+  I18n.useI18n();
   const [selectedId,   setSelectedId]   = useState(null);
   const [squadName,    setSquadName]    = useState('');
   const [password,     setPassword]     = useState('');
@@ -490,9 +573,9 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
   const canCreate       = !!selectedSoldier && trimmedName.length >= 2 && !creating;
 
   let disabledReason = '';
-  if (!selectedSoldier && trimmedName.length < 2) disabledReason = 'Choisis un soldat et donne un nom à ta squad.';
-  else if (!selectedSoldier)                       disabledReason = 'Choisis un soldat fondateur.';
-  else if (trimmedName.length < 2)                 disabledReason = 'Le nom doit faire au moins 2 caractères.';
+  if (!selectedSoldier && trimmedName.length < 2) disabledReason = t('home.errChooseBoth');
+  else if (!selectedSoldier)                       disabledReason = t('home.errChooseSld');
+  else if (trimmedName.length < 2)                 disabledReason = t('home.errName2');
 
   const handleCreate = async e => {
     e.preventDefault();
@@ -515,7 +598,7 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
     e.preventDefault();
     setJoinError(null);
     const name = joinName.trim();
-    if (name.length < 2) { setJoinError('Entre un nom de squad valide.'); return; }
+    if (name.length < 2) { setJoinError(t('home.errJoinName')); return; }
     try { localStorage.setItem(LAST_SQUAD_KEY, name); setLastSquad(name); } catch (_) {}
     onJoin(name);
   };
@@ -530,14 +613,16 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
     <div className="gp-page gp-home">
       <div className="gp-bg" /><div className="gp-overlay" />
       {!serverOnline && (
-        <div className="srv-offline-badge" title="Mode hors ligne — données locales">
-          HORS LIGNE
+        <div className="srv-offline-badge" title={t('offline.badgeTip')}>
+          {t('offline.badge')}
         </div>
       )}
+      <div className="home-copyright" aria-label="copyright">© 2026 teddyfresnes.teddyfresnes</div>
+      <div className="home-lang-corner"><LangDropdown /></div>
       <div className="sq-card">
         <div className="sq-card-header">
-          <div className="sq-card-title">SQUADRON</div>
-          <div className="sq-card-sub">Une squad pour les gouverner tous</div>
+          <div className="sq-card-title">{t('brand.title')}</div>
+          <div className="sq-card-sub">{t('brand.subtitle')}</div>
         </div>
 
         <div className="sq-soldier-strip">
@@ -550,15 +635,15 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
 
         <div className="sq-actions">
           <form className="sq-create sq-col" onSubmit={handleCreate}>
-            <div className="sq-section-title">CRÉER MA SQUAD</div>
+            <div className="sq-section-title">{t('home.createTitle')}</div>
             <div className="sq-fields">
-              <input type="text"     className="sq-input" placeholder="Nom de la squad"          value={squadName} maxLength={24} autoComplete="off"          onChange={e => { setSquadName(e.target.value); setCreateError(null); }} />
-              <input type="password" className="sq-input" placeholder="Mot de passe (optionnel)" value={password}  maxLength={128} autoComplete="new-password"  onChange={e => { setPassword(e.target.value);  setCreateError(null); }} />
+              <input type="text"     className="sq-input" placeholder={t('home.squadName')}    value={squadName} maxLength={24} autoComplete="off"          onChange={e => { setSquadName(e.target.value); setCreateError(null); }} />
+              <input type="password" className="sq-input" placeholder={t('home.passwordOpt')} value={password}  maxLength={128} autoComplete="new-password"  onChange={e => { setPassword(e.target.value);  setCreateError(null); }} />
             </div>
             <div className="sq-col-spacer" />
             <div className="sq-btn-wrap" data-tooltip={canCreate ? '' : disabledReason}>
               <button type="submit" className={'sq-btn sq-btn-primary' + (canCreate ? '' : ' is-disabled')} disabled={!canCreate}>
-                {creating ? '…' : 'CRÉER'}
+                {creating ? '…' : t('home.createBtn')}
               </button>
             </div>
             {createError ? <div className="sq-error">{createError}</div> : null}
@@ -566,23 +651,23 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
 
           <div className="sq-or" aria-hidden="true">
             <span className="sq-or-line" />
-            <span className="sq-or-text">OU</span>
+            <span className="sq-or-text">{t('common.or')}</span>
             <span className="sq-or-line" />
           </div>
 
           <form className="sq-join sq-col" onSubmit={handleJoin}>
-            <div className="sq-section-title">REJOINDRE UNE SQUAD</div>
+            <div className="sq-section-title">{t('home.joinTitle')}</div>
             <div className="sq-fields">
-              <input type="text" className="sq-input" placeholder="Nom de la squad" value={joinName} maxLength={24} autoComplete="off" onChange={e => { setJoinName(e.target.value); setJoinError(null); }} />
+              <input type="text" className="sq-input" placeholder={t('home.squadName')} value={joinName} maxLength={24} autoComplete="off" onChange={e => { setJoinName(e.target.value); setJoinError(null); }} />
               {lastSquad && (
                 <button type="button" className="sq-last-squad" onClick={handleLastSquadClick}>
-                  ↩ Dernière connexion : <strong>{lastSquad}</strong>
+                  {t('home.lastConnection')}<strong>{lastSquad}</strong>
                 </button>
               )}
             </div>
             <div className="sq-col-spacer" />
             <div className="sq-btn-wrap">
-              <button type="submit" className={'sq-btn' + (joinName.trim().length >= 2 ? '' : ' is-disabled')} disabled={joinName.trim().length < 2}>REJOINDRE</button>
+              <button type="submit" className={'sq-btn' + (joinName.trim().length >= 2 ? '' : ' is-disabled')} disabled={joinName.trim().length < 2}>{t('home.joinBtn')}</button>
             </div>
             {joinError ? <div className="sq-error">{joinError}</div> : null}
           </form>
@@ -653,25 +738,18 @@ function FallingLinesEffect({ headline, detail, onDone, duration = 2400 }) {
 }
 
 // ── BootIntroEffect ──────────────────────────────────────────────────────────
-const BOOT_LINES = [
-  '> SQUADRON-NET v3.7.1',
-  '> Initialisation du module crypto...',
-  '> Tunnel sécurisé établi            [OK]',
-  '> Localisation du nœud squad...',
-  '> Nœud trouvé — latence 4 ms        [OK]',
-  '> Protocole AUTH activé             [OK]',
-  '> Mode CHALLENGE/RESPONSE',
-  '> En attente des identifiants...',
-];
+const BOOT_LINE_KEYS = ['boot.l1','boot.l2','boot.l3','boot.l4','boot.l5','boot.l6','boot.l7','boot.l8'];
 
 function BootIntroEffect({ onDone }) {
+  I18n.useI18n();
   const [count, setCount] = useState(0);
+  const lines = BOOT_LINE_KEYS.map(k => t(k));
 
   useEffect(() => {
-    const timers = BOOT_LINES.map((_, i) =>
+    const timers = lines.map((_, i) =>
       setTimeout(() => setCount(n => Math.max(n, i + 1)), i * 110)
     );
-    const done = setTimeout(onDone, BOOT_LINES.length * 110 + 250);
+    const done = setTimeout(onDone, lines.length * 110 + 250);
     return () => { timers.forEach(clearTimeout); clearTimeout(done); };
   }, [onDone]);
 
@@ -679,10 +757,10 @@ function BootIntroEffect({ onDone }) {
     <div className="gp-page hk-screen fx-boot">
       <div className="fx-boot-frame">
         <div className="fx-boot-tag">[SQUADRON-SYS]</div>
-        {BOOT_LINES.slice(0, count).map((line, i) => (
+        {lines.slice(0, count).map((line, i) => (
           <div key={i} className="fx-boot-line" style={{ animationDelay: '0ms' }}>{line}</div>
         ))}
-        {count < BOOT_LINES.length && <div className="fx-boot-cursor">▍</div>}
+        {count < lines.length && <div className="fx-boot-cursor">▍</div>}
       </div>
     </div>
   );
@@ -733,6 +811,7 @@ function HackerTyper({ text, speed = 38, jitter = 16, onDone }) {
 
 // ── LoginPage ────────────────────────────────────────────────────────────────
 function LoginPage({ squadName, onSuccess, onBack, onLogin }) {
+  I18n.useI18n();
   const [typingDone, setTypingDone] = useState(false);
   const [password,   setPassword]   = useState('');
   const [error,      setError]      = useState(null);
@@ -762,7 +841,7 @@ function LoginPage({ squadName, onSuccess, onBack, onLogin }) {
         <div className="hk-line"><span className="hk-prompt-tag">[SQUADRON-AUTH]</span></div>
         <div className="hk-line hk-prompt">
           <HackerTyper
-            text={`> Entrez le mot de passe de la Squad « ${squadName} »...`}
+            text={t('login.prompt', { name: squadName })}
             onDone={() => setTypingDone(true)}
           />
         </div>
@@ -778,11 +857,11 @@ function LoginPage({ squadName, onSuccess, onBack, onLogin }) {
                 disabled={loading}
               />
               <button type="submit" className="hk-submit" disabled={loading}>
-                {loading ? '…' : 'ENTER'}
+                {loading ? '…' : t('common.enter')}
               </button>
             </div>
             {error ? <div className="hk-error">{error}</div> : null}
-            <button type="button" className="hk-back" onClick={onBack} disabled={loading}>← annuler</button>
+            <button type="button" className="hk-back" onClick={onBack} disabled={loading}>{t('common.cancelLower')}</button>
           </form>
         )}
       </div>
@@ -804,6 +883,7 @@ function HQPage(props) {
 //   home → direct-access (FallingLines) → hq
 //   home → boot-intro → login → tv-on → hq
 function GameApp({ onSwitchMode }) {
+  I18n.useI18n();
   const [page,         setPage]         = useState('server-check');
   const [squad,        setSquad]        = useState(null);
   const [founder,      setFounder]      = useState(null);
@@ -821,7 +901,7 @@ function GameApp({ onSwitchMode }) {
     try {
       const { ok, data } = await apiFetch('/api/troopers');
       if (ok && Array.isArray(data.troopers)) {
-        const list = data.troopers;
+        const list = relocalizeSoldierNames(data.troopers);
         const padded = list.length < SOLDIER_COUNT
           ? [...list, ...buildSoldiers(SOLDIER_COUNT - list.length)]
           : list;
@@ -852,7 +932,7 @@ function GameApp({ onSwitchMode }) {
       method: 'POST',
       body: JSON.stringify({ squadName, password, founder: founderData }),
     });
-    if (!ok) return { ok: false, error: data.error || 'Erreur serveur.' };
+    if (!ok) return { ok: false, error: data.error || t('server.error') };
     try { sessionStorage.setItem('sq-token', data.token); } catch (_) {}
     setFounder(founderData);
     return { ok: true };
@@ -860,15 +940,15 @@ function GameApp({ onSwitchMode }) {
 
   const loginSquadApi = useCallback(async (password) => {
     if (!serverOnline) {
-      if (!squadExists(squad)) return { ok: false, error: 'ACCESS DENIED — squad introuvable.' };
+      if (!squadExists(squad)) return { ok: false, error: t('login.errNotFound') };
       if (verifySquadPassword(squad, password)) return { ok: true };
-      return { ok: false, error: 'ACCESS DENIED — mot de passe invalide.' };
+      return { ok: false, error: t('login.errBadPwd') };
     }
     const { ok, data } = await apiFetch('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ squadName: squad, password }),
     });
-    if (!ok) return { ok: false, error: data.error || 'ACCESS DENIED — erreur serveur.' };
+    if (!ok) return { ok: false, error: data.error || t('login.errServer') };
     try { sessionStorage.setItem('sq-token', data.token); } catch (_) {}
     return { ok: true };
   }, [serverOnline, squad]);
@@ -916,8 +996,8 @@ function GameApp({ onSwitchMode }) {
   } else if (page === 'creating') {
     content = (
       <FallingLinesEffect
-        headline="CRÉATION DU QG"
-        detail={squad || 'ESCADRON'}
+        headline={t('falling.createHQ')}
+        detail={squad || t('falling.fallback')}
         onDone={goHQ}
         duration={2400}
       />
@@ -926,8 +1006,8 @@ function GameApp({ onSwitchMode }) {
   } else if (page === 'direct-access') {
     content = (
       <FallingLinesEffect
-        headline="ACCÈS AU QG"
-        detail={squad || 'ESCADRON'}
+        headline={t('falling.accessHQ')}
+        detail={squad || t('falling.fallback')}
         onDone={goHQ}
         duration={2200}
       />

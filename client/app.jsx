@@ -1,6 +1,8 @@
 // Main React app — UI showcase for custom 2D characters.
 
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
+const __I18n = window.I18n;
+const __t = __I18n.t;
 
 // Default rifle index in the new sheet-driven list. The list order is
 // [smg×11, rifle×10, heavy×14, shotgun×8, sniper×10, pistol×8, melee×1]
@@ -21,10 +23,12 @@ const DEFAULT_CFG = {
   weaponSkinIdx: 33  // sheet 33.png — default texture style
 };
 
-const BODY_TYPES = [
-  { name: 'Male', value: 'male' },
-  { name: 'Female', value: 'female' }
-];
+function getBodyTypes() {
+  return [
+    { name: __t('dev.male'), value: 'male' },
+    { name: __t('dev.female'), value: 'female' },
+  ];
+}
 
 const HAIRSTYLES_BY_BODY = {
   male: ['Textured Crop', 'Low Fade', 'Side Part', 'Quiff', 'Curly Top', 'Buzz Cut', 'Crew Cut', 'Bald'],
@@ -243,6 +247,8 @@ function Toggle({ on, onChange, label }) {
 
 // ---------------- App ----------------
 function App({ onSwitchMode }) {
+  __I18n.useI18n();
+  const BODY_TYPES = getBodyTypes();
   const [cfg, setCfg] = useState(() => {
     try {
       const saved = localStorage.getItem('char-cfg');
@@ -329,7 +335,7 @@ function App({ onSwitchMode }) {
         <div className="brand">
           <img className="brand-dot" src="assets/images/icons/favicon.png" alt="Squadron" />
           <div className="brand-text">
-            <div className="brand-title">SQUADRON DEV PART</div>
+            <div className="brand-title">{__t('brand.devTitle')}</div>
           </div>
         </div>
         <div className="topbar-actions">
@@ -337,9 +343,9 @@ function App({ onSwitchMode }) {
             type="button"
             className="mode-toggle"
             onClick={() => onSwitchMode && onSwitchMode('prod')}
-            title="Switch to game (prod) mode"
+            title={__t('brand.prodModeTip')}
           >
-            PROD MODE →
+            {__t('brand.prodModeBtn')}
           </button>
         </div>
       </header>
@@ -347,20 +353,20 @@ function App({ onSwitchMode }) {
       <div className="main">
         {/* Left: weapons and skins */}
         <aside className="panel panel-left">
-          <div className="panel-title">WEAPON SKIN</div>
+          <div className="panel-title">{__t('dev.weaponSkin')}</div>
           <WeaponSkinPicker
             value={cfg.weaponSkinIdx}
             onChange={set('weaponSkinIdx')}
           />
 
-          <div className="panel-title" style={{marginTop: 16}}>WEAPON LEVEL</div>
+          <div className="panel-title" style={{marginTop: 16}}>{__t('dev.weaponLevel')}</div>
           <WeaponLevelPicker
             baseWeapon={currentBaseWeapon}
             value={currentMkLevel}
             onChange={setWeaponMkLevel}
           />
 
-          <div className="panel-title" style={{marginTop: 16}}>WEAPON</div>
+          <div className="panel-title" style={{marginTop: 16}}>{__t('dev.weapon')}</div>
           <WeaponPicker
             list={window.Weapons.list}
             byType={window.Weapons.baseByType || window.Weapons.byType}
@@ -373,13 +379,13 @@ function App({ onSwitchMode }) {
         {/* Center: main preview + animations */}
         <main className="stage-wrap">
           <div className="center-controls">
-            <button onClick={() => setBgMode('light')} className={bgMode === 'light' ? 'on' : ''} title="Light background">light</button>
-            <button onClick={() => setBgMode('grid')} className={bgMode === 'grid' ? 'on' : ''} title="Grid background">grid</button>
-            <button onClick={() => setBgMode('dark')} className={bgMode === 'dark' ? 'on' : ''} title="Dark background">dark</button>
+            <button onClick={() => setBgMode('light')} className={bgMode === 'light' ? 'on' : ''} title={__t('dev.lightTip')}>{__t('dev.light')}</button>
+            <button onClick={() => setBgMode('grid')} className={bgMode === 'grid' ? 'on' : ''} title={__t('dev.gridTip')}>{__t('dev.grid')}</button>
+            <button onClick={() => setBgMode('dark')} className={bgMode === 'dark' ? 'on' : ''} title={__t('dev.darkTip')}>{__t('dev.dark')}</button>
             <span style={{ marginLeft: 'auto' }} />
-            <button onClick={() => setFacing(f => -f)} title="Flip facing">⇄</button>
-            <button onClick={() => setScale(s => Math.max(1, s - 1))} title="Zoom out">−</button>
-            <button onClick={() => setScale(s => Math.min(8, s + 1))} title="Zoom in">+</button>
+            <button onClick={() => setFacing(f => -f)} title={__t('dev.flipTip')}>⇄</button>
+            <button onClick={() => setScale(s => Math.max(1, s - 1))} title={__t('dev.zoomOut')}>−</button>
+            <button onClick={() => setScale(s => Math.min(8, s + 1))} title={__t('dev.zoomIn')}>+</button>
             <span style={{ fontSize: '10px', color: 'var(--text-dim)', marginLeft: '8px' }}>{STAGE_W} × {STAGE_H} px · ×{scale}</span>
           </div>
 
@@ -390,7 +396,7 @@ function App({ onSwitchMode }) {
           </div>
 
           <div className="anims-section">
-            <div className="anims-section-label">ANIMATIONS</div>
+            <div className="anims-section-label">{__t('dev.animations')}</div>
             <div className="anim-grid">
               {window.AnimList.map((k) => (
                 <button
@@ -419,21 +425,21 @@ function App({ onSwitchMode }) {
 
         {/* Right: customization */}
         <aside className="panel panel-right">
-          <div className="panel-title">CHARACTER</div>
+          <div className="panel-title">{__t('dev.character')}</div>
 
-          <Section title="Body">
+          <Section title={__t('dev.body')}>
             <Chips
               options={BODY_TYPES}
-              selectedIdx={Math.max(0, BODY_TYPES.findIndex((t) => t.value === (cfg.bodyType || 'male')))}
+              selectedIdx={Math.max(0, BODY_TYPES.findIndex((bt) => bt.value === (cfg.bodyType || 'male')))}
               onPick={(i) => setBodyType(BODY_TYPES[i].value)}
             />
           </Section>
 
-          <Section title="Skin">
+          <Section title={__t('dev.skin')}>
             <ColorSwatches options={window.Palette.skin} selectedIdx={cfg.skinIdx} onPick={set('skinIdx')} field="base" />
           </Section>
 
-          <Section title="Hair Style">
+          <Section title={__t('dev.hairStyle')}>
             <Chips
               options={hairStyleOptions}
               selectedIdx={selectedHairStyleOptionIdx}
@@ -441,26 +447,26 @@ function App({ onSwitchMode }) {
             />
           </Section>
 
-          <Section title="Hair Color">
+          <Section title={__t('dev.hairColor')}>
             <ColorSwatches options={window.Palette.hair} selectedIdx={cfg.hairIdx} onPick={set('hairIdx')} field="base" />
           </Section>
 
-          <Section title={<>Headwear <Toggle on={headwearOn} onChange={(on) => set('hatIdx')(on ? 1 : 0)} label="" /></>}>
+          <Section title={<>{__t('dev.headwear')} <Toggle on={headwearOn} onChange={(on) => set('hatIdx')(on ? 1 : 0)} label="" /></>}>
             {headwearOn && <Chips options={headwearHats} selectedIdx={selectedHeadwearIdx} onPick={(i) => set('hatIdx')(i + 1)} />}
           </Section>
 
-          <Section title="Eyes">
+          <Section title={__t('dev.eyes')}>
             <ColorSwatches options={window.Palette.eye} selectedIdx={cfg.eyeIdx} onPick={set('eyeIdx')} field="base" />
           </Section>
 
-          <Section title="Uniform Color">
+          <Section title={__t('dev.uniformColor')}>
             <ColorSwatches options={window.Palette.uniforms} selectedIdx={cfg.uniformIdx} onPick={set('uniformIdx')} field="base" />
           </Section>
 
-          <Section title={<>Vest <Toggle on={cfg.vestOn} onChange={set('vestOn')} label="" /></>}>
+          <Section title={<>{__t('dev.vest')} <Toggle on={cfg.vestOn} onChange={set('vestOn')} label="" /></>}>
           </Section>
 
-          <Section title={<>Backpack <Toggle on={cfg.backpackOn} onChange={set('backpackOn')} label="" /></>}>
+          <Section title={<>{__t('dev.backpack')} <Toggle on={cfg.backpackOn} onChange={set('backpackOn')} label="" /></>}>
           </Section>
         </aside>
       </div>
@@ -471,12 +477,13 @@ function App({ onSwitchMode }) {
 
 // Strip of individual frames for current animation
 function FrameStrip({ cfg, animKey, facing }) {
+  __I18n.useI18n();
   const anim = window.Anims[animKey];
   const frames = [];
   for (let i = 0; i < anim.frames; i++) frames.push(i);
   return (
     <div className="frame-strip">
-      <div className="frame-strip-label">FRAMES</div>
+      <div className="frame-strip-label">{__t('dev.frames')}</div>
       <div className="frame-strip-inner">
         {frames.map((i) => (
           <div key={i} className="frame-cell">
@@ -491,9 +498,10 @@ function FrameStrip({ cfg, animKey, facing }) {
 
 // Grid of all animations playing in parallel
 function AllAnimsRow({ cfg, facing }) {
+  __I18n.useI18n();
   return (
     <div className="all-anims">
-      <div className="all-anims-label">ALL ANIMATIONS · LIVE</div>
+      <div className="all-anims-label">{__t('dev.allAnims')}</div>
       <div className="all-anims-grid">
         {window.AnimList.map((k) => (
           <div key={k} className="all-anim-cell">
@@ -780,7 +788,7 @@ function WeaponGameIcon({ weapon }) {
   }, [weapon, sheetVersion]);
 
   return (
-    <span className="game-icon weapon-game-icon" title={`${weapon.name} icon`} aria-hidden="true">
+    <span className="game-icon weapon-game-icon" title={`${__I18n.localizedWeaponName(weapon)} icon`} aria-hidden="true">
       <canvas ref={ref} width="96" height="96" />
     </span>
   );
@@ -791,24 +799,16 @@ function WeaponGameIcon({ weapon }) {
 // weapon shows its sprite-sheet thumbnail plus its name. Rendering is cheap
 // because canvases just blit from the active sheet.
 const TYPE_ORDER = ['melee', 'pistol', 'smg', 'shotgun', 'rifle', 'sniper', 'heavy'];
-const TYPE_LABELS = {
-  melee:   'Melee',
-  pistol:  'Pistols',
-  smg:     'SMGs',
-  shotgun: 'Shotguns',
-  rifle:   'Rifles',
-  sniper:  'Snipers',
-  heavy:   'Heavy'
-};
 
 function WeaponLevelPicker({ baseWeapon, value, onChange }) {
+  __I18n.useI18n();
   const levels = [
-    { label: 'Base', value: 0 },
-    { label: 'MK1', value: 1 },
-    { label: 'MK2', value: 2 }
+    { label: __t('dev.weaponBase'), value: 0 },
+    { label: __t('dev.mk1'), value: 1 },
+    { label: __t('dev.mk2'), value: 2 }
   ];
   return (
-    <div className="weapon-level-picker" role="group" aria-label="Weapon level">
+    <div className="weapon-level-picker" role="group" aria-label={__t('dev.weaponLevelAria')}>
       {levels.map(level => {
         const variant = level.value === 0
           ? baseWeapon
@@ -821,7 +821,7 @@ function WeaponLevelPicker({ baseWeapon, value, onChange }) {
             className={'weapon-level-chip' + (value === level.value ? ' selected' : '')}
             onClick={() => !disabled && onChange(level.value)}
             disabled={disabled}
-            title={disabled ? 'No variant' : level.label}
+            title={disabled ? __t('dev.noVariant') : level.label}
           >
             {level.label}
           </button>
@@ -832,6 +832,7 @@ function WeaponLevelPicker({ baseWeapon, value, onChange }) {
 }
 
 function WeaponPicker({ list, byType, selectedIdx, selectedBaseIdx, onPick }) {
+  __I18n.useI18n();
   // Map weapon -> list index for stable keys / clicks.
   const idxOf = useMemo(() => {
     const m = new Map();
@@ -842,25 +843,26 @@ function WeaponPicker({ list, byType, selectedIdx, selectedBaseIdx, onPick }) {
 
   return (
     <div className="weapon-picker">
-      {TYPE_ORDER.map((t) => {
-        const items = byType[t] || [];
+      {TYPE_ORDER.map((typeKey) => {
+        const items = byType[typeKey] || [];
         if (!items.length) return null;
         return (
-          <div key={t} className="weapon-group">
-            <div className="weapon-group-title">{TYPE_LABELS[t]} <span className="weapon-group-count">{items.length}</span></div>
+          <div key={typeKey} className="weapon-group">
+            <div className="weapon-group-title">{__t('wt.' + typeKey)} <span className="weapon-group-count">{items.length}</span></div>
             <div className="weapon-grid">
               {items.map((w) => {
                 const i = idxOf.get(w);
+                const displayName = __I18n.localizedWeaponName(w);
                 return (
                   <button
                     key={i}
                     className={'weapon-card' + (activeIdx === i ? ' selected' : '')}
                     onClick={() => onPick(i)}
-                    title={w.name}
+                    title={displayName}
                   >
                     <div className="weapon-card-main">
                       <WeaponIcon weapon={w} />
-                      <div className="weapon-name">{w.name}</div>
+                      <div className="weapon-name">{displayName}</div>
                     </div>
                     <WeaponGameIcon weapon={w} />
                   </button>
@@ -878,6 +880,7 @@ function WeaponPicker({ list, byType, selectedIdx, selectedBaseIdx, onPick }) {
 // 34 skins (0..33). We render each one as a tiny number chip and show a live
 // preview of the currently-selected skin using the active weapon.
 function WeaponSkinPicker({ value, onChange }) {
+  __I18n.useI18n();
   const NUM = (window.Weapons && window.Weapons.NUM_SKINS) || 34;
   return (
     <div className="skin-picker">
@@ -887,7 +890,7 @@ function WeaponSkinPicker({ value, onChange }) {
             key={i}
             className={'skin-chip' + (value === i ? ' selected' : '')}
             onClick={() => onChange(i)}
-            title={`Skin ${i}`}
+            title={__t('dev.skinTip', { n: i })}
           >
             {i}
           </button>

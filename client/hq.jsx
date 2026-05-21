@@ -8,6 +8,8 @@ const { useState, useEffect, useMemo, useCallback } = React;
 
 const G = window.SquadronGame.helpers;
 const UI = window.SquadronUI;
+const I18n = window.I18n;
+const t = I18n.t;
 
 const HQ_KEY      = (sname) => 'squadron-hq-' + sname;
 const RECRUIT_KEY = (sname) => 'squadron-recruit-' + sname;
@@ -99,7 +101,7 @@ function soldierFromFounder(founder, squadName) {
   if (founder.skill2Name && founder.skill2Name !== founder.skill1Name) unlocked.push(founder.skill2Name);
   return {
     id: 'founder-' + hashStr(squadName || founder.name || 'squad').toString(36),
-    name: founder.name || 'Soldat',
+    name: founder.name || t('cv.soldier'),
     config: founder.config,
     level: 1,
     xp: 0,
@@ -152,15 +154,28 @@ function formatRemainingCooldown(ms) {
   const days = Math.ceil(hrs / 24);
   const months = Math.ceil(days / 30);
   const years = Math.floor(months / 12);
+  const lang = I18n.getLang();
+  const units = lang === 'en'
+    ? { y: 'y', m: 'mo', d: 'd', h: 'h', min: 'min', s: 's' }
+    : lang === 'zh'
+      ? { y: '年', m: '月', d: '天', h: '小时', min: '分钟', s: '秒' }
+      : { y: 'an', ys: 'ans', m: 'mois', d: 'j', h: 'h', min: 'min', s: 's' };
   if (years >= 1) {
     const rem = months - years * 12;
-    return rem > 0 ? `${years} an${years > 1 ? 's' : ''} ${rem} mois` : `${years} an${years > 1 ? 's' : ''}`;
+    if (lang === 'zh') {
+      return rem > 0 ? `${years}${units.y} ${rem}${units.m}` : `${years}${units.y}`;
+    }
+    if (lang === 'en') {
+      return rem > 0 ? `${years}${units.y} ${rem}${units.m}` : `${years}${units.y}`;
+    }
+    const ySuffix = years > 1 ? units.ys : units.y;
+    return rem > 0 ? `${years} ${ySuffix} ${rem} ${units.m}` : `${years} ${ySuffix}`;
   }
-  if (months >= 1) return `${months} mois`;
-  if (days >= 1) return `${days} j`;
-  if (hrs >= 1) return `${hrs} h`;
-  if (min >= 1) return `${min} min`;
-  return `${sec} s`;
+  if (months >= 1) return lang === 'zh' ? `${months}${units.m}` : `${months} ${units.m}`;
+  if (days >= 1)   return lang === 'zh' ? `${days}${units.d}` : `${days} ${units.d}`;
+  if (hrs >= 1)    return lang === 'zh' ? `${hrs}${units.h}` : `${hrs} ${units.h}`;
+  if (min >= 1)    return lang === 'zh' ? `${min}${units.min}` : `${min} ${units.min}`;
+  return lang === 'zh' ? `${sec}${units.s}` : `${sec} ${units.s}`;
 }
 
 // ── Upgrade-offer generation (deterministic per soldier + next level) ──────────
@@ -487,28 +502,30 @@ const TAB_ICONS = {
   ),
 };
 
-const TABS = [
-  { id: 'play',     label: 'Jouer' },
-  { id: 'squad',    label: 'Ma squad' },
-  { id: 'market',   label: 'Marché' },
-  { id: 'settings', label: 'Paramètres' },
-];
+const TAB_IDS = ['play', 'squad', 'market', 'settings'];
+const TAB_LABEL_KEYS = {
+  play:     'hq.tab.play',
+  squad:    'hq.tab.squad',
+  market:   'hq.tab.market',
+  settings: 'hq.tab.settings',
+};
 
 function HQHeader({ tab, onTab }) {
+  I18n.useI18n();
   return (
     <header className="hq-header">
       <nav className="hq-tabs" role="tablist">
-        {TABS.map(t => (
+        {TAB_IDS.map(id => (
           <button
-            key={t.id}
+            key={id}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
-            className={'hq-tab' + (tab === t.id ? ' active' : '')}
-            onClick={() => onTab(t.id)}
+            aria-selected={tab === id}
+            className={'hq-tab' + (tab === id ? ' active' : '')}
+            onClick={() => onTab(id)}
           >
-            <span className="hq-tab-icon">{TAB_ICONS[t.id]}</span>
-            <span className="hq-tab-label">{t.label}</span>
+            <span className="hq-tab-icon">{TAB_ICONS[id]}</span>
+            <span className="hq-tab-label">{t(TAB_LABEL_KEYS[id])}</span>
           </button>
         ))}
       </nav>
@@ -518,23 +535,24 @@ function HQHeader({ tab, onTab }) {
 
 // ── HQSidebar ────────────────────────────────────────────────────────────────
 function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting, tokens, power, serverOnline }) {
+  I18n.useI18n();
   const { AnimPreview } = UI;
   return (
     <aside className="hq-sidebar">
       <div className="hq-sidebar-stats">
-        <div className="hq-stat hq-stat-tokens" title="Tokens">
+        <div className="hq-stat hq-stat-tokens" title={t('hq.sb.tokensTip')}>
           <span className="hq-stat-icon" aria-hidden="true"><TokenIcon /></span>
-          <span className="hq-stat-key">TOKENS</span>
+          <span className="hq-stat-key">{t('hq.sb.tokens')}</span>
           <span className="hq-stat-val">{tokens}</span>
         </div>
-        <div className="hq-stat hq-stat-power" title="Power">
+        <div className="hq-stat hq-stat-power" title={t('hq.sb.powerTip')}>
           <span className="hq-stat-icon" aria-hidden="true"><PowerIcon /></span>
-          <span className="hq-stat-key">POWER</span>
+          <span className="hq-stat-key">{t('hq.sb.power')}</span>
           <span className="hq-stat-val">{power}</span>
         </div>
-        {!serverOnline && <div className="hq-offline-pill" title="Mode hors ligne">HORS LIGNE</div>}
+        {!serverOnline && <div className="hq-offline-pill" title={t('offline.pillTip')}>{t('offline.badge')}</div>}
       </div>
-      <div className="hq-sidebar-title">MES SOLDATS <span className="hq-sidebar-count">{soldiers.length}</span></div>
+      <div className="hq-sidebar-title">{t('hq.sb.mySoldiers')} <span className="hq-sidebar-count">{soldiers.length}</span></div>
       <div className="hq-sidebar-list">
         {soldiers.map(s => (
           <button
@@ -557,10 +575,10 @@ function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting, tokens
           type="button"
           className={'hq-sb-add' + (isRecruiting ? ' active' : '')}
           onClick={onAdd}
-          title="Recruter un nouveau soldat"
+          title={t('hq.sb.recruitTip')}
         >
           <div className="hq-sb-add-plus">＋</div>
-          <div className="hq-sb-add-label">Recruter</div>
+          <div className="hq-sb-add-label">{t('hq.sb.recruit')}</div>
         </button>
       </div>
     </aside>
@@ -568,49 +586,30 @@ function HQSidebar({ soldiers, selectedId, onSelect, onAdd, isRecruiting, tokens
 }
 
 // ── HQPlay (default Jouer page — modes grid + battles counter) ──────────────
-const PLAY_MODES = [
-  {
-    id: 'army-vs-army',
-    label: 'Squad vs Squad',
-    cover: 'assets/images/covers_mode/armyvsarmy.png',
-    available: true,
-  },
-  {
-    id: 'survival',
-    label: 'Survie',
-    accent: 'mode-accent-green',
-    available: false,
-  },
-  {
-    id: 'tournament',
-    label: 'Tournoi',
-    accent: 'mode-accent-amber',
-    available: false,
-  },
-  {
-    id: 'boss',
-    label: 'Boss du jour',
-    accent: 'mode-accent-red',
-    available: false,
-  },
+const PLAY_MODE_DEFS = [
+  { id: 'army-vs-army', labelKey: 'hq.play.mode.army',       cover: 'assets/images/covers_mode/armyvsarmy.png', available: true },
+  { id: 'survival',     labelKey: 'hq.play.mode.survival',   accent: 'mode-accent-green', available: false },
+  { id: 'tournament',   labelKey: 'hq.play.mode.tournament', accent: 'mode-accent-amber', available: false },
+  { id: 'boss',         labelKey: 'hq.play.mode.boss',       accent: 'mode-accent-red',   available: false },
 ];
 
 function HQPlay({ squadName, onPickMode }) {
+  I18n.useI18n();
   return (
     <div className="hq-play">
       <div className="hq-play-header">
-        <div className="hq-play-eyebrow">QUARTIER GÉNÉRAL</div>
-        <h1 className="hq-play-title"><span className="hq-squad-prefix">SQUADRON</span>{squadName}</h1>
+        <div className="hq-play-eyebrow">{t('hq.play.eyebrow')}</div>
+        <h1 className="hq-play-title"><span className="hq-squad-prefix">{t('hq.play.squadPrefix')}</span>{squadName}</h1>
       </div>
 
       <div className="hq-modes">
-        {PLAY_MODES.map(m => (
+        {PLAY_MODE_DEFS.map(m => (
           <div
             key={m.id}
             className={'hq-mode-shell' + (m.accent ? ' ' + m.accent : '') + (m.available ? '' : ' is-locked')}
           >
             <div className="hq-mode-card">
-              <div className="hq-mode-card-header">{m.label.toUpperCase()}</div>
+              <div className="hq-mode-card-header">{t(m.labelKey).toUpperCase()}</div>
 
               {/* Cover — decorative only, not interactive */}
               <div className="hq-mode-cover-area">
@@ -618,7 +617,7 @@ function HQPlay({ squadName, onPickMode }) {
                   ? <img src={m.cover} alt="" className="hq-mode-cover-img" />
                   : <div className="hq-mode-cover-placeholder" />
                 }
-                {!m.available && <div className="hq-mode-empty">À VENIR</div>}
+                {!m.available && <div className="hq-mode-empty">{t('hq.play.comingSoon')}</div>}
               </div>
 
               {/* Footer */}
@@ -630,13 +629,13 @@ function HQPlay({ squadName, onPickMode }) {
                       type="button"
                       className="hq-mode-go-btn"
                       onClick={() => onPickMode(m.id)}
-                    >GO !</button>
+                    >{t('hq.play.go')}</button>
                   ))}
                 </div>
               ) : (
                 <div className="hq-mode-card-footer hq-mode-card-footer-locked">
                   <button type="button" className="hq-mode-unlock-btn" disabled>
-                    À DÉBLOQUER
+                    {t('hq.play.toUnlock')}
                   </button>
                 </div>
               )}
@@ -726,14 +725,15 @@ function HQOpponentSelect({ mySquad, serverOnline, onBack, onAttack }) {
     return () => { cancelled = true; };
   }, [mySquad.name, myPower, serverOnline, initialPack, rebuildOpponents]);
 
+  I18n.useI18n();
   return (
     <div className="hq-opponents">
-      <button type="button" className="hq-back-btn" onClick={onBack}>← Retour</button>
+      <button type="button" className="hq-back-btn" onClick={onBack}>{t('common.back')}</button>
 
-      <h2 className="hq-section-title hq-opponents-title">Squad vs Squad</h2>
+      <h2 className="hq-section-title hq-opponents-title">{t('hq.opp.title')}</h2>
 
       {isLoadingOpponents ? (
-        <p className="hq-section-hint">Recherche d'adversaires...</p>
+        <p className="hq-section-hint">{t('hq.opp.searching')}</p>
       ) : (
         <div className="hq-opp-grid">
           {opponents.map((opp, i) => (
@@ -767,7 +767,7 @@ function OpponentCard({ opp, myPower, onAttack }) {
         ))}
       </div>
       <button type="button" className="sq-btn hq-opp-attack" onClick={onAttack}>
-        ATTAQUER
+        {t('hq.opp.attack')}
       </button>
     </div>
   );
@@ -775,14 +775,15 @@ function OpponentCard({ opp, myPower, onAttack }) {
 
 // ── HQRecruit ───────────────────────────────────────────────────────────────
 function HQRecruit({ pool, tokens, soldierCount, onPick, onBack }) {
+  I18n.useI18n();
   const cost = calcRecruitCost(soldierCount);
   return (
     <div className="hq-recruit">
-      <button type="button" className="hq-back-btn" onClick={onBack}>← Retour</button>
+      <button type="button" className="hq-back-btn" onClick={onBack}>{t('common.back')}</button>
 
-      <div className="hq-section-eyebrow">RECRUTEMENT</div>
-      <h2 className="hq-section-title">5 soldats disponibles aujourd'hui</h2>
-      <p className="hq-section-hint">La sélection change chaque jour. Reviens demain pour de nouvelle recrues !</p>
+      <div className="hq-section-eyebrow">{t('hq.rec.eyebrow')}</div>
+      <h2 className="hq-section-title">{t('hq.rec.title')}</h2>
+      <p className="hq-section-hint">{t('hq.rec.hint')}</p>
 
       <div className="hq-recruit-grid">
         {pool.map((s, i) => (
@@ -822,7 +823,7 @@ function RecruitCard({ soldier, tokens, cost, onPick }) {
         disabled={!canAfford}
         onClick={onPick}
       >
-        RECRUTER · <span className="hq-recruit-cost">{cost} <TokenIcon className="hq-resource-icon-inline" /></span>
+        {t('hq.rec.btn')}<span className="hq-recruit-cost">{cost} <TokenIcon className="hq-resource-icon-inline" /></span>
       </button>
     </div>
   );
@@ -850,7 +851,7 @@ function SoldierSkillGrid({ soldier }) {
   const unlockedSet = useMemo(() => soldierOwnedWeaponIds(soldier), [soldier]);
 
   return (
-    <div className="hq-sd-skill-grid" aria-label="Compétences débloquées">
+    <div className="hq-sd-skill-grid" aria-label={t('hq.sd.skillsAria')}>
       {visibleWeapons.map(w => {
         const unlocked = unlockedSet.has(w.id);
         const cell = (
@@ -891,8 +892,8 @@ function RenamePerk({ soldier, onRename }) {
   return (
     <div className={'hq-sd-perk' + (ready ? '' : ' is-cooldown')}>
       <div className="hq-sd-perk-head">
-        <span className="hq-sd-perk-tier">NIV. 1</span>
-        <span className="hq-sd-perk-title">Renommer le soldat</span>
+        <span className="hq-sd-perk-tier">{t('hq.sd.lvlShort')} 1</span>
+        <span className="hq-sd-perk-title">{t('hq.sd.rename')}</span>
       </div>
       {!open && (
         <div className="hq-sd-perk-body">
@@ -902,7 +903,7 @@ function RenamePerk({ soldier, onRename }) {
               <span
                 className="hq-sd-perk-cooldown-icon"
                 title={formatRemainingCooldown(remaining)}
-                aria-label={'En attente : ' + formatRemainingCooldown(remaining)}
+                aria-label={t('hq.sd.renameTip', { time: formatRemainingCooldown(remaining) })}
               >
                 <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                   <circle cx="8" cy="8.5" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -918,7 +919,7 @@ function RenamePerk({ soldier, onRename }) {
               className="sq-btn hq-sd-perk-btn"
               onClick={() => setOpen(true)}
             >
-              Renommer
+              {t('hq.sd.renameBtn')}
             </button>
           )}
         </div>
@@ -942,8 +943,8 @@ function RenamePerk({ soldier, onRename }) {
             onChange={(e) => setValue(e.target.value)}
           />
           <div className="hq-sd-perk-form-row">
-            <button type="button" className="sq-btn hq-sd-perk-btn-cancel" onClick={() => { setOpen(false); setValue(soldier.name || ''); }}>Annuler</button>
-            <button type="submit" className={'sq-btn sq-btn-primary hq-sd-perk-btn' + (isValid ? '' : ' is-disabled')} disabled={!isValid}>Valider</button>
+            <button type="button" className="sq-btn hq-sd-perk-btn-cancel" onClick={() => { setOpen(false); setValue(soldier.name || ''); }}>{t('common.cancel')}</button>
+            <button type="submit" className={'sq-btn sq-btn-primary hq-sd-perk-btn' + (isValid ? '' : ' is-disabled')} disabled={!isValid}>{t('common.confirm')}</button>
           </div>
         </form>
       )}
@@ -961,8 +962,8 @@ function PreferredWeaponPerk({ soldier, onSetPreferred }) {
     return (
       <div className="hq-sd-perk is-locked">
         <div className="hq-sd-perk-head">
-          <span className="hq-sd-perk-tier">NIV. 2</span>
-          <span className="hq-sd-perk-title hq-sd-perk-mystery">???</span>
+          <span className="hq-sd-perk-tier">{t('hq.sd.lvlShort')} 2</span>
+          <span className="hq-sd-perk-title hq-sd-perk-mystery">{t('hq.sd.mystery')}</span>
         </div>
       </div>
     );
@@ -971,8 +972,8 @@ function PreferredWeaponPerk({ soldier, onSetPreferred }) {
   return (
     <div className="hq-sd-perk">
       <div className="hq-sd-perk-head">
-        <span className="hq-sd-perk-tier">NIV. 2</span>
-        <span className="hq-sd-perk-title">Arme préférée</span>
+        <span className="hq-sd-perk-tier">{t('hq.sd.lvlShort')} 2</span>
+        <span className="hq-sd-perk-title">{t('hq.sd.preferred')}</span>
       </div>
       <div className="hq-sd-perk-body hq-sd-perk-weapon-row">
         <div className="hq-sd-perk-weapon-icon">
@@ -985,10 +986,11 @@ function PreferredWeaponPerk({ soldier, onSetPreferred }) {
           value={soldier.preferredWeapon || ''}
           onChange={(e) => onSetPreferred(e.target.value || null)}
         >
-          <option value="">Aucune</option>
-          {unlocked.map(name => (
-            <option key={name} value={name}>{name}</option>
-          ))}
+          <option value="">{t('common.none')}</option>
+          {unlocked.map(name => {
+            const w = G.getWeaponByName(name);
+            return <option key={name} value={name}>{w ? I18n.localizedWeaponName(w) : name}</option>;
+          })}
         </select>
       </div>
     </div>
@@ -999,20 +1001,21 @@ function MysteryPerk({ tier }) {
   return (
     <div className="hq-sd-perk is-locked is-mystery">
       <div className="hq-sd-perk-head">
-        <span className="hq-sd-perk-tier">NIV. {tier}</span>
-        <span className="hq-sd-perk-title hq-sd-perk-mystery">???</span>
+        <span className="hq-sd-perk-tier">{t('hq.sd.lvlShort')} {tier}</span>
+        <span className="hq-sd-perk-title hq-sd-perk-mystery">{t('hq.sd.mystery')}</span>
       </div>
     </div>
   );
 }
 
 function SoldierPerksPanel({ soldier, onRename, onSetPreferred }) {
+  I18n.useI18n();
   const level = soldier.level || 1;
   // Only hint at the next locked tier so the list stays focused.
   const preferredUnlocked = level >= 2;
   return (
     <div className="hq-sd-perks">
-      <div className="hq-sd-perks-title">COMPÉTENCES</div>
+      <div className="hq-sd-perks-title">{t('hq.sd.perks')}</div>
       <RenamePerk soldier={soldier} onRename={onRename} />
       <PreferredWeaponPerk soldier={soldier} onSetPreferred={onSetPreferred} />
       {preferredUnlocked && level < PERK_HINT_TIER && <MysteryPerk tier={PERK_HINT_TIER} />}
@@ -1021,13 +1024,14 @@ function SoldierPerksPanel({ soldier, onRename, onSetPreferred }) {
 }
 
 function SoldierPortraitPanel({ soldier, tokens, onUpgrade }) {
+  I18n.useI18n();
   const { AnimPreview } = UI;
   const upgradeCost = calcUpgradeCost(soldier);
   const canUpgrade  = tokens >= upgradeCost;
   return (
     <div className="hq-sd-portrait">
       <div className="hq-sd-portrait-stage" title={soldier.name}>
-        <div className="hq-sd-portrait-level">NIV. {soldier.level}</div>
+        <div className="hq-sd-portrait-level">{t('hq.sd.lvlShort')} {soldier.level}</div>
         <div className="hq-sd-portrait-char">
           <AnimPreview cfg={soldier.config} animKey="idle" scale={2.4} facing={1} running={true} />
         </div>
@@ -1038,7 +1042,7 @@ function SoldierPortraitPanel({ soldier, tokens, onUpgrade }) {
         disabled={!canUpgrade}
         onClick={() => canUpgrade && onUpgrade()}
       >
-        <span className="hq-sd-upgrade-title">AMÉLIORER</span>
+        <span className="hq-sd-upgrade-title">{t('hq.sd.upgradeBtn')}</span>
         <span className="hq-sd-upgrade-cost">{upgradeCost} <TokenIcon className="hq-resource-icon-inline" /></span>
       </button>
     </div>
@@ -1080,14 +1084,15 @@ function HQUpgradeChoice({ soldier, squadName, onBack, onConfirm }) {
       .filter(Boolean);
   }, [offer && offer.skill1Name, offer && offer.skill2Name]);
 
+  I18n.useI18n();
   return (
     <div className="hq-upgrade-choice">
-      <button type="button" className="hq-back-btn" onClick={onBack}>← Retour</button>
+      <button type="button" className="hq-back-btn" onClick={onBack}>{t('common.back')}</button>
 
       <div className="hq-upgrade-stage">
         <div className="hq-upgrade-soldier">
           <div className="hq-upgrade-soldier-stage">
-            <div className="hq-upgrade-soldier-level">NIV. {soldier.level}</div>
+            <div className="hq-upgrade-soldier-level">{t('hq.sd.lvlShort')} {soldier.level}</div>
             <AnimPreview cfg={soldier.config} animKey="idle" scale={1.6} facing={1} running={true} />
           </div>
           <div className="hq-upgrade-soldier-name">{soldier.name}</div>
@@ -1095,21 +1100,21 @@ function HQUpgradeChoice({ soldier, squadName, onBack, onConfirm }) {
 
         <div className="hq-upgrade-options">
           {options.length === 0 && (
-            <div className="hq-upgrade-empty">Toutes les compétences sont déjà débloquées.</div>
+            <div className="hq-upgrade-empty">{t('hq.sd.allUnlocked')}</div>
           )}
           {options.map(w => (
             <div key={w.name} className="hq-upgrade-option">
               <SkillTooltip weapon={w} tipDir="below">
                 <span className="hq-upgrade-option-icon"><WeaponGameIcon weapon={w} /></span>
               </SkillTooltip>
-              <div className="hq-upgrade-option-name">{w.name}</div>
-              <div className="hq-upgrade-option-type">{G.WEAPON_TYPE_LABELS[w.type] || w.type}</div>
+              <div className="hq-upgrade-option-name">{I18n.localizedWeaponName(w)}</div>
+              <div className="hq-upgrade-option-type">{t('wt.' + w.type) || w.type}</div>
               <button
                 type="button"
                 className="sq-btn sq-btn-primary hq-upgrade-pick-btn"
                 onClick={() => onConfirm(w.name)}
               >
-                CHOISIR
+                {t('hq.sd.choose')}
               </button>
             </div>
           ))}
@@ -1144,21 +1149,41 @@ function HQSquadPage({ mySquad, onSelectSoldier }) {
 }
 
 function HQMarketPage() {
+  I18n.useI18n();
   return (
     <div className="hq-placeholder">
       <div className="hq-placeholder-icon">🏪</div>
-      <h2 className="hq-section-title">Marché</h2>
-      <p className="hq-section-hint">Skins d'armes, équipements, boosters de tokens. Le marché ouvrira bientôt ses portes.</p>
-      <div className="hq-coming-soon">EN CONSTRUCTION</div>
+      <h2 className="hq-section-title">{t('hq.mk.title')}</h2>
+      <p className="hq-section-hint">{t('hq.mk.hint')}</p>
+      <div className="hq-coming-soon">{t('hq.mk.construction')}</div>
     </div>
   );
 }
 
 function HQSettingsPage({ onLeave }) {
+  I18n.useI18n();
+  const currentLang = I18n.getLang();
   return (
     <div className="hq-placeholder hq-settings-page">
       <div className="hq-settings-list">
-        <button className="sq-btn sq-btn-primary" onClick={onLeave}>Se déconnecter</button>
+        <div className="hq-settings-section">
+          <div className="hq-settings-section-title">{t('hq.set.language')}</div>
+          <p className="hq-settings-section-hint">{t('hq.set.langHint')}</p>
+          <div className="hq-settings-lang-row">
+            {I18n.LANGS.map(lang => (
+              <button
+                key={lang.code}
+                type="button"
+                className={'sq-btn hq-settings-lang-btn' + (currentLang === lang.code ? ' sq-btn-primary' : '')}
+                onClick={() => I18n.setLang(lang.code)}
+              >
+                <img className="hq-settings-lang-flag" src={lang.flag} alt="" aria-hidden="true" />
+                <span className="hq-settings-lang-label">{lang.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <button className="sq-btn sq-btn-primary" onClick={onLeave}>{t('hq.set.logout')}</button>
       </div>
     </div>
   );
@@ -1166,16 +1191,17 @@ function HQSettingsPage({ onLeave }) {
 
 // ── Battle splash (placeholder until combat is implemented) ─────────────────
 function HQBattleSplash({ opp, onDone }) {
+  I18n.useI18n();
   useEffect(() => {
-    const t = setTimeout(onDone, 2000);
-    return () => clearTimeout(t);
+    const tid = setTimeout(onDone, 2000);
+    return () => clearTimeout(tid);
   }, [onDone]);
   return (
     <div className="hq-battle-splash">
       <div className="hq-battle-vs">
-        <div className="hq-battle-name">VS</div>
+        <div className="hq-battle-name">{t('hq.battle.vs')}</div>
         <div className="hq-battle-target">{opp.name}</div>
-        <div className="hq-battle-pending">⚔ COMBAT À VENIR — la mécanique de bataille sera implémentée ensuite.</div>
+        <div className="hq-battle-pending">{t('hq.battle.pending')}</div>
       </div>
     </div>
   );
@@ -1183,6 +1209,7 @@ function HQBattleSplash({ opp, onDone }) {
 
 // ── HQPage (root component) ─────────────────────────────────────────────────
 function HQPage({ squadName, founder, serverOnline, onSwitchMode, onLeave }) {
+  I18n.useI18n();
   // Initialize/persist HQ state
   const [hq, setHQ] = useState(() => {
     const saved = loadHQ(squadName);
