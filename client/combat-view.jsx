@@ -748,12 +748,19 @@
   function RocketsLayer({ rockets, arenaW, arenaH, pxPerTile, spriteScale, xOffset, nowMs }) {
     const laneScale = pxPerTile / BASE_TILE_PX;
     const groundY = arenaH * GROUND_Y_RATIO;
-    function worldToPx(tx, ty) {
+    function bodyAimPointToPx(tx, ty) {
       return {
         x: xOffset + tx * pxPerTile,
         // ty is laneOffsetPx in world (negative = "back/up the slope"). Match
-        // soldier vertical placement so rockets line up with sprites visually.
+        // soldier vertical placement for fallback body/muzzle placement.
         y: groundY + ty * laneScale - STAGE_H * spriteScale * 0.42
+      };
+    }
+    function impactPointToPx(tx, ty) {
+      return {
+        x: xOffset + tx * pxPerTile,
+        // Bazooka rounds detonate at the feet, not in the target's chest.
+        y: groundY + ty * laneScale - 6 * spriteScale
       };
     }
     // Resolve the launch position to the actual weapon muzzle tip instead of
@@ -769,58 +776,86 @@
           y: stageTop + muzzle.y * spriteScale
         };
       }
-      return worldToPx(r.ax, r.ay);
+      return bodyAimPointToPx(r.ax, r.ay);
     }
     return (
       <svg className="cv-rockets" width={arenaW} height={arenaH}
            viewBox={`0 0 ${arenaW} ${arenaH}`} preserveAspectRatio="none">
         {rockets.map(r => {
           const age = nowMs - r.bornMs;
-          const t = clamp(age / r.travelMs, 0, 1);
+          const flightMs = Math.max(1, r.travelMs);
+          const t = clamp(age / flightMs, 0, 1);
           const start = muzzleFor(r);
-          const end = worldToPx(r.endX, r.endY);
-          // Very small arc for BOTH hits and misses — the rocket should fly
-          // fast and nearly straight so the player can't read hit-vs-miss
-          // from the trajectory shape. Just enough sag to feel like a
-          // ballistic projectile.
-          const arcPx = 5 * spriteScale;
-          const x = lerp(start.x, end.x, t);
-          const arc = Math.sin(t * Math.PI) * arcPx;
-          const y = lerp(start.y, end.y, t) - arc;
-          // Path heading for sprite rotation.
+          const end = impactPointToPx(r.endX, r.endY);
+          // Powered rockets read best as a fast, direct line. Keep only a tiny
+          // lift so the sprite does not look like a slow thrown grenade.
           const dxTotal = end.x - start.x;
-          const dyTotal = (end.y - start.y) - arcPx * Math.PI * Math.cos(t * Math.PI);
+          const bendPx = Math.min(4 * spriteScale, Math.abs(dxTotal) * 0.006);
+          function rocketPoint(k) {
+            return {
+              x: lerp(start.x, end.x, k),
+              y: lerp(start.y, end.y, k) - Math.sin(k * Math.PI) * bendPx
+            };
+          }
+          const pos = rocketPoint(t);
+          const x = pos.x;
+          const y = pos.y;
+          const finished = t >= 1;
+          // Path heading for sprite rotation.
+          const dyTotal = (end.y - start.y) - bendPx * Math.PI * Math.cos(t * Math.PI);
           const angle = Math.atan2(dyTotal, dxTotal) * 180 / Math.PI;
-          // Smoke puffs along the trail. Dense + white, drifting up and
-          // expanding as they age so the trail reads from the back row.
-          const puffEveryMs = 14;
-          const puffMaxAgeMs = 900;
+          const angleRad = angle * Math.PI / 180;
+          const normalX = -Math.sin(angleRad);
+          const normalY = Math.cos(angleRad);
+          const wakeLenT = Math.min(0.18, (42 * spriteScale) / Math.max(1, Math.abs(dxTotal)));
+          const wakeStartT = clamp(t - wakeLenT, 0, 1);
+          const wakeEndT = clamp(t - 0.012, 0, 1);
+          const wakeStart = rocketPoint(wakeStartT);
+          const wakeEnd = rocketPoint(wakeEndT);
+          const wakeOpacity = finished ? 0 : clamp(t * 8, 0, 1);
+          const embers = [];
+          if (!finished) {
+            for (let ei = 0; ei < 6; ei++) {
+              const emberT = t - (0.035 + ei * 0.025);
+              if (emberT <= 0.01) continue;
+              const ep = rocketPoint(emberT);
+              const wobble = Math.sin(age * 0.035 + ei * 1.7) * (1.8 + ei * 0.35) * spriteScale;
+              const fade = clamp(1 - ei / 6, 0, 1) * wakeOpacity;
+              embers.push({
+                x: ep.x + normalX * wobble,
+                y: ep.y + normalY * wobble,
+                r: (1.1 - ei * 0.08) * spriteScale,
+                alpha: 0.78 * fade
+              });
+            }
+          }
+          // Smoke is emitted only while the rocket is in flight. Hits get a
+          // short tail swallowed by the blast; misses keep a longer trail.
+          const puffEveryMs = 24;
+          const puffMaxAgeMs = r.smokeTailMs || (r.hit ? 220 : 560);
           const puffs = [];
           for (let pAge = 0; pAge <= Math.min(age, puffMaxAgeMs); pAge += puffEveryMs) {
             const emitAge = age - pAge;
             if (emitAge < 0) break;
-            const emitT = clamp(emitAge / r.travelMs, 0, 1);
+            if (emitAge > flightMs) continue;
+            const emitT = clamp(emitAge / flightMs, 0, 1);
+            if (r.hit && emitT > 0.94) continue;
             // Puff origin = position the rocket was at when this puff was emitted.
-            const ppx = lerp(start.x, end.x, emitT);
-            const ppyArc = Math.sin(emitT * Math.PI) * arcPx;
-            const ppy = lerp(start.y, end.y, emitT) - ppyArc;
+            const emitted = rocketPoint(emitT);
             const k = clamp(1 - pAge / puffMaxAgeMs, 0, 1);
             // Each puff grows + drifts upward as it ages so the trail
             // billows like real exhaust smoke.
             const ageK = 1 - k;
             puffs.push({
-              x: ppx + (pAge * 0.012 * spriteScale),
-              y: ppy - pAge * 0.04 * spriteScale,
-              r: (6 + ageK * 16) * spriteScale,
-              alpha: 0.85 * k
+              x: emitted.x - (r.facing || 1) * ageK * 7 * spriteScale,
+              y: emitted.y - ageK * 13 * spriteScale,
+              r: (3.8 + ageK * 8.5) * spriteScale,
+              alpha: 0.42 * k
             });
           }
-          const finished = t >= 1;
-          // Rocket sprite scale — kept compact so the projectile reads as
-          // "fast little missile" rather than a slow blimp. The fast travel
-          // time (ROCKET_TRAVEL_T) plus the bright exhaust still make it
-          // clearly visible on screen.
-          const RS = 1.0;
+          // Rocket sprite scale: compact, but a touch larger than bullet
+          // trails so launcher shots stay readable at combat zoom.
+          const RS = 1.08;
           return (
             <g key={r.key} className="cv-rocket-fx">
               {puffs.map((p, i) => (
@@ -835,6 +870,31 @@
                           cx={p.x - 1 * spriteScale} cy={p.y - 1 * spriteScale}
                           r={p.r * 0.55} opacity={p.alpha * 0.85} />
                 </g>
+              ))}
+              {!finished && wakeEndT > wakeStartT && (
+                <g className="cv-rocket-wake">
+                  <line className="cv-rocket-wake-outer"
+                        x1={wakeStart.x} y1={wakeStart.y}
+                        x2={wakeEnd.x} y2={wakeEnd.y}
+                        strokeWidth={9 * spriteScale}
+                        opacity={wakeOpacity * 0.5} />
+                  <line className="cv-rocket-wake-inner"
+                        x1={wakeStart.x} y1={wakeStart.y}
+                        x2={wakeEnd.x} y2={wakeEnd.y}
+                        strokeWidth={4 * spriteScale}
+                        opacity={wakeOpacity * 0.85} />
+                  <line className="cv-rocket-wake-core"
+                        x1={wakeStart.x} y1={wakeStart.y}
+                        x2={wakeEnd.x} y2={wakeEnd.y}
+                        strokeWidth={1.4 * spriteScale}
+                        opacity={wakeOpacity} />
+                </g>
+              )}
+              {embers.map((e, i) => (
+                <circle key={'em' + i}
+                        className="cv-rocket-ember"
+                        cx={e.x} cy={e.y}
+                        r={e.r} opacity={e.alpha} />
               ))}
               {!finished && (
                 <g transform={`translate(${x},${y}) rotate(${angle})`}>
@@ -1150,6 +1210,7 @@
                 endX: ev.endX, endY: ev.endY,
                 hit: !!ev.hit,
                 travelMs: Math.max(60, Math.round((ev.travelT || 0.7) * 1000)),
+                smokeTailMs: ev.hit ? 220 : 560,
                 // Muzzle resolution params — same shape trailMuzzlePoint uses
                 // for bullet trails. Lets RocketsLayer anchor the projectile
                 // to the actual launcher muzzle tip instead of the body
@@ -1204,10 +1265,10 @@
           const kept = prev.filter(ex => now - ex.bornMs < EXPLOSION_FX_MS);
           return kept.length === prev.length ? prev : kept;
         });
-        // Rockets live for their flight time plus a generous smoke-fade tail
-        // so the last puffs aren't snipped before fully fading out.
+        // Rockets live only long enough for their own smoke tail. Hit smoke is
+        // intentionally short so the explosion owns the impact moment.
         setRockets(prev => {
-          const kept = prev.filter(rk => now - rk.bornMs < rk.travelMs + 700);
+          const kept = prev.filter(rk => now - rk.bornMs < rk.travelMs + (rk.smokeTailMs || 560) + 40);
           return kept.length === prev.length ? prev : kept;
         });
         setHpFlashes(prev => {

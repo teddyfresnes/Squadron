@@ -127,8 +127,8 @@ L'action `shoot` d'un lance-roquette est marquée `action.isRocket = true` et d�
 ```
 aim (aimDur)
   → launchT = aimDur + AIM_HOLD            [event 'rocketLaunch' émis (endpoint résolu ICI à partir de target.x courant — pas du snapshot stale de la création de l'action), magasin -1]
-  → ROCKET_TRAVEL_T = 0.35 s de vol (hit)  [vue : sprite roquette rapide + traînée de fumée]
-                     ou ROCKET_TRAVEL_T × k (miss, k = distance hors arène / distance cible)
+  → travelT calculé par distance             [vue : sprite roquette rapide + traînée de fumée]
+                     (hit clampé à 0.18..0.52s, miss off-screen clampé à 0.18..0.82s)
   → impactT = shot.atT                     [event 'rocketImpact' avec impactX/Y = target.x courant ; AoE si hit ; pas d'explosion sur miss]
   → ROCKET_RECOVERY_T = 0.18 s
   → unaim
@@ -136,9 +136,9 @@ aim (aimDur)
 
 **Résolution de la trajectoire AU LANCEMENT** (pas à la création de l'action — sinon l'explosion atterrit derrière une cible qui a bougé pendant les ~1 s d'aim) : on relit la position courante de la cible dans le handler `rocketLaunch`, et on en déduit `endX/endY` + `travelT`.
 
-**Hit** : `endX = target.x` courant, `endY = target.laneOffsetPx` courant. La roquette vole droit sur la cible en `travelT = ROCKET_TRAVEL_T`.
+**Hit** : `endX = target.x` courant, `endY = target.laneOffsetPx` courant. La roquette vole droit vers les pieds de la cible avec un temps de vol basé sur la distance (`ROCKET_SPEED_TILES_PER_SEC`, clamp `ROCKET_TRAVEL_T_MIN/MAX`).
 
-**Miss** : on vise le long de la même ligne (`aimDy = dy + missLateralPx` où `missLateralPx ∈ ±[22, 50] px` pré-rollé à la création) puis on **extrapole jusqu'au bord de l'arène** (`endX = ±(ARENA_TILES + 4)`). La roquette continue à la même vitesse qu'un hit : `travelT = ROCKET_TRAVEL_T × k` où `k = (offScreenX - actor.x) / aimDx`. La trajectoire visible est indissociable d'un hit jusqu'à la zone de la cible — c'est l'absence d'explosion qui révèle le miss, puis la roquette finit sa course dans le décor comme une balle ratée. Fallback (cible morte/disparue avant launch) : `endX/endY` pré-rollés off-screen.
+**Miss** : on vise le long de la même ligne (`aimDy = dy + missLateralPx` où `missLateralPx ∈ ±[22, 50] px` pré-rollé à la création) puis on **extrapole jusqu'au bord de l'arène** (`endX = ±(ARENA_TILES + 4)`). `endY` est clampé à l'enveloppe verticale du décor (`SPAWN_Y_MIN/MAX ± 80 px`) pour éviter les diagonales absurdes sur les ratés proches. La trajectoire visible est indissociable d'un hit jusqu'à la zone de la cible — c'est l'absence d'explosion qui révèle le miss, puis la roquette finit sa course dans le décor comme une balle ratée. Le sprite utilise le temps de vol off-screen, mais l'acteur peut récupérer dès que le projectile a traversé la zone cible. Fallback (cible morte/disparue avant launch) : `endX/endY` pré-rollés off-screen et `hit=false`.
 
 **Hit AoE** : `applyRocketAoE(shooter, impactX, impactY)` (avec `impactX/Y` = position courante de la cible au moment de l'impact, pas le snapshot du launch — l'explosion sort toujours sous le perso) projette en l'air tous les ennemis (pas d'allié) vivants à `|x - impactX| ≤ ROCKET_AOE_TILES (= 3 tuiles)` **ET** `|laneOffsetPx - impactY| ≤ ROCKET_AOE_Y_PX (= 55 px)` via `tossSoldier()` — la clamp verticale empêche le blast d'aspirer des soldats des lanes voisines :
 - `state = 'tossed'` ; toute action en cours sur la cible est avortée (`a.duration = a.elapsed`)
@@ -158,10 +158,10 @@ aim (aimDur)
 
 `combat-view.flightOffsetY(animKey, frame, spriteScale, s)` lit `s.animState.toss.height` pour multiplier `deadExplode.flightY(frame)` — un groupe touché par la même explosion ne décolle pas en bloc.
 
-**Tunables** : `ROCKET_TRAVEL_T`, `ROCKET_AOE_TILES`, `ROCKET_AOE_Y_PX`, `ROCKET_RECOVERY_T`, `ROCKET_TOSS_DMG_MIN/MAX`, `TOSS_LAND_FRAME` (combat-sim.js).
+**Tunables** : `ROCKET_SPEED_TILES_PER_SEC`, `ROCKET_TRAVEL_T_MIN/MAX`, `ROCKET_MISS_TRAVEL_T_MAX`, `ROCKET_AOE_TILES`, `ROCKET_AOE_Y_PX`, `ROCKET_RECOVERY_T`, `ROCKET_TOSS_DMG_MIN/MAX`, `TOSS_LAND_FRAME` (combat-sim.js).
 
 **Rendu (combat-view.jsx)** :
-- `RocketsLayer` (SVG, z-index 8) anime le sprite roquette (compact — `RS = 1.0` × scale de base, 3 couches de flamme) + train de fumée blanche dense (puffs toutes les 14 ms : halo flouté + corps + cœur). Le point de départ est résolu via `trailMuzzlePoint(r)` (même helper que les balles) pour partir du **muzzle de l'arme**, pas du centre du soldat. **Arc minuscule** (`arcPx = 5 * spriteScale`) identique pour hit et miss — la roquette file droit et vite, on ne peut pas lire l'issue depuis la trajectoire.
+- `RocketsLayer` (SVG, z-index 8) anime le sprite roquette (`RS = 1.08`, 3 couches de flamme) + une fumée blanche courte + un sillage chaud très court (`cv-rocket-wake-*`) avec quelques braises (`cv-rocket-ember`) uniquement pendant le vol. Le point de départ est résolu via `trailMuzzlePoint(r)` (même helper que les balles) pour partir du **muzzle de l'arme**, pas du centre du soldat. Le point d'arrivée visuel est aux pieds (`impactPointToPx`), avec une micro-lift max `4 * spriteScale`. La fumée n'est émise que pendant le vol : `smokeTailMs = 220` sur hit (avalée par l'explosion), `560` sur miss.
 - `ExplosionLayer` (DIV, z-index 9) — **sprite-based**, une seule variante `'explosion'` : `assets/animations/explosion/{1..11,13..17}.png` (16 frames, 512×512, frame 12 absente du disque, mappée par `frameForIdx`). Pour les impacts de roquette (`atFeet: true`), le bottom du sprite est ancré à `groundY + 4 * spriteScale` — donc l'explosion sort vraiment du sol pile où la roquette atterrit. Pour `deadVariant: 'explode'` (corps qui pète en l'air), `atFeet: false` garde l'ancien comportement (centre à ~42 px au-dessus du sol).
 
 ---

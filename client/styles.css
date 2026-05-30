@@ -3068,16 +3068,37 @@ html, body {
   pointer-events: none;
 }
 .cv-rocket-smoke-halo {
-  fill: rgba(255, 255, 255, 0.9);
-  filter: blur(4px);
+  fill: rgba(255, 255, 255, 0.52);
+  filter: blur(3.4px);
 }
 .cv-rocket-smoke {
-  fill: rgba(248, 246, 240, 0.96);
-  filter: blur(1.8px);
+  fill: rgba(246, 245, 236, 0.74);
+  filter: blur(1.6px);
 }
 .cv-rocket-smoke-core {
-  fill: #ffffff;
-  filter: blur(0.6px);
+  fill: rgba(255, 255, 255, 0.66);
+  filter: blur(0.55px);
+}
+.cv-rocket-wake-outer,
+.cv-rocket-wake-inner,
+.cv-rocket-wake-core {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+.cv-rocket-wake-outer {
+  stroke: rgba(255, 77, 30, 0.78);
+  filter: blur(2.5px);
+}
+.cv-rocket-wake-inner {
+  stroke: rgba(255, 177, 54, 0.9);
+  filter: blur(0.9px);
+}
+.cv-rocket-wake-core {
+  stroke: rgba(255, 248, 196, 0.95);
+}
+.cv-rocket-ember {
+  fill: rgba(255, 198, 72, 0.92);
+  filter: drop-shadow(0 0 3px rgba(255, 92, 26, 0.85));
 }
 .cv-rocket-body {
   fill: #2c2622;

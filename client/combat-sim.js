@@ -38,7 +38,10 @@
   // Bazooka-class heavy weapons fire a single visible rocket with a smoke
   // trail. Hits explode at the target's feet and toss every nearby enemy up
   // via the deadExplode animation; misses fly past and exit the arena.
-  const ROCKET_TRAVEL_T = 0.35;         // sim-time the rocket spends in the air (fast & straight, hard to read hit-vs-miss in flight)
+  const ROCKET_SPEED_TILES_PER_SEC = 72; // visual/sim rocket speed; travel time is distance-based
+  const ROCKET_TRAVEL_T_MIN = 0.18;      // keeps close-range shots from looking like instant teleports
+  const ROCKET_TRAVEL_T_MAX = 0.52;      // caps long hit shots so they still feel like rockets
+  const ROCKET_MISS_TRAVEL_T_MAX = 0.82; // misses may fly farther while exiting the arena
   const ROCKET_AOE_TILES = 3;           // X-distance from impact for the AoE
   const ROCKET_AOE_Y_PX = 55;           // Y-distance (laneOffsetPx) from impact — keeps the blast in the impact lane (lane spacing is 80–100 px)
   const ROCKET_RECOVERY_T = 0.18;       // pause between impact and unaim
@@ -112,6 +115,17 @@
   function lerp(a, b, t) { return a + (b - a) * t; }
   function sign(v) { return v > 0 ? 1 : (v < 0 ? -1 : 0); }
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  function rocketTravelTime(fromX, fromY, toX, toY, maxT) {
+    const dyTiles = ((toY || 0) - (fromY || 0)) / TILE_PX;
+    const dxTiles = (toX || 0) - (fromX || 0);
+    const distTiles = Math.max(1, Math.sqrt(dxTiles * dxTiles + dyTiles * dyTiles));
+    return clamp(
+      distTiles / ROCKET_SPEED_TILES_PER_SEC,
+      ROCKET_TRAVEL_T_MIN,
+      maxT || ROCKET_TRAVEL_T_MAX
+    );
+  }
 
   function emptyBodyHits() {
     const hits = {};
@@ -913,15 +927,17 @@
       const shotProfile = shotProfileKey(w);
 
       // Pre-roll shots so the action is a self-contained, deterministic plan.
-      // Rockets fly for ROCKET_TRAVEL_T between launch and impact; the single
-      // shot.atT marks the impact moment so AoE damage applies in sim time
-      // exactly when the view's rocket reaches the target.
+      // Rocket travel is distance-based; this first estimate uses the current
+      // target snapshot, then launch-time code refines it from live positions.
       const launchT = aimDur + AIM_HOLD;
+      const plannedRocketTravelT = isRocket
+        ? rocketTravelTime(actor.x, actor.laneOffsetPx, target.x, target.laneOffsetPx)
+        : 0;
       const shots = [];
       for (let i = 0; i < burst; i++) {
         const hit = rng() < hitChance;
         const atT = isRocket
-          ? launchT + ROCKET_TRAVEL_T
+          ? launchT + plannedRocketTravelT
           : launchT + i * interval;
         shots.push({
           atT,
@@ -943,6 +959,7 @@
         shotProfile,
         weaponCategory: w.category,
         weaponType: w.weaponType,
+        unAimDur,
         unaimStartT,
         facing: actor.facing,
         ax: actor.x, ay: actor.laneOffsetPx,
@@ -1237,36 +1254,51 @@
           // lateral drift, then extend past the target to off-screen so the
           // rocket flies into the décor like a bullet that missed.
           const targetNow = all.find(s => s.id === a.targetId);
-          let endX, endY, travelT;
+          let endX, endY, travelT, impactTravelT;
           if (targetNow && targetNow.hp > 0) {
             const dx = targetNow.x - actor.x;
             const dy = targetNow.laneOffsetPx - actor.laneOffsetPx;
             if (shot.hit) {
               endX = targetNow.x;
               endY = targetNow.laneOffsetPx;
-              travelT = ROCKET_TRAVEL_T;
+              travelT = rocketTravelTime(actor.x, actor.laneOffsetPx, endX, endY);
+              impactTravelT = travelT;
             } else {
               const aimDx = dx;
               const aimDy = dy + (a.missLateralPx || 0);
               const missDir = aimDx >= 0 ? 1 : -1;
               const offScreenX = missDir > 0 ? ARENA_TILES + 4 : -4;
               // k = how many target-distances to reach off-screen. Always > 1
-              // for normal shooter/target geometry. Speed is identical to a
-              // hit, so the rocket just flies for k× the hit duration before
-              // exiting the décor.
+              // for normal shooter/target geometry. The visual travel time is
+              // still distance-based, while the actor can recover once the
+              // round has crossed the target's zone.
               const denom = Math.abs(aimDx) < 0.001 ? (missDir * 0.001) : aimDx;
               const k = (offScreenX - actor.x) / denom;
               endX = offScreenX;
-              endY = actor.laneOffsetPx + aimDy * k;
-              travelT = ROCKET_TRAVEL_T * Math.max(1, Math.abs(k));
+              endY = clamp(actor.laneOffsetPx + aimDy * k, SPAWN_Y_MIN - 80, SPAWN_Y_MAX + 80);
+              travelT = rocketTravelTime(actor.x, actor.laneOffsetPx, endX, endY, ROCKET_MISS_TRAVEL_T_MAX);
+              impactTravelT = rocketTravelTime(
+                actor.x,
+                actor.laneOffsetPx,
+                targetNow.x,
+                targetNow.laneOffsetPx + (a.missLateralPx || 0)
+              );
             }
           } else {
             // Target died/disappeared during the aim hold: fall back to the
             // pre-rolled off-screen exit so the rocket still flies somewhere.
+            shot.hit = false;
             endX = a.missEndX;
             endY = a.missEndY;
-            travelT = ROCKET_TRAVEL_T * 2;
+            travelT = rocketTravelTime(actor.x, actor.laneOffsetPx, endX, endY, ROCKET_MISS_TRAVEL_T_MAX);
+            impactTravelT = Math.min(travelT, ROCKET_TRAVEL_T_MAX);
           }
+          a.rocketEndX = endX;
+          a.rocketEndY = endY;
+          shot.atT = a.launchT + impactTravelT;
+          a.unaimStartT = shot.atT + ROCKET_RECOVERY_T;
+          a.duration = a.unaimStartT + (a.unAimDur || 0);
+          actor.cooldown = worldT + Math.max(0, a.duration - a.elapsed) + TURN_GAP;
           events.push({
             t: worldT, type: 'rocketLaunch',
             actorId: a.actorId, targetId: a.targetId,
@@ -1308,8 +1340,8 @@
             // false — no explosion, no damage; the rocket sprite continues
             // flying off-screen in the view via the longer travelT set at
             // launch.
-            const impactX = (shot.hit && target && target.hp > 0) ? target.x : a.tx;
-            const impactY = (shot.hit && target && target.hp > 0) ? target.laneOffsetPx : a.ty;
+            const impactX = (shot.hit && target && target.hp > 0) ? target.x : (a.rocketEndX != null ? a.rocketEndX : a.tx);
+            const impactY = (shot.hit && target && target.hp > 0) ? target.laneOffsetPx : (a.rocketEndY != null ? a.rocketEndY : a.ty);
             events.push({
               t: worldT, type: 'rocketImpact',
               actorId: a.actorId, targetId: a.targetId,
