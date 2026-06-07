@@ -617,7 +617,7 @@ function HomePage({ soldiers, onCreate, onJoin, onCreateSquad, serverOnline }) {
           {t('offline.badge')}
         </div>
       )}
-      <div className="home-copyright" aria-label="copyright">© 2026 teddyfresnes.teddyfresnes</div>
+      <div className="home-copyright" aria-label="copyright">© 2026 Copyrights - teddyfresnes</div>
       <div className="home-lang-corner"><LangDropdown /></div>
       <div className="sq-card">
         <div className="sq-card-header">
