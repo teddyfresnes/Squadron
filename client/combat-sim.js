@@ -28,9 +28,10 @@
   const IDLE_TURN_DURATION = 0.4;
   const TURN_GAP = 0.04;                // tiny pause between turns for readability
   const MAX_ACTIVE_ACTIONS = 2;         // Minitroopers-like overlaps, but never a full scrum
-  const OVERLAP_CHANCE = 0.35;
-  const AIM_OVERLAP_CHANCE = 0.40;
-  const OVERLAP_RETRY_DELAY = 0.28;
+  const OVERLAP_CHANCE = 0.48;
+  const AIM_OVERLAP_CHANCE = 0.72;
+  const RECOVERY_OVERLAP_CHANCE = 0.58;
+  const OVERLAP_RETRY_DELAY = 0.16;
   const AIM_DELAY_MIN = 0.38;           // minimum aim-up duration (covers short aim anims)
   const AIM_HOLD = 0.18;                // pause after aim anim ends, before first shot
 
@@ -45,6 +46,9 @@
   const ROCKET_TOSS_DMG_MIN = 1;        // fall damage rolled when a tossed body lands
   const ROCKET_TOSS_DMG_MAX = 6;
   const TOSS_LAND_FRAME = 11;           // deadExplode frame where the body hits the ground
+  const TOSS_HEIGHT_MIN = 0.55;
+  const TOSS_HEIGHT_MAX = 2.25;
+  const RECOVERY_WAIT_IDLE_T = 0.18;
 
   const LANE_OFFSETS = { front: 0, mid: -80, back: -180 };
   // Per-soldier Y spread within a lane so soldiers don't stack on one line.
@@ -479,32 +483,35 @@
     function tossSoldier(s, impactX, rngFn) {
       if (!s || s.hp <= 0) return;
       const r = rngFn || rng;
-      // Toss height: most blasts lift bodies a normal amount, but a chunky
-      // tail of rolls send them WAY up. Triangular distribution biased to
-      // 0.8 with a long tail to ~3.0 of the deadExplode arc height.
-      // Using max-of-2 rng to bias low, then a 20% kicker that adds a big
-      // bonus so the body sometimes goes spectacularly high.
-      const baseRoll = Math.min(r(), r());            // bias toward smaller values
-      let height = 0.55 + baseRoll * 1.35;             // [0.55, 1.9]
-      if (r() < 0.20) height += 0.4 + r() * 1.4;       // 20% chance to add a "kicker" -> up to ~3.7
+      // Toss height: still varied, but capped so rocket blasts do not send a
+      // body absurdly high. A small kicker keeps rare bigger launches without
+      // the old long tail.
+      const baseRoll = Math.min(r(), r());             // bias toward smaller values
+      let height = TOSS_HEIGHT_MIN + baseRoll * 1.20;  // [0.55, 1.75]
+      if (r() < 0.14) height += 0.18 + r() * 0.50;
+      height = clamp(height, TOSS_HEIGHT_MIN, TOSS_HEIGHT_MAX);
+      // Some bodies play the toss slightly slower. This keeps a blast group
+      // from moving in lockstep without making the result chaotic.
+      const animSpeed = r() < 0.55 ? (0.78 + r() * 0.16) : (0.96 + r() * 0.08);
+      const slideScale = 0.92 + r() * 0.46;
       // Fall damage scales with height: a tiny pop should mostly tickle for
       // 1-2, a big launch should mostly hurt for 5-6. We bias the [1,6]
       // roll by interpolating between two triangular distributions weighted
       // by a height ratio in [0, 1].
-      // heightRatio: 0 at height=0.55 (min toss) -> 1 at height=3.5 (very high).
-      const heightRatio = clamp((height - 0.55) / (3.5 - 0.55), 0, 1);
+      // heightRatio: 0 at the min toss -> 1 at the capped max toss.
+      const heightRatio = clamp((height - TOSS_HEIGHT_MIN) / (TOSS_HEIGHT_MAX - TOSS_HEIGHT_MIN), 0, 1);
       const damage = rollFallDamage(r, heightRatio);
-      // Knock the body horizontally — usually AWAY from the blast, but 35 %
-      // of the time it kicks the body the OTHER way (concussion pinwheel)
+      // Knock the body horizontally — usually AWAY from the blast, but sometimes
+      // it kicks the body the OTHER way (concussion pinwheel)
       // and mirrors the facing so the animation reads as the body spinning
-      // 180° before launching. Distance is widely scattered so survivors
-      // don't all wake up in a clean ring around the impact.
+      // 180° before launching. Distance stays bounded so survivors do not
+      // teleport across the arena.
       let knockDir = s.x >= impactX ? 1 : -1;
-      if (r() < 0.35) {
+      if (r() < 0.18) {
         knockDir *= -1;
         s.facing *= -1;
       }
-      const knockTiles = (0.25 + r() * r() * 2.4) * knockDir;
+      const knockTiles = (0.18 + Math.min(r(), r()) * 1.55) * knockDir;
       s.state = 'tossed';
       s.stateT = 0;
       s.aimed = false;
@@ -514,6 +521,8 @@
           damage,
           height,
           heightRatio,
+          animSpeed,
+          slideScale,
           knockFromX: s.x,
           knockToX: clamp(s.x + knockTiles, 0.5, ARENA_TILES - 0.5),
           landed: false
@@ -526,7 +535,7 @@
           a.duration = a.elapsed;
         }
       }
-      const tossDur = animDur('deadExplode') || 1.15;
+      const tossDur = (animDur('deadExplode') || 1.15) / animSpeed;
       s.cooldown = Math.max(s.cooldown, worldT + tossDur + TURN_GAP);
       events.push({
         t: worldT, type: 'toss',
@@ -569,6 +578,10 @@
         if (d < bestD) { best = e; bestD = d; }
       }
       return best;
+    }
+
+    function hasAliveEnemy(self) {
+      return all.some(e => e.team !== self.team && e.hp > 0);
     }
 
     function pickNextActor() {
@@ -814,9 +827,20 @@
 
       const target = findTarget(actor);
       if (!target) {
+        const ammoState = actor.ammo[actor.weaponName];
+        if (!ammoState || ammoState.loaded <= 0) {
+          const switchTo = pickLoadedAlternative(actor);
+          if (switchTo) return planSwitchAction(actor, switchTo);
+          const reloadTo = pickReloadCandidate(actor);
+          if (reloadTo) {
+            if (reloadTo !== actor.weaponName) return planSwitchAction(actor, reloadTo);
+            return planReloadAction(actor);
+          }
+        }
         const action = {
           actorId: actor.id, type: 'idle',
-          startT: worldT, duration: IDLE_TURN_DURATION
+          startT: worldT,
+          duration: hasAliveEnemy(actor) ? RECOVERY_WAIT_IDLE_T : IDLE_TURN_DURATION
         };
         actor.cooldown = worldT + action.duration + TURN_GAP;
         return action;
@@ -1013,6 +1037,17 @@
       return activeActions.some(a => a.type === 'shoot' && a.elapsed < a.aimDur);
     }
 
+    function hasRecoveryInProgress() {
+      return all.some(s => s.hp > 0 && (s.state === 'tossed' || s.state === 'lain' || s.state === 'getUp'));
+    }
+
+    function activeOverlapChance() {
+      let chance = OVERLAP_CHANCE;
+      if (hasRecoveryInProgress()) chance = Math.max(chance, RECOVERY_OVERLAP_CHANCE);
+      if (hasAimInProgress()) chance = Math.max(chance, AIM_OVERLAP_CHANCE);
+      return chance;
+    }
+
     function winnerForAliveCounts(aA, aB) {
       return aA > 0 ? 'A' : (aB > 0 ? 'B' : 'draw');
     }
@@ -1156,7 +1191,7 @@
       while (!done && activeActions.length < MAX_ACTIVE_ACTIONS) {
         if (activeActions.length > 0) {
           if (worldT < overlapRetryT) return;
-          const chance = hasAimInProgress() ? AIM_OVERLAP_CHANCE : OVERLAP_CHANCE;
+          const chance = activeOverlapChance();
           if (rng() >= chance) {
             overlapRetryT = worldT + OVERLAP_RETRY_DELAY;
             return;
@@ -1540,12 +1575,15 @@
       const frames = (tossAnim && tossAnim.frames) || 16;
       const totalDur = frames / fps;
       const landT = TOSS_LAND_FRAME / fps;
-      s.stateT += dt;
       const toss = (s.animState && s.animState.toss) || null;
+      const animSpeed = (toss && toss.animSpeed) || 1;
+      s.stateT += dt * animSpeed;
       // Slide horizontally across the toss so the body lands a step away from
       // where it was standing — picks up the blast direction set in tossSoldier.
       if (toss && toss.knockFromX != null && toss.knockToX != null) {
-        const k = clamp(s.stateT / Math.max(0.001, landT), 0, 1);
+        const slideT = landT * ((toss && toss.slideScale) || 1);
+        const rawK = clamp(s.stateT / Math.max(0.001, slideT), 0, 1);
+        const k = rawK * rawK * (3 - 2 * rawK);
         s.x = lerp(toss.knockFromX, toss.knockToX, k);
       }
       // Apply fall damage at the landing frame: if it kills, fall through to
@@ -1581,9 +1619,9 @@
         // back up via the getUp anim before returning to combat. The lain
         // duration scales loosely with how high they were tossed (bigger
         // impact → longer recovery).
-        const baseLain = 1.0;
+        const baseLain = 0.65;
         const tossH = (toss && toss.height) || 1;
-        const lainDur = baseLain + Math.min(2.0, tossH * 0.5) + rng() * 0.5;
+        const lainDur = baseLain + Math.min(1.2, tossH * 0.35) + rng() * 0.3;
         s.state = 'lain';
         s.stateT = 0;
         s.animState = Object.assign({}, s.animState || {}, {
@@ -1592,7 +1630,7 @@
         });
         // Lock the soldier out of acting until lain+getUp finishes.
         const getUpDur = animDur('getUp') || 1.0;
-        s.cooldown = Math.max(s.cooldown, worldT + lainDur + getUpDur + 0.2);
+        s.cooldown = Math.max(s.cooldown, worldT + lainDur + getUpDur + 0.08);
       }
     }
 
@@ -1613,7 +1651,7 @@
         s.stateT = 0;
         s.animState = null;
         // Tiny grace cooldown so the soldier doesn't snap straight into a shot.
-        s.cooldown = Math.max(s.cooldown, worldT + 0.15);
+        s.cooldown = Math.max(s.cooldown, worldT + 0.08);
       }
     }
 

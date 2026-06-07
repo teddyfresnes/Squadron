@@ -54,7 +54,8 @@ battle.aliveCount('A')  // soldats vivants de l'équipe A
 
 'combat' → semi-simultané. Le premier acteur prêt démarre selon pickNextActor()
            (cooldown minimal). Pendant son action, une deuxième action peut démarrer
-           selon OVERLAP_CHANCE, avec une chance plus forte pendant une visée.
+           selon OVERLAP_CHANCE, avec une chance plus forte pendant une visée
+           ou pendant qu'un soldat récupère d'une projection.
            Tie-break : initiative (V1 = 0 partout), puis orderIdx (interleaved A/B à l'init).
 ```
 
@@ -142,23 +143,23 @@ aim (aimDur)
 
 **Hit AoE** : `applyRocketAoE(shooter, impactX, impactY)` (avec `impactX/Y` = position courante de la cible au moment de l'impact, pas le snapshot du launch — l'explosion sort toujours sous le perso) projette en l'air tous les ennemis (pas d'allié) vivants à `|x - impactX| ≤ ROCKET_AOE_TILES (= 3 tuiles)` **ET** `|laneOffsetPx - impactY| ≤ ROCKET_AOE_Y_PX (= 55 px)` via `tossSoldier()` — la clamp verticale empêche le blast d'aspirer des soldats des lanes voisines :
 - `state = 'tossed'` ; toute action en cours sur la cible est avortée (`a.duration = a.elapsed`)
-- `animState.toss = { damage, height ∈ [0.55, ~3.7], heightRatio ∈ [0,1], knockFromX, knockToX, landed }`
-- `cooldown = Math.max(cooldown, worldT + animDur('deadExplode'))`
+- `animState.toss = { damage, height ∈ [0.55, 2.25], heightRatio ∈ [0,1], animSpeed, slideScale, knockFromX, knockToX, landed }`
+- `cooldown = Math.max(cooldown, worldT + animDur('deadExplode') / animSpeed)`
 
-**Hauteur de toss** : `height = 0.55 + min(rng, rng) * 1.35` (biais bas, mean ~1.0) + `20% chance` d'ajouter `0.4 + rng*1.4` (kicker, pour des envols spectaculaires). `combat-view.flightOffsetY` lit `s.animState.toss.height` et multiplie `deadExplode.flightY(frame)` — donc un soldat avec `height = 3.0` monte 3× plus haut que la trajectoire de base. La trajectoire de base est une demi-sinusoïde (peak ~-238 px inner à F5-F6) → **ease-in-out** : lift-off rapide, hover au sommet, chute qui ré-accélère jusqu'à l'impact.
+**Hauteur de toss** : `height = 0.55 + min(rng, rng) * 1.20` (biais bas) + `14% chance` d'ajouter `0.18 + rng*0.50`, puis clamp à `2.25`. `combat-view.flightOffsetY` lit `s.animState.toss.height` et multiplie `deadExplode.flightY(frame)` — donc un soldat avec `height = 2.0` monte 2× plus haut que la trajectoire de base. La trajectoire de base est une demi-sinusoïde (peak ~-238 px inner à F5-F6) → **ease-in-out** : lift-off rapide, hover au sommet, chute qui ré-accélère jusqu'à l'impact.
 
-**Direction de toss** : `knockTiles = (0.25 + rng² * 2.4)` (sqrt-biaisé → la plupart restent près du point d'impact, mais la queue laisse parfois partir un corps loin). Direction normalement **away from impact**, mais **35 % de chance** d'inverser le sens ET de flipper `s.facing` — le corps part dans l'autre direction en mode miroir, comme s'il avait pivoté de 180° avant d'être éjecté.
+**Direction de toss** : `knockTiles = (0.18 + min(rng, rng) * 1.55)` (biais bas, distance bornée). Direction normalement **away from impact**, mais **18 % de chance** d'inverser le sens ET de flipper `s.facing` — le corps part dans l'autre direction en mode miroir, comme s'il avait pivoté de 180° avant d'être éjecté.
 
 **Dégâts de chute biaisés par la hauteur** : `rollFallDamage(rng, heightRatio)` mélange deux tirages :
 - `heightRatio = 0` (mini-pop) → `Math.min(a, b)` → quasi tout le temps 1-2
 - `heightRatio = 1` (envol max) → `Math.max(a, b)` → quasi tout le temps 5-6
 - entre les deux : interpolation via `mid = (a+b)/2`
 
-`driveTossedSoldier()` (appelée depuis `driveInactiveAnimations`) lerp la position X de `knockFromX` → `knockToX` sur `[0, landT = TOSS_LAND_FRAME/fps]`, puis applique les dégâts à `landT`. Si HP ≤ 0, bascule en `'dead'` en gardant `deadVariant: 'explode'` + `fromToss: true` (l'event `die` indique à la vue de ne PAS spawner une seconde explosion). Sinon, à la fin de l'anim (`frames/fps`), bascule en `'lain'` pour `1.0 + min(2.0, height*0.5) + rng*0.5` s, puis `'getUp'` (~1 s), puis `'idle'`.
+`driveTossedSoldier()` (appelée depuis `driveInactiveAnimations`) avance `stateT` avec `animSpeed` (certains corps sont légèrement ralentis), puis smoothstep la position X de `knockFromX` → `knockToX` sur `[0, landT * slideScale]`. Les dégâts s'appliquent à `landT`. Si HP ≤ 0, bascule en `'dead'` en gardant `deadVariant: 'explode'` + `fromToss: true` (l'event `die` indique à la vue de ne PAS spawner une seconde explosion). Sinon, à la fin de l'anim (`frames/fps` en temps d'anim), bascule en `'lain'` pour `0.65 + min(1.2, height*0.35) + rng*0.3` s, puis `'getUp'` (~1 s), puis `'idle'`.
 
 `combat-view.flightOffsetY(animKey, frame, spriteScale, s)` lit `s.animState.toss.height` pour multiplier `deadExplode.flightY(frame)` — un groupe touché par la même explosion ne décolle pas en bloc.
 
-**Tunables** : `ROCKET_TRAVEL_T`, `ROCKET_AOE_TILES`, `ROCKET_AOE_Y_PX`, `ROCKET_RECOVERY_T`, `ROCKET_TOSS_DMG_MIN/MAX`, `TOSS_LAND_FRAME` (combat-sim.js).
+**Tunables** : `ROCKET_TRAVEL_T`, `ROCKET_AOE_TILES`, `ROCKET_AOE_Y_PX`, `ROCKET_RECOVERY_T`, `ROCKET_TOSS_DMG_MIN/MAX`, `TOSS_LAND_FRAME`, `TOSS_HEIGHT_MIN/MAX`, `RECOVERY_WAIT_IDLE_T` (combat-sim.js).
 
 **Rendu (combat-view.jsx)** :
 - `RocketsLayer` (SVG, z-index 8) anime le sprite roquette (compact — `RS = 1.0` × scale de base, 3 couches de flamme) + train de fumée blanche dense (puffs toutes les 14 ms : halo flouté + corps + cœur). Le point de départ est résolu via `trailMuzzlePoint(r)` (même helper que les balles) pour partir du **muzzle de l'arme**, pas du centre du soldat. **Arc minuscule** (`arcPx = 5 * spriteScale`) identique pour hit et miss — la roquette file droit et vite, on ne peut pas lire l'issue depuis la trajectoire.
@@ -180,9 +181,12 @@ SOLO_SPAWN_FROM_EDGE = 2.2 // position d'un soldat seul dans sa zone de côté
 MOVE_STEP_TILES = 4        // distance max d'un tour de déplacement
 TURN_GAP = 0.04            // pause entre tours
 MAX_ACTIVE_ACTIONS = 2     // nombre max d'actions simultanées
-OVERLAP_CHANCE = 0.18      // chance de lancer une action pendant une autre
-AIM_OVERLAP_CHANCE = 0.34  // chance pendant qu'un soldat vise
-OVERLAP_RETRY_DELAY = 0.28 // délai avant de retenter un chevauchement refusé
+OVERLAP_CHANCE = 0.48      // chance de lancer une action pendant une autre
+AIM_OVERLAP_CHANCE = 0.72  // chance pendant qu'un soldat vise
+RECOVERY_OVERLAP_CHANCE = 0.58 // chance quand un soldat est tossed/lain/getUp
+OVERLAP_RETRY_DELAY = 0.16 // délai avant de retenter un chevauchement refusé
+RECOVERY_WAIT_IDLE_T = 0.18 // idle court quand seuls des ennemis au sol/récupération existent
+TOSS_HEIGHT_MIN/MAX = 0.55/2.25 // multiplicateur vertical des projections roquette
 LANE_OFFSETS = { front:0, mid:-80, back:-180 }  // décalage Y par lane (en px)
 LANE_Y_SPREAD = [0, 12, -12, 22, -22, 6, -6]
 SPAWN_Y_MIN/MAX = -202/22  // limites verticales conservées depuis les anciennes lanes
@@ -238,8 +242,8 @@ melee                → 'front' par défaut (catalogue seulement pour l'instant
 | `'punch'` | Coup de poing mains nues (anticipation, frappe, impact, recovery). Damage à `Anims.punch.impactFrame` (F5) |
 | `'holster'` | Fin de combat : les survivants gagnants rangent leur arme (puis `victory`, puis `walk`/`run` mains nues) |
 | `'hurt'` | Vient d'être touché (dure `Anims.hurt.frames/fps`, puis → idle) |
-| `'tossed'` | Projeté en l'air par l'explosion d'une roquette AoE. Joue `Anims.deadExplode` via `combat-view.effectiveAnimKey`. À la frame d'atterrissage (`TOSS_LAND_FRAME = 11`) le simulateur tire `damage ∈ [1,6]` biaisé par `animState.toss.heightRatio` (haut → plus de 6 ; bas → plus de 1, voir `rollFallDamage()`). Si HP ≤ 0 → bascule en `'dead'` (même clé d'anim) sans saut visuel, sinon → `'lain'`. La hauteur `animState.toss.height` ∈ `[0.55, ~3.7]` (queue longue : 20 % de chance d'un gros bonus) multiplie `deadExplode.flightY(frame)` dans `combat-view.flightOffsetY`. |
-| `'lain'` | Survivant d'une roquette, allongé sur le dos, **yeux ouverts**, légère respiration (`bodyDY` oscille de 1 px). Boucle `Anims.lain` (12 frames @ 6 fps). Durée tirée à la transition `tossed → lain` : `1.0 + min(2.0, height*0.5) + rng*0.5` secondes (plus on a volé haut, plus on reste sonné). Verrouille `cooldown` jusqu'à la fin de `lain + getUp`. |
+| `'tossed'` | Projeté en l'air par l'explosion d'une roquette AoE. Joue `Anims.deadExplode` via `combat-view.effectiveAnimKey`. À la frame d'atterrissage (`TOSS_LAND_FRAME = 11`) le simulateur tire `damage ∈ [1,6]` biaisé par `animState.toss.heightRatio` (haut → plus de 6 ; bas → plus de 1, voir `rollFallDamage()`). Si HP ≤ 0 → bascule en `'dead'` (même clé d'anim) sans saut visuel, sinon → `'lain'`. La hauteur `animState.toss.height` ∈ `[0.55, 2.25]` multiplie `deadExplode.flightY(frame)` dans `combat-view.flightOffsetY`; `animSpeed` et `slideScale` varient légèrement la vitesse et le glissement. |
+| `'lain'` | Survivant d'une roquette, allongé sur le dos, **yeux ouverts**, légère respiration (`bodyDY` oscille de 1 px). Boucle `Anims.lain` (12 frames @ 6 fps). Durée tirée à la transition `tossed → lain` : `0.65 + min(1.2, height*0.35) + rng*0.3` secondes (plus on a volé haut, plus on reste sonné, mais moins longtemps qu'avant). Verrouille `cooldown` jusqu'à la fin de `lain + getUp`. |
 | `'getUp'` | Transition `lain → idle` : `Anims.getUp` (10 frames @ 10 fps, ~1 s). Le `deathAngle` revient de `-π/2` à `0`, le soldat s'appuie sur son coude puis se met à genoux puis debout. Endpoint pose = IDLE bare-hands → aucun snap au retour `'idle'`. |
 | `'dead'` | HP ≤ 0, animation finale. Le simulateur tire (RNG seedé) `animState.deadVariant ∈ {'project','fall','explode'}` au moment du kill ; `combat-view.effectiveAnimKey` mappe `'fall'` → `Anims.dead2` (chute raide en arrière, pas de skid), `'project'` → `Anims.dead` (projection + skid arrière) et `'explode'` → `Anims.deadExplode` (projection verticale en demi-sinusoïde, ventre vers le sol à la montée, flip d'une frame au sommet, puis chute **dos au sol / membres vers le ciel** jusqu'à l'atterrissage — `deathAngleWorld=false` pour que les deux facings atterrissent dans la même orientation que `Anims.lain`, sans flip 180° à la transition). |
 
