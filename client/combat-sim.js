@@ -32,8 +32,8 @@
   const AIM_OVERLAP_CHANCE = 0.72;
   const RECOVERY_OVERLAP_CHANCE = 0.58;
   const OVERLAP_RETRY_DELAY = 0.16;
-  const AIM_DELAY_MIN = 0.38;           // minimum aim-up duration (covers short aim anims)
-  const AIM_HOLD = 0.18;                // pause after aim anim ends, before first shot
+  const AIM_DELAY_MIN = 0.62;           // minimum aim-up duration (covers short aim anims)
+  const AIM_HOLD = 0.24;                // pause after aim anim ends, before first shot
 
   // â”€â”€ Rocket launcher tunables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Bazooka-class heavy weapons fire a single visible rocket with a smoke
